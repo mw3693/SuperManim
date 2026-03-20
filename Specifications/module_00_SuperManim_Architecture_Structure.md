@@ -479,7 +479,7 @@ This is where you put things you want to show in the video. If you have a pictur
 ### Section 0.4 — Full File Structure of the superManim tool  on Disk
 This is the complete directory layout for a SuperManim installation.
 
-### Section 4.0 — The SuperManim Interactive Shell and Command Reference (User Interaction):
+### Section 0.4  — The SuperManim Interactive Shell and Command Reference (User Interaction):
 This section is specifically about the interactive shell that the tool gives the user  after they start it,
 and it documents every command the user can type in that shell.The word "Reference" is important because
 this section is something you come back to look things up in it is not just a one-time explanation.
@@ -494,9 +494,9 @@ the tool responds immediately.This section explains:
 - What every command does, what you type exactly, and what happens when you type it.
 - How commands are organized into categories based on what they do.
 
-#### Subsection 4.0.1 — The Interactive Shell
+#### Subsection 0.4.1 — The Interactive Shell
 
-##### Subsubsection 4.0.1.1 — What Is the Interactive Shell?
+##### Subsubsection 0.4.1.1 — What Is the Interactive Shell?
 
 When most people think of running a program, they think: you run it, it does something, it finishes,
 and it closes.That is how simple programs work.
@@ -550,7 +550,7 @@ The tool keeps its state in memory and in its database while you are working.
 
 ---
 
-##### Subsubsection 4.0.1.2 — How the Shell Is Built (The `cmd` Library)
+##### Subsubsection 0.4.1.2 — How the Shell Is Built (The `cmd` Library)
 
 SuperManim builds its interactive shell using a Python standard library called **`cmd`**.
 
@@ -598,7 +598,7 @@ The shell looks like this when you start it:
 ```
 $ python supermanim.py
 
-   ____                       __  __             _
+   ____                        __  __             _
   / ___| _   _ _ __   ___ _ __|  \/  | __ _ _ __ (_)_ __ ___
   \___ \| | | | '_ \ / _ \ '__| |\/| |/ _` | '_ \| | '_ ` _ \
    ___) | |_| | |_) |  __/ |  | |  | | (_| | | | | | | | | | |
@@ -617,7 +617,7 @@ The `supermanim>` at the bottom is the prompt. This is where you type your comma
 
 ---
 
-##### Subsubsection 4.0.1.3 — How Commands Are Structured
+##### Subsubsection 0.4.1.3 — How Commands Are Structured
 
 Every command you type in the SuperManim shell follows this general pattern:
 
@@ -662,9 +662,7 @@ The section below explains every single command in detail, grouped by what they 
 ---
 
 ---
-
-#### Subsection 4.0.2 — The Six Command Categories
-
+#### Subsection 0.4.2 — The classifications of commands :
 All the commands in SuperManim are organized into six groups.Each group handles a different part of the tool.
 
 ```
@@ -679,13 +677,29 @@ All the commands in SuperManim are organized into six groups.Each group handles 
 | 6 | Export and Utility Commands      | Exporting the final video and other tools         |
 +---+----------------------------------+---------------------------------------------------+
 ```
----
+ The Golden Rule of the commands:
+Before you can use any  command, you must have a project open.
 
----
+The tool always checks this first. If no project is open, every  command will stop immediately
+and tell you to open or create a project first.
 
-#### Subsection 4.0.3 — Category 1: Project Commands
+```
++----------------------------------------------------------+
+|  BEFORE EVERY  COMMAND, THE TOOL CHECKS:                 |
+|                                                          |
+|  Is a project currently open?                            |
+|                                                          |
+|  YES --> continue with the command.                      |
+|  NO  --> stop. Print:                                    |
+|          "No project is open.                            |
+|           Please open or create a project first."        |
+|                                                          |
++----------------------------------------------------------+
+`
+```
+#### Subsection 0.4.3 — Category 1: Project Commands
 
-##### Subsubsection 4.0.3.1 — What Are Project Commands?
+##### Subsubsection 0.4.3.1 — What Are Project Commands?
 
 Before you do anything in SuperManim, you need a **project**.A project is like a folder for your video work.
 It holds everything: the scenes, the audio clips, the render history, the settings, and the final output video.
@@ -703,7 +717,7 @@ Without doing one of these first, the other commands will tell you that no proje
 
 ---
 
-### Subsubsection 4.0.3.2 — `new project` or `create project` `create new_project`
+### Subsubsection 0.4.3.2 The command of creating project — `new project` or `create project` `create new_project`
 
 **What it does:**
 
@@ -835,7 +849,7 @@ supermanim>
 
 ---
 
-##### Subsubsection 4.0.3.3 — `open project`
+##### Subsubsection 0.4.3.3  — `open project`
 
 **What it does:**
 
@@ -895,7 +909,7 @@ The tool shows you a summary of the project state so you immediately know where 
 
 ---
 
-##### Subsubsection 4.0.3.4 — `list projects`
+##### Subsubsection 0.4.3.4 — `list projects`
 
 **What it does:**
 
@@ -929,7 +943,7 @@ supermanim>
 
 ---
 
-##### Subsubsection 4.0.3.5 — `project info` `show project info`
+##### Subsubsection 0.4.3.5 — `project info` `show project info`
 
 **What it does:**
 
@@ -993,7 +1007,7 @@ supermanim>
 
 ---
 
-##### Subsubsection 4.0.3.6 — `close project`
+##### Subsubsection 0.4.3.6  — `close project`
 
 **What it does:**
 
@@ -1028,7 +1042,7 @@ supermanim>
 
 ---
 
-##### Subsubsection 4.0.3.7 — `delete project`
+##### Subsubsection 0.4.3.7 — `delete project`
 
 **What it does:**
 
@@ -1076,7 +1090,2028 @@ supermanim> delete project OldTest
 supermanim>
 ```
 
+#### Subsection 0.4.4 — Category 2: Scene Commands
+
+##### Subsubsection 0.4.4.1  — What Are Scene Commands?
+
+A **scene** is one section of your video.
+
+Think of your video like a book. Each scene is one chapter of that book.
+If your video has 5 scenes, then Scene 1 is the first part that plays, Scene 2 plays after it,
+Scene 3 plays after that, and so on until the end.
+
+Each scene holds three things:
+
+```
++----------------------------------------------------------+
+|  Every Scene Has:                                        |
+|                                                          |
+|  1. A DURATION  — how many seconds it lasts.             |
+|                  Example: 12.5 seconds.                  |
+|                                                          |
+|  2. A CODE FILE — the Python file that tells the         |
+|                  animation engine what to draw.          |
+|                  Example: intro.py                       |
+|                                                          |
+|  3. An AUDIO CLIP (optional) — the piece of audio        |
+|                  that plays while this scene is shown.   |
+|                  Example: clip_001.mp3                   |
+|                                                          |
++----------------------------------------------------------+
+```
+
+Scene commands are the commands that let you build and manage these scenes.
+They let you:
+
+- Tell the tool how many scenes your project will have.
+- Add new scenes one at a time.
+- Set the duration of each scene.
+- Assign the animation code file to each scene.
+- Look at information about your scenes.
+- Delete scenes you do not need anymore.
+- Move scenes to a different position.
+- Swap two scenes with each other.
+- Make a copy of a scene.
+
 ---
+---
+
+##### Subsubsection 0.4.4.2 — `set scenes_number`
+
+**What it does:**
+
+This command tells the tool how many scenes your project will have.
+When you run it, the tool creates that many empty scene slots in the database.
+
+Each slot is like an empty box waiting for you to put things inside it —
+a duration, a code file, and later an audio clip.
+
+Think of it like this: you are telling the tool "I am going to make a video with 5 chapters."
+The tool then creates 5 empty chapters, all blank, waiting for you to fill them in.
+
+This is almost always the first scene command you run after you create a new project.
+
+**Syntax:**
+
+```
+set scenes_number <number>
+```
+
+**Examples:**
+
+```
+supermanim> set scenes_number 5
+```
+
+```
+supermanim> set scenes_number 10
+```
+
+**What the tool does step by step:**
+
+1. Checks that a project is open. If not, stops and prints an error.
+2. Creates `<number>` scene records in the database, all with empty fields.
+3. Prints a table showing all the created scenes.
+
+**What the tool prints back:**
+
+```
+supermanim> set scenes_number 5
+
+  5 scene slots created.
+
+  +-------+------------+----------+-----------+---------------------+
+  | Scene | Duration   | Code     | Audio     | synced_with_audio   |
+  +-------+------------+----------+-----------+---------------------+
+  |   1   | not set    | not set  | not set   | False               |
+  |   2   | not set    | not set  | not set   | False               |
+  |   3   | not set    | not set  | not set   | False               |
+  |   4   | not set    | not set  | not set   | False               |
+  |   5   | not set    | not set  | not set   | False               |
+  +-------+------------+----------+-----------+---------------------+
+
+  Next step: Set the duration for each scene.
+  Example:   set scene 1 duration 12.5
+
+supermanim>
+```
+
+Notice the `synced_with_audio` column. Every new scene starts with `False`.
+This means the scene is not linked to any audio clip yet.
+This flag will become important later when you work with audio and rendering.
+
+---
+
+##### Subsubsection 0.4.4.3 — `add scene`
+
+**What it does:**
+
+This command adds one single new scene to the project.
+
+It is different from `set scenes_number` which creates many scenes at once.
+`add scene` adds exactly one scene at the end of whatever you already have.
+
+For example: if you already have 4 scenes and you type `add scene`, the tool creates Scene 5.
+
+You use this command when you decide you need one more scene after you have already started working.
+Maybe you set up 4 scenes, worked on them for a while, and then realized you need a 5th scene at the end.
+
+**Syntax:**
+
+```
+add scene
+```
+
+You can also add a scene and set its duration at the same time:
+
+```
+add scene duration <seconds>
+```
+
+**Examples:**
+
+```
+supermanim> add scene
+```
+
+```
+supermanim> add scene duration 15.0
+```
+
+**What the tool prints back:**
+
+```
+supermanim> add scene
+
+  Scene 5 added.
+
+  +-------+------------+----------+-----------+---------------------+
+  | Scene | Duration   | Code     | Audio     | synced_with_audio   |
+  +-------+------------+----------+-----------+---------------------+
+  |   5   | not set    | not set  | not set   | False               |
+  +-------+------------+----------+-----------+---------------------+
+
+supermanim>
+```
+
+---
+
+##### Subsubsection 0.4.4.4 — `set scene <n> duration`
+
+**What it does:**
+
+This command tells the tool how long a specific scene lasts.
+You give it the scene number and the number of seconds.
+
+The duration is how many seconds the animation for that scene will play on screen.
+For example, `set scene 1 duration 12.5` means Scene 1 will play for 12.5 seconds.
+
+This duration matters a lot because:
+- The Manim code you write for that scene must produce an animation that lasts exactly this many seconds.
+- If you later add audio to this scene, the audio clip must also be exactly this many seconds.
+
+**Syntax:**
+
+```
+set scene <scene_number> duration <seconds>
+```
+
+**Examples:**
+
+```
+supermanim> set scene 1 duration 12.5
+supermanim> set scene 2 duration 18.5
+supermanim> set scene 3 duration 16.8
+supermanim> set scene 4 duration 7.0
+supermanim> set scene 5 duration 5.5
+```
+
+**What the tool prints back:**
+
+```
+supermanim> set scene 1 duration 12.5
+
+  Scene 1 duration set to 12.5 seconds.
+
+  Scene 1 | Duration: 12.5s | Code: not set | Audio: not set | synced_with_audio: False
+
+supermanim>
+```
+
+**What happens if you set all 5 durations:**
+
+After you set all your scene durations, the tool can show you the total.
+
+```
+supermanim> set scene 5 duration 5.5
+
+  Scene 5 duration set to 5.5 seconds.
+
+  Duration summary:
+  Scene 1:  12.5s
+  Scene 2:  18.5s
+  Scene 3:  16.8s
+  Scene 4:   7.0s
+  Scene 5:   5.5s
+  ----------------------
+  Total:    60.3 seconds
+
+supermanim>
+```
+
+If you have an audio file loaded, the tool will also check if the total duration matches the audio length.
+If they do not match, it will warn you — but it will not stop you. It is just a helpful warning.
+
+---
+
+##### Subsubsection 0.4.4.5 — `set scene <n> code`
+
+**What it does:**
+
+This command assigns a Python code file to a specific scene.
+The code file is the file that tells the animation engine (like Manim or Pygame) what to draw for that scene.
+
+When you run this command, the tool does two things:
+1. It saves the path to the code file in the database so it knows where to find it later during rendering.
+2. It computes a SHA-256 hash of the file — a unique fingerprint — and saves that fingerprint too.
+   This fingerprint is used later to detect if you changed the code. If the fingerprint is the same
+   as last time, the tool knows the code did not change and can skip re-rendering that scene.
+
+You can use a relative path (a path starting from where you ran SuperManim) or a full absolute path.
+Both work exactly the same.
+
+**Syntax:**
+
+```
+set scene <scene_number> code <path_to_code_file>
+```
+
+**Examples:**
+
+```
+supermanim> set scene 1 code my_scenes/intro.py
+supermanim> set scene 2 code my_scenes/main_concept.py
+supermanim> set scene 3 code my_scenes/example.py
+supermanim> set scene 4 code my_scenes/conclusion.py
+supermanim> set scene 5 code my_scenes/credits.py
+```
+
+**What the tool prints back:**
+
+```
+supermanim> set scene 1 code my_scenes/intro.py
+
+  Scene 1 code file assigned.
+  File:        my_scenes/intro.py
+  Fingerprint: a3f8c2d1e4b9...  (saved for change detection)
+  Status:      pending  (ready to render when you want)
+
+supermanim>
+```
+
+**What if the file path does not exist?**
+
+```
+supermanim> set scene 1 code wrong_path/intro.py
+
+  ERROR: File not found: wrong_path/intro.py
+  Please check the path and try again.
+
+supermanim>
+```
+
+The tool will not accept a code file that does not exist on your computer.
+It checks the file is really there before saving it.
+
+---
+
+##### Subsubsection 0.4.4.6 — `list scenes`
+
+**What it does:**
+
+This command shows you a table of all the scenes in your current project.
+For each scene it shows the scene number, the duration, the render status, the code file,
+the audio clip, whether it is synced with audio, and any error if the last render failed.
+
+You will use this command very often — it is the quickest way to see the state of your whole project.
+
+**Syntax:**
+
+```
+list scenes
+```
+
+**What the tool prints back:**
+
+```
+supermanim> list scenes
+
+  Scenes in project "MyAnimation":
+
+  +-------+----------+-----------+--------------------+-----------------+--------------------+
+  | Scene | Duration | Status    | Code File          | Audio Clip      | synced_with_audio  |
+  +-------+----------+-----------+--------------------+-----------------+--------------------+
+  |   1   | 12.5s    | rendered  | intro.py           | clip_001.mp3    | True               |
+  |   2   | 18.5s    | rendered  | main_concept.py    | clip_002.mp3    | True               |
+  |   3   | 16.8s    | rendered  | example.py         | clip_003.mp3    | True               |
+  |   4   |  7.0s    | pending   | conclusion.py      | not set         | False              |
+  |   5   |  5.5s    | FAILED    | credits.py         | not set         | False              |
+  +-------+----------+-----------+--------------------+-----------------+--------------------+
+
+  Total duration: 60.3 seconds
+  Rendered: 3  |  Pending: 1  |  Failed: 1
+
+supermanim>
+```
+
+---
+
+##### Subsubsection 0.4.4.7 — `show scene <n> info`
+
+**What it does:**
+
+This command shows you the complete, detailed information about one specific scene.
+It shows everything the database knows about that scene.
+
+Use this when you want to look closely at one scene — check its duration, its code file,
+whether it has audio, whether it is synced, and what its render status is.
+
+**Syntax:**
+
+```
+show scene <scene_number> info
+```
+
+**Example:**
+
+```
+supermanim> show scene 3 info 
+```
+
+**What the tool prints back:**
+
+```
+supermanim> scene info 3
+
+  ==========================================
+  Scene 3 — Full Details
+  ==========================================
+  Scene Number:        3
+  Duration:            16.8 seconds
+  Status:              rendered
+
+  CODE FILE
+  ---------
+  Path:                my_scenes/example.py
+  Fingerprint:         c9a1b3e7f2d4...
+  Changed since last render: No
+
+  AUDIO
+  -----
+  Audio clip:          audio_clips/clip_003.mp3
+  Audio clip duration: 16.8 seconds
+  synced_with_audio:   True
+
+  OUTPUT VIDEO
+  ------------
+  Path:     output/scene_03/scene_03.mp4
+  Rendered: 2024-11-12 at 14:22
+
+  ==========================================
+
+supermanim>
+```
+
+---
+
+##### Subsubsection 0.4.4.8 — `delete scene`
+
+**What it does:**
+This command permanently removes a scene from your project completely. It deletes two things
+at the same time: the scene record from the database, and the scene's physical folder from
+your computer's file system. Nothing is kept — the scene duration, the code file path, the
+linked audio clip reference, and the entire scene folder are all gone after this command runs.
+
+After deletion, SuperManim automatically reorders all remaining scenes so that the scene
+numbers stay continuous with no gaps — both in the database and in the file system folders.
+
+**Syntax:**
+```
+delete scene <scene_number>
+```
+
+**Example:**
+```
+supermanim> delete scene 2
+```
+
+Suppose your project currently has 4 scenes stored in the database and 4 folders on disk:
+
+Database:
+```
+scene_id    scene_duration    scene_code_path    scene_audio_clip
+scene 1     ...               ...                ...
+scene 2     ...               ...                ...
+scene 3     ...               ...                ...
+scene 4     ...               ...                ...
+```
+
+File system:
+```
+scenes/
+├── scene_01/
+├── scene_02/
+├── scene_03/
+└── scene_04/
+```
+
+After running `delete scene 2`, the tool deletes Scene 2 completely — its database record
+and its `scene_02/` folder — then reorders everything that remains:
+
+Database:
+```
+scene_id    scene_duration    scene_code_path    scene_audio_clip
+scene 1     ...               ...                ...
+scene 2     ...               ...                ...
+scene 3     ...               ...                ...
+```
+
+File system:
+```
+scenes/
+├── scene_01/
+├── scene_02/
+└── scene_03/
+```
+
+The old Scene 3 is now Scene 2, and the old Scene 4 is now Scene 3 — in both the database
+and on disk. The project has shrunk from 4 scenes to 3 scenes.
+
+**What the tool prints back:**
+```
+supermanim> delete scene 5
+  Scene 5 removed from the project.
+  The scene folder has been deleted from your computer.
+  The project now has 4 scenes.
+supermanim>
+```
+
+---
+
+##### Subsubsection 0.4.4.9 — `move scene`
+
+**What it does:**
+This command moves a scene from its current position to a new position in the scene order.
+The move affects two things at the same time: the scene records inside the database, and the
+scene folders on your computer's file system. Both are fully reordered after every move.
+
+When you move a scene, SuperManim does not simply swap two scenes. Instead, it shifts all
+the scenes between the old position and the new position to fill the gap cleanly. The result
+is a continuous, gap-free order — in the database and on disk.
+
+For example: if you have 5 scenes and you move Scene 5 to position 2, the scene that was
+in position 5 becomes the new Scene 2. Every scene that was between position 2 and position 4
+shifts one step forward to fill the gap left behind.
+
+**Syntax:**
+```
+move scene <scene_number> to <new_position>
+```
+
+**Example:**
+```
+supermanim> move scene 5 to 2
+```
+
+Suppose your project currently has 5 scenes in the database and 5 folders on disk:
+
+Database (before):
+```
+scene_id    scene_duration    scene_code_path    scene_audio_clip
+scene 1     ...               ...                ...
+scene 2     ...               ...                ...
+scene 3     ...               ...                ...
+scene 4     ...               ...                ...
+scene 5     ...               ...                ...
+```
+
+File system (before):
+```
+scenes/
+├── scene_01/
+├── scene_02/
+├── scene_03/
+├── scene_04/
+└── scene_05/
+```
+
+After running `move scene 5 to 2`, SuperManim takes the old Scene 5 and inserts it at
+position 2. Every scene that was at position 2 or later shifts one step forward to
+accommodate it:
+
+Database (after):
+```
+scene_id    scene_duration    scene_code_path    scene_audio_clip
+scene 1     ...               ...                ...      <- unchanged
+scene 2     ...               ...                ...      <- was scene 5
+scene 3     ...               ...                ...      <- was scene 2
+scene 4     ...               ...                ...      <- was scene 3
+scene 5     ...               ...                ...      <- was scene 4
+```
+
+File system (after):
+```
+scenes/
+├── scene_01/    <- unchanged
+├── scene_02/    <- was scene_05/
+├── scene_03/    <- was scene_02/
+├── scene_04/    <- was scene_03/
+└── scene_05/    <- was scene_04/
+```
+
+The total number of scenes does not change. No scene is lost. Only the order changes.
+
+**What the tool prints back:**
+```
+supermanim> move scene 5 to 2
+  Scene 5 moved to position 2.
+  All scenes renumbered in the database and on disk.
+  New order:
+  +----------+-------------------+
+  | New Num  | Was Scene Number  |
+  +----------+-------------------+
+  |    1     |       1           |
+  |    2     |       5  <-- moved|
+  |    3     |       2           |
+  |    4     |       3           |
+  |    5     |       4           |
+  +----------+-------------------+
+supermanim>
+```
+
+---
+
+---
+
+##### Subsubsection 4.0.4.10 — `swap scenes`
+
+**What it does:**
+
+This command swaps the positions of two scenes.
+Scene A goes where Scene B was, and Scene B goes where Scene A was.
+Nothing else moves.
+
+This is simpler than `move scene` when you just want to exchange exactly two scenes.
+
+**Syntax:**
+
+```
+swap scenes <scene_number_a> <scene_number_b>
+```
+
+**Example:**
+
+```
+supermanim> swap scenes 2 4
+```
+
+**What the tool prints back:**
+
+```
+supermanim> swap scenes 2 4
+
+  Scene 2 and Scene 4 have been swapped.
+
+  Scene 2 now contains: what was previously in Scene 4.
+  Scene 4 now contains: what was previously in Scene 2.
+
+supermanim>
+```
+
+---
+
+##### Subsubsection 4.0.4.11 — `duplicate scene`
+
+**What it does:**
+
+This command makes a copy of an existing scene and adds it as a new scene at the end of your project.
+The copy gets the next available scene number.
+
+The copy starts with the same code file path as the original,
+but its render status is reset to `pending` because it has never been rendered.
+Its audio clip is not copied — audio must be assigned separately.
+
+This is useful when two or more scenes use the same code file as a starting point.
+You duplicate one, then make small changes to the copy.
+
+**Syntax:**
+
+```
+duplicate scene <scene_number>
+```
+
+**Example:**
+
+```
+supermanim> duplicate scene 3
+```
+
+**What the tool prints back:**
+
+```
+supermanim> duplicate scene 3
+
+  Scene 3 duplicated.
+
+  New scene created: Scene 6
+  Code file:         my_scenes/example.py  (copied from Scene 3)
+  Duration:          16.8 seconds          (copied from Scene 3)
+  Audio clip:        not set               (must be assigned separately)
+  synced_with_audio: False
+  Status:            pending
+
+supermanim>
+```
+
+---
+
+---
+
+#### Subsection 4.0.5 — Category 4: Audio Commands
+
+##### Subsubsection 4.0.5.1 — What Are Audio Commands?
+
+Audio commands are the commands you use to work with audio files in your project.
+
+They let you do two different kinds of things:
+
+**Kind 1 — Audio File Editing:**
+You can use SuperManim to edit an audio file by itself, without any animation.
+You can cut it, split it into pieces, change its format, or check how long it is.
+This works like a simple audio editing tool.
+
+**Kind 2 — Audio for Animation:**
+You can add an audio file to your project and link each piece of it to a scene.
+Later, when you render a scene that has been linked to audio and marked as synced,
+the tool will include that audio in the rendered video.
+
+Both kinds need the same starting point: you must have a project open first.
+
+---
+
+###### The One Rule That Must Always Be True
+
+Before anything else, understand this rule. It applies to every audio command and every render:
+
+```
++------------------------------------------------------------------+
+|                  THE GOLDEN RULE                                 |
+|                                                                  |
+|  If a scene has an audio clip AND is synced with it:            |
+|                                                                  |
+|  Scene duration  ==  Audio clip duration                         |
+|                                                                  |
+|  Example:                                                        |
+|  Scene 3 duration:        16.8 seconds                           |
+|  Scene 3 audio clip:      16.8 seconds                           |
+|                                                                  |
+|  They must be IDENTICAL.                                         |
+|  Not 16.7. Not 16.9. Exactly 16.8.                               |
+|                                                                  |
+|  If they are different:                                          |
+|  The tool will REFUSE to render and will tell you what is wrong. |
+|                                                                  |
++------------------------------------------------------------------+
+```
+
+Why? Because if the video is 16.8 seconds but the audio is 17.2 seconds,
+the video will end before the audio finishes. They will not match.
+The tool prevents this from happening by checking before every render.
+
+---
+
+###### The `synced_with_audio` Flag
+
+Every scene in the database has a column called `synced_with_audio`.
+It holds one of two values: `True` or `False`.
+
+```
++----------------------------------------------------------+
+|  synced_with_audio = False  (default for all new scenes) |
+|                                                          |
+|  This scene has NO audio linked to it.                   |
+|  When rendered, it will produce a video with NO sound.   |
+|                                                          |
++----------------------------------------------------------+
+|  synced_with_audio = True                                |
+|                                                          |
+|  This scene IS linked to an audio clip.                  |
+|  The durations have been verified to match.              |
+|  When rendered, it will produce a video WITH sound.      |
+|                                                          |
++----------------------------------------------------------+
+```
+
+This flag is what the render system checks before every render.
+You change this flag using the Sync Commands (covered in Subsection 4.0.6).
+
+The audio commands below are what you use to add and manage the audio files themselves.
+The sync commands are what you use to link those audio files to scenes and set this flag.
+
+---
+
+###### Before Every Audio Command
+
+Every audio command checks two things before doing anything:
+
+```
+CHECK 1: Is a project open?
+    YES --> continue.
+    NO  --> stop. Print "No project is open. Please open a project first."
+
+CHECK 2: Is an audio file loaded in this project?
+    (only for commands that need it — not for "add audio")
+    YES --> continue.
+    NO  --> stop. Print "No audio file has been added to this project yet.
+                         Use: add audio <path_to_audio_file>"
+```
+
+---
+
+##### Subsubsection 4.0.5.2 — `add audio`
+
+**What it does:**
+
+This command loads your audio file into the project.
+This is the first audio command you will ever run in a project.
+Before you split audio, before you sync anything — you must add the audio file first.
+
+When you run this command, the tool:
+1. Copies your audio file into the project's `audio_clips/` folder.
+   It saves it there as `original_audio` with the same file extension you gave it.
+2. Reads the total duration of the audio file in seconds.
+3. Saves the file path and the duration in the project database.
+
+After this command, the tool knows about your audio file.
+You can then split it, edit it, or link it to scenes.
+
+**Syntax:**
+
+```
+add audio <path_to_audio_file>
+```
+
+You can also write:
+
+```
+add audio_file <path_to_audio_file>
+```
+
+Both forms do exactly the same thing. The second form is just an alternative way to write it.
+
+**Examples:**
+
+```
+supermanim> add audio voice.mp3
+```
+
+```
+supermanim> add audio /home/user/recordings/narration.wav
+```
+
+```
+supermanim> add audio_file C:/Users/Ahmed/Desktop/lecture.mp3
+```
+
+**What the tool prints back:**
+
+```
+supermanim> add audio voice.mp3
+
+  Audio file added successfully.
+
+  Copied to:   audio_clips/original_audio.mp3
+  Format:      mp3
+  Duration:    60.3 seconds
+  Channels:    mono
+  Sample rate: 44100 Hz
+
+  What you can do next:
+  - Edit this file:    change audio_format wav
+  - Split it:          split audio auto
+  - Split manually:    split audio half
+                       split audio duration 12.5 18.5 16.8 7.0 5.5
+
+supermanim>
+```
+
+---
+
+##### Subsubsection 4.0.5.3 — `change audio_format`
+
+**What it does:**
+
+This command converts the audio file from its current format to a new format.
+For example, you can convert an `.mp3` file to a `.wav` file, or a `.wav` to an `.ogg`.
+
+You might want to do this because:
+- Your animation engine works better with a specific format.
+- You want a lossless format like `.wav` for higher quality.
+- You want to reduce file size by converting to a more compressed format.
+
+The tool converts the original audio file and saves the new version in the `audio_clips/` folder.
+The old file is kept unless you ask the tool to replace it.
+
+**Syntax:**
+
+```
+change audio_format <new_format>
+```
+
+**Examples:**
+
+```
+supermanim> change audio_format wav
+```
+
+```
+supermanim> change audio_format ogg
+```
+
+```
+supermanim> change audio_format mp3
+```
+
+**Supported formats:** `mp3`, `wav`, `ogg`, `aac`, `flac`, `m4a`
+
+**What the tool prints back:**
+
+```
+supermanim> change audio_format wav
+
+  Converting: original_audio.mp3  -->  original_audio.wav
+  Format:     mp3 (lossy, compressed)  -->  wav (lossless, uncompressed)
+  Old size:   4.2 MB
+  New size:   31.8 MB
+
+  Conversion complete.
+  New file saved: audio_clips/original_audio.wav
+
+supermanim>
+```
+
+---
+
+##### Subsubsection 4.0.5.4 — `split audio auto`
+
+**What it does:**
+
+This command listens to your audio file and splits it into pieces automatically.
+The tool finds the quiet parts — the silences — and treats each silence as the border
+between one scene and the next.
+
+Think of it like this: your narration sounds like this:
+```
+[...speaking for 12 seconds...] [silence] [speaking for 18 seconds] [silence] [speaking for 17 seconds]
+```
+
+The tool hears that there are two silences in between the speaking parts.
+So it decides there are three sections, and it cuts the audio at those silences.
+Each section becomes the audio clip for one scene.
+
+After the tool finishes, it:
+- Creates scene slots in the database for however many sections it found.
+- Sets each scene's duration to match the length of its audio section.
+- Saves each audio section as a separate clip file in the `audio_clips/` folder.
+
+**Syntax:**
+
+```
+split audio auto
+```
+
+You can also adjust the sensitivity of the silence detection:
+
+```
+split audio auto --min_silence 0.5 --threshold -40
+```
+
+- `--min_silence 0.5` means: a silent gap must be at least 0.5 seconds long to count as a scene boundary.
+  If you set this too low, every tiny pause becomes a new scene. If you set it too high, some boundaries get missed.
+- `--threshold -40` means: anything quieter than -40 decibels is counted as silence.
+  The more negative the number, the stricter the definition of silence.
+
+If you do not include these options, the tool uses its default values, which work well for most voice recordings.
+
+**What the tool prints back:**
+
+```
+supermanim> split audio auto
+
+  Analyzing: audio_clips/original_audio.mp3 (60.3 seconds)
+  Scanning for silence regions...
+
+  Found 5 speech segments:
+
+  +----------+---------+---------+-----------+
+  | Segment  | Start   | End     | Duration  |
+  +----------+---------+---------+-----------+
+  |    1     |  0.0s   | 12.5s   |  12.5s    |
+  |    2     | 12.5s   | 31.0s   |  18.5s    |
+  |    3     | 31.0s   | 47.8s   |  16.8s    |
+  |    4     | 47.8s   | 54.8s   |   7.0s    |
+  |    5     | 54.8s   | 60.3s   |   5.5s    |
+  +----------+---------+---------+-----------+
+
+  Cutting audio into 5 clips...
+
+  clip_001.mp3 saved  (12.5 sec)
+  clip_002.mp3 saved  (18.5 sec)
+  clip_003.mp3 saved  (16.8 sec)
+  clip_004.mp3 saved   (7.0 sec)
+  clip_005.mp3 saved   (5.5 sec)
+
+  5 scenes created. Durations set automatically.
+  Total: 60.3 seconds (matches original audio length exactly).
+
+  Note: Scenes are created but NOT yet synced with audio.
+  Use:  sync all   to sync all scenes with their clips.
+  Or:   sync scene <n> audio_clip <n>   to sync one by one.
+
+supermanim>
+```
+
+---
+
+##### Subsubsection 4.0.5.5 — `split audio half`
+
+**What it does:**
+
+This command cuts the audio file exactly in half.
+The result is two equal pieces. Each piece is exactly half the length of the original.
+
+For example: if your audio is 60 seconds long, this command creates:
+- Clip 1: 0.0 seconds to 30.0 seconds (30 seconds long).
+- Clip 2: 30.0 seconds to 60.0 seconds (30 seconds long).
+
+Use this when you have two scenes and you want to divide the audio equally between them.
+
+**Syntax:**
+
+```
+split audio half
+```
+
+**What the tool prints back:**
+
+```
+supermanim> split audio half
+
+  Splitting audio_clips/original_audio.mp3 into two equal halves.
+  Original duration: 60.3 seconds
+  Each half:         30.15 seconds
+
+  clip_001.mp3 saved  (0.0s to 30.15s  |  30.15 sec)
+  clip_002.mp3 saved  (30.15s to 60.3s |  30.15 sec)
+
+  2 scenes created. Durations set automatically.
+  Total: 60.3 seconds.
+
+  Note: Scenes are created but NOT yet synced with audio.
+  Use:  sync all   to link scenes to their clips.
+
+supermanim>
+```
+
+---
+
+##### Subsubsection 4.0.5.6 — `split audio duration`
+
+**What it does:**
+
+This command lets you split the audio into pieces of specific lengths that you choose yourself.
+You provide the duration (length in seconds) of each piece you want.
+
+The tool will cut the audio into that many pieces with those exact lengths.
+The durations you provide must add up to the total length of the audio file.
+If they do not add up, the tool will stop and tell you.
+
+For example: your audio is 60.3 seconds and you want 5 pieces of specific lengths.
+You tell the tool: `split audio duration 12.5 18.5 16.8 7.0 5.5`
+That adds up to 12.5 + 18.5 + 16.8 + 7.0 + 5.5 = 60.3 seconds. It matches. The tool will proceed.
+
+**Syntax:**
+
+```
+split audio duration <d1> <d2> <d3> ...
+```
+
+You provide as many durations as you need. Each number is in seconds.
+
+**Example:**
+
+```
+supermanim> split audio duration 12.5 18.5 16.8 7.0 5.5
+```
+
+**What the tool does step by step:**
+
+1. Adds up all the numbers you provided: 12.5 + 18.5 + 16.8 + 7.0 + 5.5 = 60.3 seconds.
+2. Checks if that total matches the audio file's duration (60.3 seconds).
+3. If they match, it cuts the audio.
+4. If they do NOT match, it stops and tells you the difference.
+
+**What the tool prints back (success):**
+
+```
+supermanim> split audio duration 12.5 18.5 16.8 7.0 5.5
+
+  Checking durations...
+  Your total:   60.3 seconds
+  Audio length: 60.3 seconds
+  Match: YES
+
+  Cutting audio into 5 clips...
+
+  +----------+---------+---------+-----------+----------------------+
+  | Clip     | Start   | End     | Duration  | File                 |
+  +----------+---------+---------+-----------+----------------------+
+  |    1     |  0.0s   | 12.5s   |  12.5s    | clip_001.mp3         |
+  |    2     | 12.5s   | 31.0s   |  18.5s    | clip_002.mp3         |
+  |    3     | 31.0s   | 47.8s   |  16.8s    | clip_003.mp3         |
+  |    4     | 47.8s   | 54.8s   |   7.0s    | clip_004.mp3         |
+  |    5     | 54.8s   | 60.3s   |   5.5s    | clip_005.mp3         |
+  +----------+---------+---------+-----------+----------------------+
+
+  5 scenes created. Durations set automatically.
+
+  Note: Scenes are created but NOT yet synced with audio.
+  Use:  sync all   to link scenes to their clips.
+
+supermanim>
+```
+
+**What the tool prints back (durations do not match):**
+
+```
+supermanim> split audio duration 12.5 18.5 16.8 7.0 10.0
+
+  Checking durations...
+  Your total:   64.8 seconds
+  Audio length: 60.3 seconds
+  Difference:  +4.5 seconds (your total is too long)
+
+  ERROR: The durations you provided do not add up to the audio length.
+  Please fix the numbers and try again.
+
+supermanim>
+```
+
+---
+
+##### Subsubsection 4.0.5.7 — `audio info`
+
+**What it does:**
+
+This command shows you a complete overview of the audio situation in your project.
+It shows the original audio file, its length, and for each scene: which audio clip is assigned,
+what time range it covers, and whether the scene is synced with the audio.
+
+Use this command to check the current state of your audio before syncing or rendering.
+
+**Syntax:**
+
+```
+audio info
+```
+
+**What the tool prints back:**
+
+```
+supermanim> audio info
+
+  AUDIO OVERVIEW — Project: MyAnimation
+  ========================================
+  Original file:   audio_clips/original_audio.mp3
+  Total duration:  60.3 seconds
+  Format:          mp3
+
+  SCENE AUDIO MAP
+  +---------+-----------+-----------+-----------+-----------------+--------------------+
+  | Scene   | Start     | End       | Duration  | Clip File       | synced_with_audio  |
+  +---------+-----------+-----------+-----------+-----------------+--------------------+
+  |   1     |   0.0s    |  12.5s    |  12.5s    | clip_001.mp3    | True               |
+  |   2     |  12.5s    |  31.0s    |  18.5s    | clip_002.mp3    | True               |
+  |   3     |  31.0s    |  47.8s    |  16.8s    | clip_003.mp3    | True               |
+  |   4     |  47.8s    |  54.8s    |   7.0s    | not set         | False              |
+  |   5     |  54.8s    |  60.3s    |   5.5s    | not set         | False              |
+  +---------+-----------+-----------+-----------+-----------------+--------------------+
+
+  Synced scenes:    3 out of 5
+  Unsynced scenes:  2 (Scenes 4 and 5 have no audio clip assigned)
+
+supermanim>
+```
+
+---
+
+---
+
+#### Subsection 4.0.6 — Category 5: Render Commands
+
+##### Subsubsection 4.0.6.1 — What Are Render Commands?
+
+Rendering is the process of turning your Python code file into a real video file.
+
+When you render a scene, the tool runs your code through an animation engine like Manim.
+The engine reads your code, draws all the shapes and animations you wrote, and produces
+an `.mp4` video file. That file is saved in the `output/` folder of your project.
+
+Render commands control everything about this process:
+- Which scenes to render.
+- Whether to skip scenes that have not changed.
+- Whether to force a re-render even if nothing changed.
+- Whether to generate a fast, low-quality preview instead of the final render.
+- What to do with scenes that failed.
+
+---
+
+###### Before Every Render: What the Tool Always Checks
+
+Before the tool renders anything, it runs through a checklist.
+If any check fails, the tool stops and tells you exactly what needs to be fixed.
+
+```
++--------------------------------------------------------------------+
+|  RENDER CHECKLIST — runs before EVERY render command              |
+|                                                                    |
+|  CHECK 1: Is a project open?                                       |
+|  YES --> continue.                                                 |
+|  NO  --> STOP. "No project is open."                               |
+|                                                                    |
+|  CHECK 2: Does this scene have a code file assigned?               |
+|  YES --> continue.                                                 |
+|  NO  --> STOP. "Scene X has no code file. Use: set scene X code." |
+|                                                                    |
+|  CHECK 3: Is synced_with_audio = True for this scene?              |
+|  YES --> also check audio duration matches scene duration.         |
+|          If they match   --> render WITH audio.                    |
+|          If they don't   --> STOP. "Duration mismatch."            |
+|  NO  --> render WITHOUT audio. (Silent video. That is fine.)      |
+|                                                                    |
+|  CHECK 4: Has the code changed since the last render?              |
+|  (Checked by comparing the current file fingerprint                |
+|   to the stored fingerprint in the database.)                      |
+|  YES, changed    --> render.                                       |
+|  NO, unchanged   --> skip render. Use the old video. Save time.    |
+|                                                                    |
++--------------------------------------------------------------------+
+```
+
+This checklist is the heart of SuperManim's smart behavior.
+It is what makes SuperManim faster than running Manim directly.
+
+---
+
+###### How the Tool Knows If Code Changed (The Fingerprint System)
+
+Every time you assign a code file to a scene, the tool computes a SHA-256 hash of that file.
+Think of a hash as a unique fingerprint — like a person's fingerprint, but for a file.
+
+```
++----------------------------------------------------------+
+|  HOW THE FINGERPRINT SYSTEM WORKS                        |
+|                                                          |
+|  You assign a code file to Scene 3.                      |
+|  The tool reads the file and computes its fingerprint:   |
+|  Fingerprint = "a3f8c2d1e4b9..."                         |
+|  This fingerprint is saved in the database.              |
+|                                                          |
+|  You render Scene 3. It succeeds.                        |
+|                                                          |
+|  Later, you run "render scene 3" again.                  |
+|  The tool reads the file again and computes a new print: |
+|  New fingerprint = "a3f8c2d1e4b9..."  (same as before!)  |
+|                                                          |
+|  The file did not change. Skip the render.               |
+|                                                          |
+|  ---                                                     |
+|                                                          |
+|  Now you edit scene3.py and change one line.             |
+|  You run "render scene 3" again.                         |
+|  New fingerprint = "f7c3a9e1b2d8..."  (DIFFERENT!)       |
+|                                                          |
+|  The file changed. Render it.                            |
+|                                                          |
++----------------------------------------------------------+
+```
+
+This is why SuperManim can save you hours of rendering time.
+It only renders the scenes that actually changed.
+
+---
+
+##### Subsubsection 4.0.6.2 — `render scene`
+
+**What it does:**
+
+This command renders one specific scene.
+
+The tool first runs the render checklist described above.
+If the code has not changed since the last render, the tool skips it and tells you.
+If the code changed, the tool runs the animation engine to produce a new video clip.
+
+**Syntax:**
+
+```
+render scene <scene_number>
+```
+
+**Example:**
+
+```
+supermanim> render scene 3
+```
+
+**What the tool prints back — when the scene needs rendering:**
+
+```
+supermanim> render scene 3
+
+  Render checklist for Scene 3:
+  [OK] Project is open.
+  [OK] Code file assigned: my_scenes/example.py
+  [OK] Code has changed since last render. (fingerprint different)
+  [OK] synced_with_audio: True  |  Durations match: 16.8s == 16.8s
+
+  Rendering Scene 3 with audio...
+  Running animation engine...
+  [===========================================] 100%  (Elapsed: 4m 12s)
+
+  Scene 3 rendered successfully.
+  Output:   output/scene_03/scene_03.mp4
+  Duration: 16.8 seconds  (matches expected duration)
+  Audio:    clip_003.mp3 included.
+
+supermanim>
+```
+
+**What the tool prints back — when the scene has NOT changed:**
+
+```
+supermanim> render scene 3
+
+  Render checklist for Scene 3:
+  [OK] Project is open.
+  [OK] Code file assigned: my_scenes/example.py
+  [--] Code unchanged (fingerprint matches). Skipping render.
+
+  Scene 3 skipped. (Saved approximately 4 minutes of rendering time.)
+
+supermanim>
+```
+
+**What the tool prints back — when the scene has audio but durations do not match:**
+
+```
+supermanim> render scene 4
+
+  Render checklist for Scene 4:
+  [OK] Project is open.
+  [OK] Code file assigned: my_scenes/conclusion.py
+  [OK] Code has changed since last render.
+  [!!] synced_with_audio: True  |  Duration mismatch!
+       Scene duration:      7.0 seconds
+       Audio clip duration: 9.3 seconds
+       Difference:          2.3 seconds
+
+  ERROR: Cannot render Scene 4.
+  The scene duration and audio clip duration do not match.
+  Fix the scene duration:  set scene 4 duration 9.3
+  Or fix the sync:         unsync scene 4
+
+supermanim>
+```
+
+**What the tool prints back — when synced_with_audio is False:**
+
+```
+supermanim> render scene 4
+
+  Render checklist for Scene 4:
+  [OK] Project is open.
+  [OK] Code file assigned: my_scenes/conclusion.py
+  [OK] Code has changed since last render.
+  [  ] synced_with_audio: False  -->  Rendering WITHOUT audio (silent video).
+
+  Rendering Scene 4 without audio...
+  [===========================================] 100%  (Elapsed: 2m 03s)
+
+  Scene 4 rendered successfully (silent video).
+  Output:   output/scene_04/scene_04.mp4
+  Duration: 7.0 seconds
+  Audio:    none.
+
+supermanim>
+```
+
+---
+
+##### Subsubsection 4.0.6.3 — `render all`
+
+**What it does:**
+
+This command goes through every scene in your project and renders the ones that need it.
+It is the most commonly used render command.
+
+For each scene, the tool runs the full render checklist.
+Scenes whose code has not changed since the last render are skipped automatically.
+Only the scenes whose code actually changed get rendered.
+
+This is the command you will type the most often in your workflow.
+After making changes to one or two scenes, you type `render all` and the tool handles everything.
+
+**Syntax:**
+
+```
+render all
+```
+
+**What the tool prints back:**
+
+```
+supermanim> render all
+
+  Checking all 5 scenes...
+
+  +-------+-----------------------------+--------------------+
+  | Scene | Code Changed?               | Action             |
+  +-------+-----------------------------+--------------------+
+  |   1   | No  (fingerprint matches)   | SKIP               |
+  |   2   | No  (fingerprint matches)   | SKIP               |
+  |   3   | No  (fingerprint matches)   | SKIP               |
+  |   4   | YES (fingerprint changed)   | RENDER             |
+  |   5   | No  (fingerprint matches)   | SKIP               |
+  +-------+-----------------------------+--------------------+
+
+  Rendering Scene 4...
+  [===========================================] 100%  (Elapsed: 2m 03s)
+  Scene 4 rendered. Output: output/scene_04/scene_04.mp4
+
+  Render complete.
+  Rendered:     1 scene  (Scene 4)
+  Skipped:      4 scenes (no changes detected)
+  Time saved:   approximately 17 minutes
+
+supermanim>
+```
+
+---
+
+##### Subsubsection 4.0.6.4 — `render changed`
+
+**What it does:**
+
+This command renders only the scenes whose status is `pending` or `failed`.
+It does not re-check the fingerprint — it simply looks at the status field in the database
+and renders anything that is not already marked as `rendered`.
+
+This is different from `render all` in a subtle way:
+- `render all` checks the fingerprint. If the code is unchanged, it skips even if status is `pending`.
+- `render changed` skips the fingerprint check and just looks at the status.
+
+Use `render changed` when you want to render all the scenes that are waiting,
+without worrying about whether the code changed or not.
+
+**Syntax:**
+
+```
+render changed
+```
+
+**What the tool prints back:**
+
+```
+supermanim> render changed
+
+  Scanning for pending or failed scenes...
+
+  Found:
+    Scene 4 — status: pending
+    Scene 5 — status: failed
+
+  Rendering Scene 4...
+  [===========================================] 100%  (Elapsed: 2m 03s)
+  Scene 4 rendered successfully.
+
+  Rendering Scene 5 (retrying after previous failure)...
+  [===========================================] 100%  (Elapsed: 1m 44s)
+  Scene 5 rendered successfully.
+
+  All pending and failed scenes have been rendered.
+
+supermanim>
+```
+
+---
+
+##### Subsubsection 4.0.6.5 — `force render scene`
+
+**What it does:**
+
+This command forces a specific scene to be rendered again, even if the code has not changed.
+
+Normally, the tool skips scenes whose fingerprint has not changed.
+This command overrides that skip completely.
+
+Use this when:
+- You changed an asset file that your code uses (like an image or a font),
+  but the Python code file itself stayed the same.
+  The fingerprint check would say "unchanged" — but the actual output would be different.
+  So you force the render.
+- You want a completely fresh render for any other reason.
+
+**Syntax:**
+
+```
+force render scene <scene_number>
+```
+
+**Example:**
+
+```
+supermanim> force render scene 3
+```
+
+**What the tool prints back:**
+
+```
+supermanim> force render scene 3
+
+  Force rendering Scene 3. (Ignoring fingerprint check.)
+
+  Render checklist for Scene 3:
+  [OK] Project is open.
+  [OK] Code file assigned: my_scenes/example.py
+  [OK] synced_with_audio: True  |  Durations match: 16.8s == 16.8s
+
+  Rendering Scene 3 with audio...
+  [===========================================] 100%  (Elapsed: 4m 22s)
+
+  Scene 3 rendered successfully.
+  Output: output/scene_03/scene_03.mp4
+
+supermanim>
+```
+
+---
+
+##### Subsubsection 4.0.6.6 — `force render all`
+
+**What it does:**
+
+This command forces every single scene to be re-rendered from scratch.
+It wipes the stored fingerprints for all scenes, marks every scene as `pending`,
+and then renders them all.
+
+This is the "burn it all down and start fresh" command for rendering.
+
+Use this when:
+- You changed a global setting that affects all scenes, like the output video resolution or the frame rate.
+- Something seems wrong with your rendered videos and you want a completely clean rebuild.
+- You just want to be absolutely sure that every single scene is fresh.
+
+This command takes a long time if you have many scenes. The tool will warn you before it starts
+and ask you to confirm.
+
+**Syntax:**
+
+```
+force render all
+```
+
+**What the tool prints back:**
+
+```
+supermanim> force render all
+
+  WARNING: This will re-render ALL 5 scenes from scratch.
+  Estimated time: 18 to 25 minutes.
+  This cannot be undone.
+
+  Type "yes" to continue, or anything else to cancel:
+  > yes
+
+  Clearing all stored fingerprints...
+  Resetting all scenes to pending...
+  Starting full render...
+
+  Rendering Scene 1...  [===================] 100%  (4m 10s)
+  Rendering Scene 2...  [===================] 100%  (6m 02s)
+  Rendering Scene 3...  [===================] 100%  (4m 22s)
+  Rendering Scene 4...  [===================] 100%  (2m 03s)
+  Rendering Scene 5...  [===================] 100%  (1m 44s)
+
+  All 5 scenes rendered successfully.
+  Total time: 18 minutes 21 seconds.
+
+supermanim>
+```
+
+---
+
+##### Subsubsection 4.0.6.7 — `preview scene`
+
+**What it does:**
+
+This command generates a fast, low-quality version of a scene so you can check it quickly
+without waiting for the full high-quality render.
+
+A preview is intentionally low quality: small video size, low resolution, maybe fewer frames per second.
+This makes it render in seconds instead of minutes.
+You use it to check "does my animation look right?" without waiting.
+
+Preview files are saved in the `previews/` folder of your project.
+
+**Syntax:**
+
+```
+preview scene <scene_number>
+```
+
+**Example:**
+
+```
+supermanim> preview scene 4
+```
+
+**What the tool prints back:**
+
+```
+supermanim> preview scene 4
+
+  Generating low-quality preview for Scene 4...
+  (This will be fast. Preview quality is intentionally low.)
+
+  Running animation engine (low quality mode)...
+  [===========================================] 100%  (Elapsed: 0m 18s)
+
+  Preview ready: previews/scene_04_preview.mp4
+  Duration:      7.0 seconds
+  Quality:       low (480p)
+
+  Tip: When you are happy with the preview, run:
+       render scene 4
+       (This produces the final high-quality version.)
+
+supermanim>
+```
+
+---
+
+##### Subsubsection 4.0.6.8 — `retry failed`
+
+**What it does:**
+
+This command finds all the scenes that have a `failed` status and tries to render them again.
+
+When a scene fails, the tool saves the error message in the database.
+This command clears those error messages, marks the failed scenes as `pending` again,
+and runs the render checklist on each one.
+
+Use this after you have fixed whatever caused the failure —
+for example, you fixed a bug in the code file that caused Manim to crash.
+
+**Syntax:**
+
+```
+retry failed
+```
+
+**What the tool prints back:**
+
+```
+supermanim> retry failed
+
+  Found 2 failed scenes: Scene 2, Scene 5.
+
+  Retrying Scene 2...
+  Clearing previous error message...
+  Running render checklist...
+  [OK] Code file: my_scenes/main_concept.py
+  [OK] synced_with_audio: True  |  Durations match.
+  Rendering...
+  [===========================================] 100%  (Elapsed: 6m 07s)
+  Scene 2 rendered successfully.
+
+  Retrying Scene 5...
+  Clearing previous error message...
+  Running render checklist...
+  [OK] Code file: my_scenes/credits.py
+  [  ] synced_with_audio: False  -->  Rendering without audio (silent).
+  Rendering...
+  [===========================================] 100%  (Elapsed: 1m 44s)
+  Scene 5 rendered successfully (silent video).
+
+  Both failed scenes have been rendered successfully.
+
+supermanim>
+```
+
+---
+
+##### Subsubsection 4.0.6.9 — `render status`
+
+**What it does:**
+
+This command shows you a quick summary of where your rendering stands.
+How many scenes are rendered? How many are still waiting? How many failed?
+It also tells you whether the project is ready to be exported.
+
+**Syntax:**
+
+```
+render status
+```
+
+**What the tool prints back:**
+
+```
+supermanim> render status
+
+  Render Status — MyAnimation
+  ============================
+  Total scenes:   5
+  Rendered:       3
+  Pending:        1
+  Failed:         1
+
+  +-------+----------+-----------+--------------------+
+  | Scene | Duration | Status    | Notes              |
+  +-------+----------+-----------+--------------------+
+  |   1   | 12.5s    | rendered  |                    |
+  |   2   | 18.5s    | rendered  |                    |
+  |   3   | 16.8s    | rendered  |                    |
+  |   4   |  7.0s    | pending   | not yet rendered   |
+  |   5   |  5.5s    | FAILED    | NameError line 12  |
+  +-------+----------+-----------+--------------------+
+
+  Ready to export: NO
+  Reason: 1 scene pending, 1 scene failed.
+
+supermanim>
+```
+
+---
+
+---
+
+#### Subsection 4.0.7 — Category 6: Sync Commands
+
+##### Subsubsection 4.0.7.1 — What Are Sync Commands?
+
+Sync commands are the commands that link a scene to its audio clip.
+
+Remember the `synced_with_audio` flag from the scene table?
+This flag is `False` by default for every new scene.
+Sync commands are the ONLY way to change this flag to `True`.
+
+```
++----------------------------------------------------------+
+|  What "syncing" means:                                   |
+|                                                          |
+|  You have Scene 3.                                       |
+|  You have clip_003.mp3.                                  |
+|                                                          |
+|  Syncing links them together:                            |
+|  "Scene 3 uses clip_003.mp3 as its audio."               |
+|                                                          |
+|  The tool checks:                                        |
+|  Scene 3 duration == clip_003.mp3 duration?              |
+|  16.8 seconds     == 16.8 seconds?                       |
+|  YES --> Link confirmed. synced_with_audio = True.       |
+|  NO  --> Refuse. Tell you the difference.                |
+|                                                          |
+|  From now on, when Scene 3 is rendered,                  |
+|  it will include clip_003.mp3 in the output video.       |
+|                                                          |
++----------------------------------------------------------+
+```
+
+Sync commands let you:
+- Sync one scene with its audio clip.
+- Sync all scenes at once.
+- Remove the sync from one scene (if you want it to render silently).
+- Remove the sync from all scenes at once.
+- Check the sync status of all scenes.
+
+---
+
+###### Before Every Sync Command
+
+Every sync command checks:
+
+```
+CHECK 1: Is a project open?
+    YES --> continue.
+    NO  --> stop. "No project is open."
+
+CHECK 2: Does the project have an audio file?
+    YES --> continue.
+    NO  --> stop. "No audio file loaded. Use: add audio <path>"
+```
+
+---
+
+##### Subsubsection 4.0.7.2 — `sync scene`
+
+**What it does:**
+
+This command links one specific scene to one specific audio clip.
+
+When you run it, the tool:
+1. Checks that the scene exists.
+2. Checks that the audio clip file exists.
+3. Measures the duration of the audio clip.
+4. Compares it to the scene's duration.
+5. If they match exactly → sets `synced_with_audio = True` for that scene.
+6. If they do NOT match → refuses and shows you the difference.
+
+**Syntax:**
+
+```
+sync scene <scene_number> audio_clip <clip_number>
+```
+
+**Examples:**
+
+```
+supermanim> sync scene 1 audio_clip 1
+supermanim> sync scene 2 audio_clip 2
+supermanim> sync scene 3 audio_clip 3
+```
+
+**What the tool prints back (success):**
+
+```
+supermanim> sync scene 3 audio_clip 3
+
+  Syncing Scene 3 with clip_003.mp3...
+
+  Checking durations:
+  Scene 3 duration:        16.8 seconds
+  clip_003.mp3 duration:   16.8 seconds
+  Match: YES
+
+  synced_with_audio = True  for Scene 3.
+  From now on, rendering Scene 3 will produce a video with audio.
+
+supermanim>
+```
+
+**What the tool prints back (duration mismatch):**
+
+```
+supermanim> sync scene 4 audio_clip 4
+
+  Syncing Scene 4 with clip_004.mp3...
+
+  Checking durations:
+  Scene 4 duration:        7.0 seconds
+  clip_004.mp3 duration:   9.3 seconds
+  Match: NO  (difference: 2.3 seconds)
+
+  ERROR: Cannot sync. Durations do not match.
+
+  Fix options:
+    Option A: Change the scene duration to match the audio:
+              set scene 4 duration 9.3
+
+    Option B: Re-cut the audio clip to match the scene:
+              split audio duration 12.5 18.5 16.8 7.0 5.5
+              (adjust the 4th number to 7.0)
+
+supermanim>
+```
+
+---
+
+##### Subsubsection 4.0.7.3 — `sync all`
+
+**What it does:**
+
+This command tries to sync every scene in the project with its matching audio clip all at once.
+
+The tool assumes that Scene 1 goes with Clip 1, Scene 2 goes with Clip 2, and so on.
+This is the natural order — the clips were created to match the scenes.
+
+For each scene, the tool:
+1. Checks if a matching clip exists.
+2. Compares the scene duration to the clip duration.
+3. If they match → sets `synced_with_audio = True`.
+4. If they do NOT match → marks that scene as "sync failed" and moves to the next.
+
+At the end, the tool prints a full report showing which scenes synced successfully
+and which ones failed (and why).
+
+**Syntax:**
+
+```
+sync all
+```
+
+**What the tool prints back:**
+
+```
+supermanim> sync all
+
+  Attempting to sync all 5 scenes...
+
+  +-------+-----------------+-----------------+----------+-------------------+
+  | Scene | Scene Duration  | Clip Duration   | Match?   | Result            |
+  +-------+-----------------+-----------------+----------+-------------------+
+  |   1   | 12.5s           | 12.5s           | YES      | synced = True     |
+  |   2   | 18.5s           | 18.5s           | YES      | synced = True     |
+  |   3   | 16.8s           | 16.8s           | YES      | synced = True     |
+  |   4   |  7.0s           |  9.3s           | NO       | synced = False    |
+  |   5   |  5.5s           | no clip found   | NO       | synced = False    |
+  +-------+-----------------+-----------------+----------+-------------------+
+
+  Synced successfully: 3 scenes  (Scenes 1, 2, 3)
+  Failed to sync:      2 scenes  (Scenes 4 and 5)
+
+  Scene 4: Duration mismatch. Scene=7.0s, Clip=9.3s. Difference=2.3s.
+  Scene 5: No audio clip assigned to this scene.
+
+  To fix Scene 4: set scene 4 duration 9.3
+  To fix Scene 5: assign a clip first, then try again.
+
+supermanim>
+```
+
+---
+
+##### Subsubsection 4.0.7.4 — `unsync scene`
+
+**What it does:**
+
+This command removes the audio link from one specific scene.
+It sets `synced_with_audio = False` for that scene.
+
+After you run this command, that scene will render as a silent video — no audio included —
+even if it has an audio clip file assigned.
+
+Use this when:
+- You want to render one scene without its audio for testing purposes.
+- The scene's audio is wrong and you want to disconnect it while you fix things.
+- You just changed your mind and want this scene to be silent.
+
+**Syntax:**
+
+```
+unsync scene <scene_number>
+```
+
+**Example:**
+
+```
+supermanim> unsync scene 4
+```
+
+**What the tool prints back:**
+
+```
+supermanim> unsync scene 4
+
+  Scene 4 unsynced.
+  synced_with_audio = False  for Scene 4.
+
+  Scene 4 will now render as a silent video.
+  The audio clip file (clip_004.mp3) is still saved — just not linked.
+  To re-link it later, use: sync scene 4 audio_clip 4
+
+supermanim>
+```
+
+---
+
+##### Subsubsection 4.0.7.5 — `unsync all`
+
+**What it does:**
+
+This command removes the audio link from every single scene at once.
+It sets `synced_with_audio = False` for all scenes.
+
+After you run this command, every scene will render as a silent video.
+All the audio clip files are still saved in the `audio_clips/` folder — they are not deleted.
+You can re-sync them later.
+
+Use this when you want to do a test render of the entire project without any audio.
+
+**Syntax:**
+
+```
+unsync all
+```
+
+**What the tool prints back:**
+
+```
+supermanim> unsync all
+
+  Removing audio sync from all 5 scenes...
+
+  Scene 1:  synced_with_audio = False
+  Scene 2:  synced_with_audio = False
+  Scene 3:  synced_with_audio = False
+  Scene 4:  synced_with_audio = False
+  Scene 5:  synced_with_audio = False
+
+  All scenes unsynced.
+  All audio clip files are still saved. Nothing was deleted.
+  To re-sync everything, use: sync all
+
+supermanim>
+```
+
+---
+
+##### Subsubsection 4.0.7.6 — `sync status`
+
+**What it does:**
+
+This command shows you a table of all scenes and their current sync status.
+It tells you which scenes are synced with audio, which are not, and for the synced ones,
+it confirms that the durations still match.
+
+Run this command any time you want to quickly check the sync state of your project
+before rendering or exporting.
+
+**Syntax:**
+
+```
+sync status
+```
+
+**What the tool prints back:**
+
+```
+supermanim> sync status
+
+  Sync Status — Project: MyAnimation
+  =====================================
+
+  +-------+----------+------------------+--------------------+--------------------+
+  | Scene | Duration | Audio Clip       | Clip Duration      | synced_with_audio  |
+  +-------+----------+------------------+--------------------+--------------------+
+  |   1   | 12.5s    | clip_001.mp3     | 12.5s  (MATCH OK)  | True               |
+  |   2   | 18.5s    | clip_002.mp3     | 18.5s  (MATCH OK)  | True               |
+  |   3   | 16.8s    | clip_003.mp3     | 16.8s  (MATCH OK)  | True               |
+  |   4   |  7.0s    | clip_004.mp3     |  9.3s  (MISMATCH!) | False              |
+  |   5   |  5.5s    | not assigned     | --                 | False              |
+  +-------+----------+------------------+--------------------+--------------------+
+
+  Fully synced:   3 scenes  (Scenes 1, 2, 3 — will render WITH audio)
+  Not synced:     2 scenes  (Scenes 4 and 5 — will render WITHOUT audio)
+
+  WARNING: Scene 4 has a duration mismatch. Fix before syncing.
+  WARNING: Scene 5 has no audio clip assigned.
+
+supermanim>
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 #### Subsection 4.0.4 — Category 3: Scene Commands
 
@@ -1284,7 +3319,7 @@ supermanim>
 
 ---
 
-### Subsubsection 4.0.5.6 — `list scenes`
+##### Subsubsection 4.0.4.6 — `list scenes`
 
 **What it does:**
 
@@ -1328,7 +3363,7 @@ supermanim>
 
 ---
 
-### Subsubsection 4.0.5.7 — `scene info`
+##### Subsubsection 4.0.4.7 — ` show scene  <n> info`
 
 **What it does:**
 
@@ -1338,42 +3373,42 @@ It shows everything stored about that scene in the database: duration, code file
 **Syntax:**
 
 ```
-scene info <scene_number>
+show scene <scene_number> info
 ```
 
 **Example:**
 
 ```
-supermanim> scene info 3
+supermanim> show scene 3 info
 ```
 
 **What the tool prints back:**
 
 ```
-supermanim> scene info 3
+supermanim> show scene 3 info
 
   ==========================================
   Scene 3 — Detailed Information
   ==========================================
-  Scene Number:    3
-  Duration:        16.8 seconds
-  Status:          rendered
+  Scene Number  :        3
+  Duration      :        16.8 seconds
+  Status        :        rendered
 
   CODE FILE
   ---------
   Path:   my_scenes/example.py
   Hash:   c9a1b3e7f2d4... (unchanged since last render)
 
-  AUDIO (supermanim mode)
+  AUDIO
   -----------------------
-  Clip:   audio_clips/clip_003.mp3
-  Range:  31.0 seconds to 47.8 seconds (from original audio)
+  Clip  :   audio_clips/clip_003.mp3
+  Range :  31.0 seconds to 47.8 seconds (from original audio)
   Length: 16.8 seconds
 
   OUTPUT VIDEO
   ------------
-  Path:       output/scene_03/scene_03.mp4
-  Rendered:   2024-11-12 at 14:22
+  Path    :       output/scene_03/scene_03.mp4
+  Rendered:       2024-11-12 at 14:22
 
   ==========================================
 
@@ -1382,12 +3417,12 @@ supermanim>
 
 ---
 
-### Subsubsection 4.0.5.8 — `delete scene`
+##### Subsubsection 4.0.4.8 — `delete scene`
 
 **What it does:**
 
 This command removes one scene from the project. It deletes the scene record from the database.
-It does not automatically delete the Python code file on your computer — it only removes the scene entry from the project. If you want to delete the files too, you do that manually through your file manager.
+It does  automatically delete the Python code file on your computer
 
 **Syntax:**
 
@@ -1407,7 +3442,7 @@ supermanim> delete scene 5
 supermanim> delete scene 5
 
   Scene 5 has been removed from the project.
-  Note: The code file "credits.py" was NOT deleted from your computer.
+  Note: The code file "credits.py" was  deleted from your computer.
   The project now has 4 scenes.
 
 supermanim>
@@ -1415,7 +3450,7 @@ supermanim>
 
 ---
 
-### Subsubsection 4.0.5.9 — `move scene`
+##### Subsubsection 4.0.4.9 — `move  scene`
 
 **What it does:**
 
@@ -1425,7 +3460,7 @@ The tool renumbers all scenes automatically after you move one.
 **Syntax:**
 
 ```
-move scene <scene_number> to <new_position>
+move  scene <scene_number> to <new_position>
 ```
 
 **Example:**
@@ -1434,12 +3469,13 @@ move scene <scene_number> to <new_position>
 supermanim> move scene 5 to 2
 ```
 
-This moves what was Scene 5 to become the new Scene 2. The old Scene 2 becomes Scene 3, old Scene 3 becomes Scene 4, and so on.
+This moves what was Scene 5 to become the new Scene 2. The old Scene 2 becomes Scene 3,
+old Scene 3 becomes Scene 4, and so on.
 
 **What the tool prints back:**
 
 ```
-supermanim> move scene 5 to 2
+supermanin > move scene 5 to 2
 
   Scene 5 moved to position 2.
   All scenes have been renumbered.
@@ -1456,11 +3492,14 @@ supermanim>
 
 ---
 
-### Subsubsection 4.0.5.10 — `swap scenes`
+##### Subsubsection 4.0.4.10 — `swap scenes`
 
 **What it does:**
 
-This command swaps the positions of two scenes. If you want Scene 3 to be where Scene 5 is, and Scene 5 to be where Scene 3 was, use this command. Unlike `move scene` (which shifts all scenes in between), `swap scenes` just exchanges exactly two scenes.
+This command swaps the positions of two scenes. If you want Scene 3 to be where Scene 5 is,
+and Scene 5 to be where Scene 3 was, use this command.
+
+Unlike `move scene` (which shifts all scenes in between), `swap scenes` just exchanges exactly two scenes.
 
 **Syntax:**
 
@@ -1489,7 +3528,7 @@ supermanim>
 
 ---
 
-### Subsubsection 4.0.5.11 — `duplicate scene`
+##### Subsubsection 4.0.4.11 — `duplicate scene`
 
 **What it does:**
 
@@ -1523,31 +3562,122 @@ supermanim> duplicate scene 3
 
 supermanim>
 ```
+---
+
+#### Subsection 4.0.5 — Category 4: Audio Commands
+
+##### Subsubsection 4.0.5.1 — What Are Audio Commands?
+Audio commands are the commands you use to add an audio file to your project,
+split it into smaller clips, and assign each clip to its matching scene.
+
+Do You Have to Use Audio? No. Audio is completely optional in SuperManim.
+The tool works in two ways depending on whether you have an audio file or not:
+
+```
++------------------------------------------------------------------+
+|  CASE 1: No audio file                                           |
+|                                                                  |
+|  The tool renders your scenes as silent videos.                  |
+|  No audio check. No sync needed.
+|  You get a video with no sound. That is perfectly fine.          |
++------------------------------------------------------------------+
+|  CASE 2: Audio file exists  (all audio clip isn't none)          |
+|                                                                  |
+|  The tool must match every scene's duration to its audio clip.   |
+|  Before rendering, the tool checks:                              |
+|  "Does Scene 3's duration equal Scene 3's audio clip duration?"  |
+|  If yes → render.                                                |
+|  If no  → stop and warn the user.                                |
++------------------------------------------------------------------+
+```
+
+So when you run a render, the tool always asks one question first:
+
+> "Is there an audio file linked to this scene?"
+
+- If **no** — render the scene with no sound. Move on.
+- If **yes** — check that the scene duration matches the audio clip duration exactly.
+  If they do not match, stop and tell the user what is wrong before touching anything.
 
 ---
 
+**The Golden Rule of Audio Sync**
+
+When you use audio, there is one rule that must always be true for every single scene:
+
+```
++------------------------------------------------------------------+
+|                                                                  |
+|   Scene duration  ==  Audio clip duration for that scene         |
+|                                                                  |
+|   Example:                                                       |
+|   Scene 3 duration  = 16.8 seconds                               |
+|   Scene 3 audio clip = 16.8 seconds                              |
+|                            ^                                     |
+|                            |                                     |
+|                     Must be identical.                           |
+|                     Not 16.7. Not 16.9. Exactly 16.8.            |
+|                                                                  |
++------------------------------------------------------------------+
+```
+
+If Scene 3 is 16.8 seconds long but its audio clip is 17.2 seconds,the video and the audio will
+fall out of sync during playback.The tool prevents this by checking before every render.
+
 ---
 
-## Subsection 4.0.6 — Category 4: Audio Commands
+When You Want a Fully Synchronized Video
 
-### Subsubsection 4.0.6.1 — What Are Audio Commands?
+If you want to build a complete video where the animation matches a narration or music track,
+the audio file becomes the foundation of the entire project.You do not decide how long each scene is
+— the audio decides it for you.
 
-Audio commands are used in `supermanim` mode and `normal` mode.
+The workflow looks like this:
 
-In `supermanim` mode, your entire video is built around a single audio narration file.
-The audio file is the backbone. The scenes are timed to match the audio.
-Audio commands let you:
+```
+You add one audio file (for example: voice.mp3, 60 seconds long)
+                |
+                v
+You set the number of scenes you will create the tool will use this number to map the video into scenes
+                |
+                v
+The tool splits that audio into clips — one clip per scene using the number that the user determined
+                |
+                v
+Each scene's duration is automatically set to match its clip.
+                |
+                v
+You write the Manim code for each scene.
+Your animation must run for exactly as long as the audio clip.
+                |
+                v
+The tool renders each scene and pairs it with its audio clip.
+                |
+                v
+The tool joins everything into one final synchronized video.
+```
+
+The audio file is the backbone. Everything else is built around it.
+The scenes exist to give the audio something to show on screen.
+
+---
+
+What Audio Commands Let You Do
+
+Audio commands give you control over every step of this process:
+
 - Give the tool your audio file.
-- Automatically split the audio into clips based on silence detection.
-- Manually tell the tool which part of the audio belongs to which scene.
-- Check the audio assignments.
+- Let the tool split it automatically (by detecting silences).
+- Split it yourself at specific timestamps if you prefer manual control.
+- Check which audio clip is assigned to which scene.
+- Fix or reassign audio clips if something does not look right.
 
 In `normal` mode, you can also use audio commands to edit an audio file directly —
 cut it, change its format, or check its duration — without creating Manim animations.
 
 ---
 
-### Subsubsection 4.0.6.2 — `add audio`
+##### Subsubsection 4.0.5.2 — `add audio`
 
 **What it does:**
 
