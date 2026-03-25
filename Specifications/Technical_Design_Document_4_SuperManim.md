@@ -708,7 +708,7 @@ supermanim/                           <- Root of the installed tool
     +-- requirements.txt              <- All Python dependencies.
     +-- README.md                     <- How to install and use.
     |
-    +-- constants.py                  <- ALL fixed values used by the whole tool.
+    +--config/ constants.py                  <- ALL fixed values used by the whole tool.
     |                                    No magic numbers or strings anywhere else.
     |
     +-- domain/                       <- The pure logic. No I/O. No external tools.
@@ -19271,12 +19271,7 @@ You plug in the new adapter. The Core logic is completely untouched.
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 # Module 6 Services:
-# Module 6 — Services
-## SuperManim CLI Tool — Full Explanation
-
----
-
-# PART 0 — BEFORE WE START: What Is a Service?
+# Section 6.1 What Is a Service?
 
 Before you read about any specific service, you need to understand what the
 word "service" means in the context of SuperManim's architecture. The word is
@@ -19325,7 +19320,7 @@ thinking, deciding, validating, and coordinating happens inside the services.
 
 ---
 
-# PART 1 — THE TWO TYPES OF SERVICES
+# Section 6.2 THE TWO TYPES OF SERVICES
 
 Not all services are the same. In SuperManim, there are two fundamentally
 different types, and it is very important to understand the difference between
@@ -19333,7 +19328,7 @@ them. They are called **Domain Services** and **Application Services**.
 
 ---
 
-## Type 1 — Domain Services
+## Subsection 6.2.1  Type 1 — Domain Services
 
 Domain Services contain **pure logic** about the problem domain.
 
@@ -19373,7 +19368,7 @@ Domain Services in SuperManim:
 
 ---
 
-## Type 2 — Application Services
+## Subsection 6.2.2  Type 2 — Application Services
 
 Application Services contain **workflows** — multi-step processes that the
 user triggers through commands. They coordinate many parts of the system.
@@ -19389,7 +19384,7 @@ Application Services in SuperManim:
 |                   APPLICATION SERVICES                         |
 +================================================================+
 |                                                                |
-|  ProjectLifecycleService                                       |
+|  ProjectService                                                |
 |  "Create a project, open one, close one, delete one."          |
 |  Uses: FileStoragePort, ProjectRepositoryPort,                 |
 |        ValidationService, AppStateService                      |
@@ -19408,7 +19403,7 @@ Application Services in SuperManim:
 |  "Link a scene to an audio clip. Verify they match."           |
 |  Uses: SceneWritePort, AudioRepositoryPort, ValidationService  |
 |                                                                |
-|  RenderOrchestrationService                                    |
+|  RenderService                                                 |
 |  "Decide what to render. Render it. Save the result."          |
 |  Uses: SceneReadPort, SceneStatusPort, SceneCachePort,         |
 |        HashService, RenderRunnerPort, FileStoragePort          |
@@ -19423,14 +19418,14 @@ Application Services in SuperManim:
 |                                                                |
 |  AppStateService                                               |
 |  "Remember which project was last open. Track session state."  |
-|  Uses: SessionRepositoryPort                                   |
+|  Uses: SessionRepositoryPort, ProjectSettingsRepositoryPort    |
 |                                                                |
 +================================================================+
 ```
 
 ---
 
-## The Relationship Between the Two Types
+# Section 6.3 The Relationship Between the Two Types the domain services and application services:
 
 Domain Services never call Application Services.
 Application Services call Domain Services to get logic answers.
@@ -19471,7 +19466,7 @@ Application Services call Domain Services to get logic answers.
 
 ---
 
-# PART 2 — WHERE SERVICES LIVE IN THE FULL ARCHITECTURE
+# Section 6.4  WHERE SERVICES LIVE IN THE FULL ARCHITECTURE
 
 Before reading about each service individually, you should see where they all
 sit in the full SuperManim layer stack. This is the view from the top.
@@ -19494,16 +19489,16 @@ sit in the full SuperManim layer stack. This is the view from the top.
 |              | calls a Driving Port (e.g. RenderCommandPort)              |
 |              v                                                            |
 |   +============================================================+          |
-|   |   LAYER 2 + 3 — THE CORE (this is where Services live)    |          |
+|   |   LAYER 2 + 3 — THE CORE (this is where Services live)     |          |
 |   |                                                            |          |
-|   |   APPLICATION SERVICES (Layer 2 — orchestration)          |          |
-|   |   ProjectLifecycleService  SceneService                    |          |
+|   |   APPLICATION SERVICES (Layer 2 — orchestration)           |          |
+|   |   ProjectService  SceneService                             |          |
 |   |   AudioService             SyncService                     |          |
-|   |   RenderOrchestrationService   PreviewService              |          |
+|   |   RenderService   PreviewService                           |          |
 |   |   ExportService            AppStateService                 |          |
 |   |                                                            |          |
 |   |   DOMAIN SERVICES (Layer 3 — pure logic)                   |          |
-|   |   ValidationService    TimelineService    HashService       |          |
+|   |   ValidationService    TimelineService    HashService      |          |
 |   |                                                            |          |
 |   |   ENTITIES (pure data containers)                          |          |
 |   |   Scene  Project  AudioFile  AudioClip  CacheRecord        |          |
@@ -19535,13 +19530,4051 @@ Every service you will read about in this module lives inside that `CORE` box.
 
 ---
 
-# PART 3 — THE DOMAIN SERVICES
+# Section 6.5  THE DOMAIN SERVICES:
 
-## Service 1 — ValidationService
+## Subsection 6.5.1 Domain Validation Services:
+Domain Services are the core of the system, focused purely on logic.
+They take Python objects, apply rules or calculations, and return results.
+They don’t interact with external systems—they never call a Port, read or write files,
+or query a database.
+
+You could run all Domain Services in an empty Python environment without SQLite, FFmpeg,
+or Manim installed, and they would still work. This is because they don’t depend on anything
+outside the code itself.
+
+One common type of Domain Service is the domain validation service.
+Instead of having one big `ValidationService` class that handles every validation rule for scenes,
+audio, projects, and sync, it’s better to separate them. Combining all rules into one class breaks
+the **Single Responsibility Principle (SRP)**.
+
+SRP states that a class should have only one reason to change. If you put scene rules,
+audio rules, project rules, and sync rules all together, the class has multiple reasons to change.
+Every time any rule changes, you must edit the same class, which makes the code messy, risky,
+and hard to maintain.
+
+
+```
++================================================================+
+|         THE PROBLEM WITH ONE BIG ValidationService             |
++================================================================+
+|                                                                |
+|  ONE BIG CLASS:                                                |
+|  validation_service.py                                         |
+|                                                                |
+|  def is_scene_duration_valid(...)     <- scene rule            |
+|  def is_scene_code_path_valid(...)    <- scene rule            |
+|  def is_scene_ready_to_render(...)    <- scene rule            |
+|  def is_audio_file_valid(...)         <- audio rule            |
+|  def is_split_point_valid(...)        <- audio rule            |
+|  def sync_is_valid(...)               <- sync rule             |
+|  def is_project_name_valid(...)       <- project rule          |
+|  def has_enough_disk_space(...)       <- project rule          |
+|                                                                |
+|  PROBLEM:                                                      |
+|  When audio rules change → you edit this file.                 |
+|  When scene rules change → you edit this file.                 |
+|  When project rules change → you edit this file.               |
+|  When sync rules change → you edit this file.                  |
+|  4 reasons to change = 4 responsibilities = SRP VIOLATION.     |
+|                                                                |
++================================================================+
+```
+
+The solution is to split into four focused Domain Services:
+
+```
++================================================================+
+|         THE SOLUTION — FOUR FOCUSED SERVICES                   |
++================================================================+
+|                                                                |
+|  scene_validation_service.py                                   |
+|  audio_validation_service.py                                     |
+|  project_validation_service.py                                 |
+|  sync_validation_service.py                                    |
+|                                                                |
+|  Each one has exactly ONE reason to change.                    |
+|  Each one is in charge of exactly ONE domain's rules.          |
+|  Each one is easy to test independently.                       |
+|  Each one is easy to find and read.                            |
+|                                                                |
++================================================================+
+```
+
+All four are still Domain Services — zero Port dependencies, zero I/O,
+zero database calls. They only use Entity objects and pure Python logic.
+
+
+
+### Subsubsection 6.5.1.1 — Service 1: SceneValidationService
+
+#### Subsubsubsection 6.5.1.1.1 What Is It?
+
+`SceneValidationService` is the rule enforcer for everything related to
+scenes. It answers one type of question: "Is this scene-related data valid
+according to the system's rules?" It never changes scene data. It never saves
+anything. It only inspects data and returns a verdict.
+
+Every Application Service that deals with scenes calls this service before
+doing any real work. Think of it as a security guard standing at the door
+of the scene system. Nothing gets through unless it passes inspection.
+
+#### Subsubsubsection 6.5.1.1.2 Why It Is a Domain Service
+
+It has zero Port dependencies. It takes in a piece of data — a number, a
+string, a Scene object — checks it against a rule, and returns True/False or
+raises a domain exception. It imports from `domain/entities/` only.
+
++================================================================+
+|         SceneValidationService — DEPENDENCY MAP (CORRECTED)    |
++================================================================+
+|                                                                |
+|  IMPORTS:                                                      |
+|  from domain.entities.scene import Scene                       |
+|  from domain.exceptions import (                               |
+|      InvalidSceneDurationError,                                |
+|      InvalidSceneIdError,                                      |
+|      InvalidCodePathFormatError,  <-- Checks format only       |
+|      SceneNotReadyToRenderError,                               |
+|  )                                                             |
+|                                                                |
+|  NO imports from:                                              |
+|  - adapters/        (NO)                                       |
+|  - ports/           (NO)                                       |
+|  - os / pathlib     (NO — strictly NO I/O operations)          |
+|  - sys / io         (NO)                                       |
+|                                                                |
+|  LOGIC CHANGE:                                                 |
+|  - is_code_path_valid() now checks string format/extension     |
+|    (e.g., ends with .py), NOT file existence on disk.          |
+|    Existence check belongs to Application Service via Ports.   |
+|                                                                |
++================================================================+
+
+
+#### Subsubsubsection 6.5.1.1.3 Who Calls SceneValidationService?
+HBefore we look at the callers, remember the golden rule we fixed:
+
+1.SceneValidationService (The Brains):
+It answers questions like "Is the duration positive?" or "Does the path end with .py?".
+It never touches the hard drive.
+
+2.The Callers (The Managers):
+They manage the work. They ask the **Brains** if the data is logical,
+and then they ask the **Ports** (Infrastructure) if the files really exist.
+
+---
+
+##### 1. SceneService (The Editor)
+This service is responsible for creating and editing scenes. It is the most frequent caller of
+the validation service. When a user types a command like `set duration` or `set code path`,
+the SceneService must check the input before saving it.
+
+Why it calls the Validator:*It needs to protect the system from bad data. It acts as a gatekeeper.
+If the user enters a negative duration, the SceneService asks the Validator, and the Validator
+rejects itimmediately.
+
+First, the SceneService takes the user input. It sends the data to the `SceneValidationService`
+to check the rules. If the rules pass, the SceneService then uses a `FileStoragePort` to check
+if the file actually exists on the disk. If everything is okay, it saves the changes to the scene entity.
+
+**For example:**
+```
++---------------------------------------------------------+
+|                  SceneService Flow                      |
++---------------------------------------------------------+
+|                                                         |
+|   User Input: "set scene 1 duration -5"                 |
+|                                                         |
+|   Step 1: Ask Validator                                |
+|   SceneService  --->  SceneValidationService           |
+|                       "Is -5 valid?"                    |
+|                       <-- "NO! Must be positive."       |
+|                                                         |
+|   Result: Operation Stopped. Error shown to user.      |
+|                                                         |
++---------------------------------------------------------+
+```
+
+---
+
+##### 2. RenderOrchestrationService (The Factory)
+
+This service is responsible for the heavy lifting: rendering the final video.
+Rendering takes a lot of time and computer power (CPU/GPU).
+
+**Why it calls the Validator:**
+It would be a disaster to start a 1-hour rendering process only to discover after 50 minutes
+that the scene duration was set to "zero". The Render Service calls the Validator as a safety
+check *before* starting the engine.
+
+**The Workflow:**
+The user commands `render scene 1`. The Render Service pauses.
+It asks the `SceneValidationService`:"Is this scene renderable?
+Do we have a valid duration and a valid path format?".
+
+If the Validator says yes, the Render Service then asks the `FileStoragePort`:
+"Is the code file physically on the disk?". Only then does it start the Manim engine.
+
+**For example:**
+```text
++---------------------------------------------------------+
+|             RenderService Flow                          |
++---------------------------------------------------------+
+|                                                         |
+|   User Command: "render scene 1"                        |
+|                                                         |
+|   Step 1: Logic Check (The Brains)                     |
+|   RenderService  --->  SceneValidationService          |
+|                       "Is scene ready?"                 |
+|                       <-- "Yes, data looks valid."      |
+|                                                         |
+|   Step 2: Reality Check (The Port)                     |
+|   RenderService  --->  FileStoragePort                 |
+|                       "Does file exist on disk?"       |
+|                       <-- "Yes, file found."            |
+|                                                         |
+|   Step 3: Action                                        |
+|   RenderService  --->  ManimAdapter (Start Render)     |
+|                                                         |
++---------------------------------------------------------+
+```
+
+---
+
+##### 3. PreviewService (The Quick Viewer)
+
+This service generates a low-quality preview of the scene.
+It is similar to the Render Service but fasterand lighter.
+
+**Why it calls the Validator:**
+It needs to ensure that the basic requirements for a preview are met.
+It primarily checks that there is a code file path assigned. You cannot preview an empty scene.
+
+**The Workflow:**
+The user commands `preview scene 1`. The Preview Service asks the `SceneValidationService`
+to ensure the code path is not empty and has a valid format (like `.py`).
+Then, it uses the `FileStoragePort` to verify the file exists.
+If all checks pass, it generates the preview.
+
+```
++---------------------------------------------------------+
+|                 PreviewService Flow                     |
++---------------------------------------------------------+
+|                                                         |
+|   User Command: "preview scene 1"                       |
+|                                                         |
+|   Step 1: Logic Check                                  |
+|   PreviewService --->  SceneValidationService          |
+|                       "Is there a code path?"          |
+|                       <-- "Yes, format is .py"          |
+|                                                         |
+|   Step 2: Reality Check                                |
+|   PreviewService --->  FileStoragePort                 |
+|                       "Is the file there?"             |
+|                       <-- "Yes."                        |
+|                                                         |
+|   Step 3: Action                                        |
+|   PreviewService --->  PreviewAdapter (Run Preview)    |
+|                                                         |
++---------------------------------------------------------+
+```
+
+
+#### Subsubsubsection 6.5.1.1.4 The methods and functions of SceneValidationService:
+
+##### Method 1: `is_scene_id_valid`
+
+###### What it does:
+
+This method acts as the first line of defense when a user tries to target a specific scene.
+When a user types a command like `render scene 5`, the system needs to know if "scene 5"
+actually exists in the current project.
+
+This method performs that logical check. It ensures that the identifier provided is not just
+a random number, but a valid reference to a real scene object within the project's boundaries.
+
+It prevents the system from trying to fetch data that does not exist. If this check were not here,
+the system might try to query a database for a non-existent ID or try to render a scene that has no data,
+leading to confusing crashes or generic system errors.By validating the ID first, the system can
+provide a clear, human-readable error message immediately.
+
+###### Rules:
+
+The `scene_id` must be an integer data type. It must be a positive number greater than zero,
+as scene counting starts at 1. Finally, it must be less than or equal to the `total_scenes`
+count for the current project. If a project has 10 scenes, ID 11 is invalid.
+
+##### Parameters:
+
+- `scene_id: int` — The integer identifier that the user provided in the command.
+- `scenes_number: int` — The total count of scenes currently registered in the project.
+
+##### Returns:
+
+Returns `True` if the ID is an integer within the valid range.
+
+##### Raises:
+
+Raises `InvalidSceneIdError` if the ID is non-numeric, negative, zero, or exceeds the total number of scenes.
+
+---
+
+##### Method 2: `is_scene_duration_valid`
+
+###### What it does:
+
+This method validates the time duration of a scene. Time is a critical component of video production. A scene cannot have a duration of zero, because that would result in a still image or a non-existent video frame. A scene cannot have a negative duration, as time cannot move backward in a standard video timeline.
+
+This method ensures that the duration value makes physical sense before it is stored in the Scene Entity. It also checks against a maximum limit defined in the system constants. This prevents a user from accidentally setting a scene duration to an absurdly large number, like a million seconds, which would freeze the rendering process or fill up the hard drive with video data.
+
+##### Rule:
+
+The `duration` must be a numeric value (float or integer). It must be strictly greater than zero. It must also be less than or equal to the `MAX_SCENE_DURATION` constant defined in the system configuration.
+
+##### Parameters:
+
+- `duration: float` — The length of the scene in seconds provided by the user.
+
+##### Returns:
+
+Returns `True` if the duration is a positive, realistic number.
+
+##### Raises:
+
+Raises `InvalidSceneDurationError` if the duration is zero, negative, or exceeds the system maximum.
+
+---
+
+#### Method 3: `is_scene_code_path_valid`
+
+##### What it does:
+
+This method checks the logical validity of the file path string pointing to the Manim Python code. In the context of a Domain Service, this method does **not** check if the file exists on the hard drive (that is the job of an Application Service using a Port). Instead, this method validates the **syntax and format** of the path string itself.
+
+It ensures the path is not an empty string, which would mean no code is assigned. It checks that the path string ends with the correct file extension (`.py`), confirming that the user is pointing to a Python file and not an image or a text file. This catches simple user errors, like typos in the filename, before the system even attempts to look for the file on disk.
+
+##### Rule:
+
+The `path` string must not be empty or None. The string must end with the `.py` extension. The string should ideally not contain illegal characters that are invalid for the operating system's file paths.
+
+##### Parameters:
+
+- `path: str` — The file path string provided by the user.
+
+##### Returns:
+
+Returns `True` if the path string has a valid format and extension.
+
+##### Raises:
+
+Raises `InvalidCodePathError` if the path is empty or does not point to a Python file.
+
+---
+
+#### Method 4: `is_scene_ready_to_render`
+
+##### What it does:
+
+This method acts as the final gatekeeper before a heavy rendering process begins. Rendering a scene with Manim takes time and computer power. It is wasteful to start the rendering engine if the scene is incomplete. This method performs a "completeness check" on the Scene Entity.
+
+It aggregates several checks to ensure the scene is viable. It verifies that the scene has a valid duration assigned. It verifies that a code path has been assigned. It ensures that all the necessary data fields in the Scene Entity are populated. If any piece of the puzzle is missing, this method stops the process, saving the user from a guaranteed failure.
+
+##### Rule:
+
+The `scene` object must have a `scene_duration` that is not None and is valid. The `scene` object must have a `scene_code_path` that is not None and is a valid string format. Note: This domain service method checks the *data integrity* of the scene object. The physical check for file existence on disk is performed by the Application Service calling a Port.
+
+##### Parameters:
+
+- `scene: Scene` — The complete Scene Entity object containing all scene data.
+
+##### Returns:
+
+Returns `True` if the scene entity has all required properties set and logically valid.
+
+##### Raises:
+
+Raises `SceneNotReadyToRenderError` with a specific message detailing exactly which property is missing or invalid (e.g., "Duration not set" or "Code path missing").
+
+---
+
+#### Method 5: `is_scene_fps_valid`
+
+##### What it does:
+
+This method validates the Frames Per Second (FPS) setting for a scene. FPS determines how smooth the video looks. Video standards use specific numbers like 24, 30, or 60. While technically a video could have any FPS, using non-standard values like 7 or 99 can cause playback issues in video players or synchronization issues with audio.
+
+This method enforces a whitelist of accepted values. It ensures that the user chooses a frame rate that is standard and compatible with the rest of the system's video processing pipeline. This guarantees that the final exported video will play correctly on all standard media players.
+
+##### Rule:
+
+The `fps` value must be one of the specific accepted integers defined in the project constants. The accepted values are typically `24`, `30`, and `60`.
+
+##### Parameters:
+
+- `fps: int` — The frames per second value provided by the user.
+
+##### Returns:
+
+Returns `True` if the FPS is one of the allowed standard values.
+
+##### Raises:
+
+Raises `ValueError` if the user attempts to set a non-standard or unsupported FPS value.
+
+---
+
+#### Method 6: `is_scene_resolution_valid`
+
+##### What it does:
+
+This method validates the video resolution string. Resolution determines the width and height of the video in pixels. Users might type this as a string like "1920x1080". This method ensures the string is formatted correctly and that the dimensions match supported video standards.
+
+First, it parses the string to ensure it follows the "WIDTHxHEIGHT" pattern. It checks that both width and height are positive numbers. Second, it checks against a list of supported resolutions (like 480p, 720p, 1080p, 4K). This prevents users from entering nonsensical values like "0x0" or custom sizes that might break the aspect ratio or rendering pipeline.
+
+##### Rule:
+
+The `resolution` string must match the pattern `"INTEGERxINTEGER"`. Both integers must be positive. The resulting resolution must be one of the supported configurations defined in constants: `"854x480"`, `"1280x720"`, `"1920x1080"`, or `"3840x2160"`.
+
+##### Parameters:
+
+- `resolution: str` — The resolution string provided by the user.
+
+##### Returns:
+
+Returns `True` if the format is correct and the resolution is supported.
+
+##### Raises:
+
+Raises `ValueError` if the string format is incorrect (e.g., "1080p") or if the specific resolution is not supported by the tool.
+
+
+
+#### Method 1: `is_scene_id_valid`
+
+##### What it does:
+Checks that a scene_id given by the user actually makes sense. The user might
+type `render scene 99` when the project only has 5 scenes. This method catches
+that before anything breaks.
+
+##### Rule:
+`scene_id` must be an integer, must be greater than zero, and must be less
+than or equal to `total_scenes`.
+
+##### Parameters:
+- `scene_id: int` — the ID the user typed
+- `total_scenes: int` — how many scenes exist in the project
+
+##### Returns:
+ `True` if valid.
+##### Raises:
+`InvalidSceneIdError` if invalid.
+
+---
+
+#### Method 2: `is_scene_duration_valid`
+
+**What it does:**
+Checks that a duration value the user wants to set is a real positive number.
+A duration of zero, negative, or non-numeric is meaningless for a video scene.
+
+**Rule:**
+`duration` must be a float or int, must be strictly greater than zero, and
+must not exceed the maximum allowed scene duration (from constants).
+
+**Parameters:**
+- `duration: float` — the duration value in seconds
+
+**Returns:** `True` if valid.
+**Raises:** `InvalidSceneDurationError` if invalid.
+
+---
+
+#### Method 3: `is_scene_code_path_valid`
+
+**What it does:**
+Checks that a file path the user wants to assign as a scene's code file is
+actually a valid, existing `.py` file. There is no point storing a path that
+points to nothing.
+
+**Rule:**
+The path string must not be empty. The file must exist on disk. The file must
+have a `.py` extension.
+
+**Parameters:**
+- `path: str` — the file path string
+
+**Returns:** `True` if valid.
+**Raises:** `InvalidCodePathError` if invalid.
+
+---
+
+#### Method 4: `is_scene_ready_to_render`
+
+**What it does:**
+Checks that a Scene object has everything it needs before a render can be
+attempted. This is the final gate before Manim is called.
+
+**Rules (all must pass):**
+1. `scene.scene_duration` must not be None and must be > 0
+2. `scene.scene_code_path` must not be None
+3. The file at `scene.scene_code_path` must exist on disk
+
+**Parameters:**
+- `scene: Scene` — the full Scene entity object
+
+**Returns:** `True` if all checks pass.
+**Raises:** `SceneNotReadyToRenderError` with a message naming exactly
+which check failed.
+
+---
+
+#### Method 5: `is_scene_fps_valid`
+
+**What it does:**
+Checks that a frames-per-second value is one of the accepted values.
+Random FPS values like 7 or 99 are not standard and would cause issues
+with video players.
+
+**Rule:**
+`fps` must be one of: `24`, `30`, `60`.
+
+**Parameters:**
+- `fps: int` — the frames per second value
+
+**Returns:** `True` if valid.
+**Raises:** `ValueError` if not one of the accepted values.
+
+---
+
+#### Method 6: `is_scene_resolution_valid`
+
+**What it does:**
+Checks that a resolution string has the correct format and is one of the
+supported values.
+
+**Rule:**
+`resolution` must match the pattern `"WIDTHxHEIGHT"` where both WIDTH and
+HEIGHT are positive integers. Accepted values: `"854x480"`, `"1280x720"`,
+`"1920x1080"`, `"3840x2160"`.
+
+**Parameters:**
+- `resolution: str` — the resolution string
+
+**Returns:** `True` if valid.
+**Raises:** `ValueError` if format is wrong or value is not accepted.
+
+---
+
+### Full Python Class
+
+```python
+# domain/services/scene_validation_service.py
+
+from __future__ import annotations
+
+import os
+import re
+from typing import Final
+
+from domain.entities.scene import Scene
+from domain.exceptions import (
+    InvalidSceneDurationError,
+    InvalidSceneIdError,
+    InvalidCodePathError,
+    SceneNotReadyToRenderError,
+)
+from constants import MAX_SCENE_DURATION_SECONDS, VALID_RESOLUTIONS, VALID_FPS_VALUES
+
+
+class SceneValidationService:
+    """
+    Domain Service — Pure Logic Only.
+
+    Validates all scene-related data before any Application Service
+    acts on it. Has zero Port dependencies. Uses only Entity objects
+    and Python's standard library.
+
+    This class has no __init__ parameters because it holds no state.
+    It is a collection of pure validation functions grouped by domain.
+    All methods are instance methods (not static) so they can be
+    injected and mocked in tests.
+    """
+
+    # ──────────────────────────────────────────────────────────────────
+    #  PUBLIC METHODS
+    # ──────────────────────────────────────────────────────────────────
+
+    def is_scene_id_valid(self, scene_id: int, total_scenes: int) -> bool:
+        """
+        Check that a scene_id is a valid scene number for this project.
+
+        Args:
+            scene_id:     The scene number the user typed (e.g. 3).
+            total_scenes: How many scenes exist in the project (e.g. 5).
+
+        Returns:
+            True if valid.
+
+        Raises:
+            InvalidSceneIdError: If scene_id is out of range or not an int.
+
+        Examples:
+            is_scene_id_valid(3, 5)   -> True
+            is_scene_id_valid(0, 5)   -> raises InvalidSceneIdError
+            is_scene_id_valid(6, 5)   -> raises InvalidSceneIdError
+            is_scene_id_valid(-1, 5)  -> raises InvalidSceneIdError
+        """
+        if not isinstance(scene_id, int):
+            raise InvalidSceneIdError(
+                f"Scene ID must be an integer. Got: {type(scene_id).__name__}"
+            )
+        if scene_id < 1:
+            raise InvalidSceneIdError(
+                f"Scene ID must be at least 1. Got: {scene_id}"
+            )
+        if scene_id > total_scenes:
+            raise InvalidSceneIdError(
+                f"Scene ID {scene_id} does not exist. "
+                f"This project has {total_scenes} scene(s)."
+            )
+        return True
+
+    def is_scene_duration_valid(self, duration: float) -> bool:
+        """
+        Check that a duration value is acceptable for a scene.
+
+        Args:
+            duration: The duration in seconds (e.g. 12.5).
+
+        Returns:
+            True if valid.
+
+        Raises:
+            InvalidSceneDurationError: If duration is zero, negative,
+                                       or exceeds the maximum.
+
+        Examples:
+            is_scene_duration_valid(12.5)    -> True
+            is_scene_duration_valid(0.0)     -> raises error
+            is_scene_duration_valid(-5.0)    -> raises error
+            is_scene_duration_valid(99999.0) -> raises error
+        """
+        if not isinstance(duration, (int, float)):
+            raise InvalidSceneDurationError(
+                f"Duration must be a number. Got: {type(duration).__name__}"
+            )
+        if duration <= 0:
+            raise InvalidSceneDurationError(
+                f"Duration must be greater than zero. Got: {duration}"
+            )
+        if duration > MAX_SCENE_DURATION_SECONDS:
+            raise InvalidSceneDurationError(
+                f"Duration {duration}s exceeds the maximum allowed "
+                f"({MAX_SCENE_DURATION_SECONDS}s)."
+            )
+        return True
+
+    def is_scene_code_path_valid(self, path: str) -> bool:
+        """
+        Check that a code file path points to a real, valid .py file.
+
+        Args:
+            path: The file path string (e.g. "my_scenes/intro.py").
+
+        Returns:
+            True if valid.
+
+        Raises:
+            InvalidCodePathError: If path is empty, not a .py file,
+                                  or does not exist on disk.
+
+        Examples:
+            is_scene_code_path_valid("my_scenes/intro.py")  -> True  (if exists)
+            is_scene_code_path_valid("")                     -> raises error
+            is_scene_code_path_valid("intro.txt")            -> raises error
+            is_scene_code_path_valid("missing.py")           -> raises error
+        """
+        if not path or not path.strip():
+            raise InvalidCodePathError("Code file path cannot be empty.")
+
+        if not path.endswith(".py"):
+            raise InvalidCodePathError(
+                f"Code file must be a Python (.py) file. Got: '{path}'"
+            )
+
+        if not os.path.isfile(path):
+            raise InvalidCodePathError(
+                f"Code file does not exist at path: '{path}'"
+            )
+
+        return True
+
+    def is_scene_ready_to_render(self, scene: Scene) -> bool:
+        """
+        Check that a Scene has everything needed to be rendered.
+        This is the final gate before calling the render engine.
+
+        Args:
+            scene: The full Scene entity object.
+
+        Returns:
+            True if all checks pass.
+
+        Raises:
+            SceneNotReadyToRenderError: With a descriptive message
+                naming exactly which requirement is missing.
+
+        Checks performed (in order):
+            1. scene.scene_duration must not be None and must be > 0
+            2. scene.scene_code_path must not be None or empty
+            3. The file at scene.scene_code_path must exist on disk
+        """
+        if scene.scene_duration is None or scene.scene_duration <= 0:
+            raise SceneNotReadyToRenderError(
+                f"Scene {scene.scene_id} has no valid duration set. "
+                f"Use: set scene {scene.scene_id} duration <seconds>"
+            )
+
+        if not scene.scene_code_path:
+            raise SceneNotReadyToRenderError(
+                f"Scene {scene.scene_id} has no code file assigned. "
+                f"Use: set scene {scene.scene_id} code <path_to_file.py>"
+            )
+
+        if not os.path.isfile(scene.scene_code_path):
+            raise SceneNotReadyToRenderError(
+                f"Scene {scene.scene_id} code file not found on disk: "
+                f"'{scene.scene_code_path}'"
+            )
+
+        return True
+
+    def is_scene_fps_valid(self, fps: int) -> bool:
+        """
+        Check that an FPS value is one of the accepted frame rates.
+
+        Args:
+            fps: The frames-per-second value (e.g. 30).
+
+        Returns:
+            True if valid.
+
+        Raises:
+            ValueError: If fps is not in the accepted set.
+        """
+        if fps not in VALID_FPS_VALUES:
+            raise ValueError(
+                f"FPS must be one of {VALID_FPS_VALUES}. Got: {fps}"
+            )
+        return True
+
+    def is_scene_resolution_valid(self, resolution: str) -> bool:
+        """
+        Check that a resolution string is in the accepted format and
+        one of the supported values.
+
+        Args:
+            resolution: A string like "1920x1080".
+
+        Returns:
+            True if valid.
+
+        Raises:
+            ValueError: If the format is wrong or not a supported value.
+        """
+        pattern = re.compile(r"^\d+x\d+$")
+        if not pattern.match(resolution):
+            raise ValueError(
+                f"Resolution must be in 'WIDTHxHEIGHT' format. Got: '{resolution}'"
+            )
+
+        if resolution not in VALID_RESOLUTIONS:
+            raise ValueError(
+                f"Resolution '{resolution}' is not supported. "
+                f"Accepted values: {VALID_RESOLUTIONS}"
+            )
+
+        return True
+```
+
+### Relationship Diagram
+
+```
+      SceneService                  RenderOrchestrationService
+           |                                  |
+           |                                  |
+           v                                  v
+  +---------------------------+     +---------------------------+
+  |  SceneValidationService   |     |  SceneValidationService   |
+  |                           |     |                           |
+  |  is_scene_id_valid()      |     |  is_scene_ready_to_       |
+  |  is_scene_duration_valid()|     |  render()                 |
+  |  is_scene_code_path_valid()|    +---------------------------+
+  +---------------------------+
+           |
+           | No Port calls.
+           | No DB access.
+           | Only uses:
+           | - Scene entity
+           | - os.path (stdlib)
+           | - constants
+           v
+      PURE RESULT: True or raises a domain exception
+```
+
+---
+
+## Subsection 6.5.2 — Service 2: AudioValidationService
 
 ### What Is It?
 
-`ValidationService` is the **rule enforcer** of SuperManim. It is a Domain
+`AudioValidationService` is the rule enforcer for everything related to
+audio files and audio clips. It answers questions like: "Is this audio file
+path pointing to a real audio file?" or "Is this split point inside the
+audio?" or "Does the total scene duration match the audio duration?"
+
+The last question — duration matching — is the most important validation
+in the entire system. SuperManim's whole audio sync feature depends on the
+total duration of all scenes equaling the duration of the audio file.
+If they do not match, syncing is impossible and meaningless.
+
+### Who Calls AudioValidationService?
+
+```
++------------------------------------------------------------------+
+|  CALLERS OF AudioValidationService                               |
++------------------------------------------------------------------+
+|                                                                  |
+|  AudioService                                                    |
+|  → calls it before loading an audio file                         |
+|  → calls it before splitting audio at a time point               |
+|  → calls it before converting audio format                       |
+|                                                                  |
+|  SyncService                                                     |
+|  → calls is_total_duration_matching() before global sync         |
+|                                                                  |
+|  ExportService                                                   |
+|  → calls all_scenes_have_audio() before assembling final video   |
+|                                                                  |
++------------------------------------------------------------------+
+```
+
+### All Methods — Explained in Full
+
+---
+
+#### Method 1: `is_audio_file_path_valid`
+
+**What it does:**
+Checks that an audio file path points to a real file with a supported audio
+format. This runs before any audio file is loaded into a project.
+
+**Rules:**
+1. The path must not be empty.
+2. The file must exist on disk.
+3. The file extension must be one of: `.mp3`, `.wav`, `.ogg`, `.aac`, `.flac`.
+
+**Parameters:**
+- `path: str` — the audio file path
+
+**Returns:** `True` if valid.
+**Raises:** `InvalidAudioFileError` if any rule fails.
+
+---
+
+#### Method 2: `is_audio_format_valid`
+
+**What it does:**
+Checks that a format string the user wants to convert to is a supported audio
+format. For example, `convert audio xyz` should be rejected.
+
+**Rule:**
+`format_str` must be one of the supported formats: `"mp3"`, `"wav"`, `"ogg"`,
+`"aac"`, `"flac"`.
+
+**Parameters:**
+- `format_str: str` — the format name (e.g. `"wav"`)
+
+**Returns:** `True` if valid.
+**Raises:** `ValueError` if not supported.
+
+---
+
+#### Method 3: `is_split_point_valid`
+
+**What it does:**
+Checks that a time point the user wants to split the audio at is actually
+inside the audio file. Splitting at 0.0 or at the very end makes no sense.
+
+**Rules:**
+1. `split_time_seconds` must be greater than 0.
+2. `split_time_seconds` must be less than `audio_duration_seconds`.
+
+**Parameters:**
+- `split_time_seconds: float` — the time point to split at
+- `audio_duration_seconds: float` — the total duration of the audio file
+
+**Returns:** `True` if valid.
+**Raises:** `InvalidSplitPointError` if out of range.
+
+---
+
+#### Method 4: `is_total_duration_matching`
+
+**What it does:**
+This is the most critical validation in the system. It checks that the sum
+of all scene durations exactly equals the duration of the audio file.
+
+If Scene 1 is 12.5 seconds, Scene 2 is 18.5 seconds, Scene 3 is 16.8 seconds,
+and Scene 4 is 12.2 seconds, their total is 60.0 seconds. The audio file must
+also be 60.0 seconds (within a small tolerance).
+
+If the totals do not match, it is impossible to cut the audio into pieces that
+each match a scene's duration. The entire audio sync workflow would be broken.
+
+**Rules:**
+The absolute difference between total scene duration and audio duration must
+be less than or equal to the tolerance (0.1 seconds by default).
+
+**Parameters:**
+- `scenes: list[Scene]` — all scenes in the project
+- `audio_duration_seconds: float` — the master audio file duration
+- `tolerance_seconds: float` — acceptable mismatch (default 0.1)
+
+**Returns:** `True` if they match.
+**Raises:** `DurationMismatchError` with a detailed message showing both
+values and the difference.
+
+---
+
+#### Method 5: `all_scenes_have_audio`
+
+**What it does:**
+Checks that every single scene in the project has an audio clip assigned.
+This runs just before the final export. The export assembles video + audio
+for each scene. If even one scene has no audio, the export would fail
+or produce a broken video.
+
+**Rule:**
+Every Scene in the list must have `scene.synced_with_audio == True` and
+`scene.audio_clip_path is not None`.
+
+**Parameters:**
+- `scenes: list[Scene]` — all scenes in the project
+
+**Returns:** `True` if all scenes have audio.
+**Raises:** `MissingAudioError` listing exactly which scenes have no audio.
+
+---
+
+### Full Python Class
+
+```python
+# domain/services/audio_validation_service.py
+
+from __future__ import annotations
+
+import os
+from typing import List
+
+from domain.entities.scene import Scene
+from domain.exceptions import (
+    InvalidAudioFileError,
+    InvalidSplitPointError,
+    DurationMismatchError,
+    MissingAudioError,
+)
+from constants import SUPPORTED_AUDIO_FORMATS
+
+
+class AudioValidationService:
+    """
+    Domain Service — Pure Logic Only.
+
+    Validates all audio-related data before any Application Service
+    acts on it. Has zero Port dependencies.
+
+    Rules enforced here are the rules of the AUDIO DOMAIN:
+    - What makes a valid audio file path?
+    - What makes a valid split point?
+    - Does total scene duration match audio duration?
+    - Do all scenes have audio before export?
+    """
+
+    def is_audio_file_path_valid(self, path: str) -> bool:
+        """
+        Check that an audio file path points to a real, supported audio file.
+
+        Args:
+            path: The file path (e.g. "voice_narration.mp3").
+
+        Returns:
+            True if valid.
+
+        Raises:
+            InvalidAudioFileError: If the path is empty, file does not exist,
+                                   or extension is not supported.
+
+        Examples:
+            is_audio_file_path_valid("voice.mp3")   -> True  (if exists)
+            is_audio_file_path_valid("")             -> raises error
+            is_audio_file_path_valid("voice.exe")   -> raises error
+            is_audio_file_path_valid("missing.mp3") -> raises error
+        """
+        if not path or not path.strip():
+            raise InvalidAudioFileError("Audio file path cannot be empty.")
+
+        ext = os.path.splitext(path)[1].lower().lstrip(".")
+        if ext not in SUPPORTED_AUDIO_FORMATS:
+            raise InvalidAudioFileError(
+                f"Unsupported audio format '.{ext}'. "
+                f"Supported formats: {SUPPORTED_AUDIO_FORMATS}"
+            )
+
+        if not os.path.isfile(path):
+            raise InvalidAudioFileError(
+                f"Audio file does not exist at path: '{path}'"
+            )
+
+        return True
+
+    def is_audio_format_valid(self, format_str: str) -> bool:
+        """
+        Check that a target audio format string is supported.
+
+        Args:
+            format_str: The format name (e.g. "wav", "mp3").
+
+        Returns:
+            True if valid.
+
+        Raises:
+            ValueError: If not a supported format.
+        """
+        if format_str.lower() not in SUPPORTED_AUDIO_FORMATS:
+            raise ValueError(
+                f"Audio format '{format_str}' is not supported. "
+                f"Supported formats: {SUPPORTED_AUDIO_FORMATS}"
+            )
+        return True
+
+    def is_split_point_valid(
+        self,
+        split_time_seconds: float,
+        audio_duration_seconds: float,
+    ) -> bool:
+        """
+        Check that a manual split point is inside the audio file's range.
+
+        Args:
+            split_time_seconds:   The time to cut at, in seconds.
+            audio_duration_seconds: Total length of the audio file.
+
+        Returns:
+            True if valid.
+
+        Raises:
+            InvalidSplitPointError: If split_time is <= 0 or >= duration.
+
+        Examples:
+            is_split_point_valid(12.5, 60.0)   -> True
+            is_split_point_valid(0.0, 60.0)    -> raises error  (at start)
+            is_split_point_valid(60.0, 60.0)   -> raises error  (at end)
+            is_split_point_valid(-5.0, 60.0)   -> raises error  (negative)
+        """
+        if split_time_seconds <= 0:
+            raise InvalidSplitPointError(
+                f"Split point must be greater than 0. Got: {split_time_seconds}s"
+            )
+
+        if split_time_seconds >= audio_duration_seconds:
+            raise InvalidSplitPointError(
+                f"Split point ({split_time_seconds}s) must be less than the "
+                f"audio duration ({audio_duration_seconds}s)."
+            )
+
+        return True
+
+    def is_total_duration_matching(
+        self,
+        scenes: List[Scene],
+        audio_duration_seconds: float,
+        tolerance_seconds: float = 0.1,
+    ) -> bool:
+        """
+        Check that the sum of all scene durations matches the audio duration.
+
+        This is the most critical validation in SuperManim. Audio sync
+        depends entirely on this match being correct.
+
+        Args:
+            scenes:                  All scenes in the project.
+            audio_duration_seconds:  Total duration of the master audio file.
+            tolerance_seconds:       Maximum allowed difference (default: 0.1s).
+
+        Returns:
+            True if totals match within tolerance.
+
+        Raises:
+            DurationMismatchError: With both values and the difference shown.
+
+        Example:
+            Scenes: [12.5, 18.5, 16.8, 12.2]
+            Sum   : 60.0 seconds
+            Audio : 60.0 seconds
+            Diff  : 0.0 seconds  → VALID
+
+            Scenes: [12.5, 18.5, 16.8, 15.0]
+            Sum   : 62.8 seconds
+            Audio : 60.0 seconds
+            Diff  : 2.8 seconds  → INVALID (exceeds tolerance)
+        """
+        total_scene_duration = sum(
+            s.scene_duration for s in scenes if s.scene_duration is not None
+        )
+        difference = abs(total_scene_duration - audio_duration_seconds)
+
+        if difference > tolerance_seconds:
+            raise DurationMismatchError(
+                f"Total scene duration ({total_scene_duration:.3f}s) does not "
+                f"match audio duration ({audio_duration_seconds:.3f}s). "
+                f"Difference: {difference:.3f}s. "
+                f"Adjust scene durations so they add up to {audio_duration_seconds:.3f}s."
+            )
+
+        return True
+
+    def all_scenes_have_audio(self, scenes: List[Scene]) -> bool:
+        """
+        Check that every scene in the project has an audio clip assigned.
+        Must pass before final video export is allowed.
+
+        Args:
+            scenes: All scenes in the project.
+
+        Returns:
+            True if every scene has audio.
+
+        Raises:
+            MissingAudioError: Listing the IDs of every scene missing audio.
+        """
+        missing = [
+            s.scene_id
+            for s in scenes
+            if not s.synced_with_audio or not s.audio_clip_path
+        ]
+
+        if missing:
+            raise MissingAudioError(
+                f"The following scenes have no audio clip assigned: "
+                f"{missing}. "
+                f"Run 'sync all' before exporting."
+            )
+
+        return True
+```
+
+---
+
+## Subsection 6.5.3 — Service 3: ProjectValidationService
+
+### What Is It?
+
+`ProjectValidationService` is the rule enforcer for everything related to
+project creation and configuration. Before a new project folder is created,
+before settings are changed, before any project-level action is taken — this
+service checks whether the data makes sense.
+
+### Why These Rules Are Separate
+
+Project creation is an irreversible operation. Once you create a project folder
+on disk, you have to delete it manually if something was wrong. Getting the
+validation right before creation is essential. Keeping these rules in their
+own service means they are easy to find, review, and test independently.
+
+### Who Calls ProjectValidationService?
+
+```
++------------------------------------------------------------------+
+|  CALLERS OF ProjectValidationService                             |
++------------------------------------------------------------------+
+|                                                                  |
+|  ProjectLifecycleService                                         |
+|  → calls is_project_name_valid() before creating a project       |
+|  → calls is_base_path_valid() before creating a project          |
+|  → calls has_enough_disk_space() before creating a project       |
+|                                                                  |
+|  SceneService                                                    |
+|  → calls is_scenes_number_valid() when user sets scenes_number   |
+|                                                                  |
++------------------------------------------------------------------+
+```
+
+### All Methods — Explained in Full
+
+---
+
+#### Method 1: `is_project_name_valid`
+
+**What it does:**
+Checks that a project name the user typed is a safe, usable name. The name
+will be used as a folder name on the operating system, so it must not contain
+characters that operating systems reject in folder names.
+
+**Rules:**
+1. Must not be empty or whitespace-only.
+2. Must not exceed 100 characters.
+3. Must not contain any of: `/ \ : * ? " < > |`
+4. Must not be one of the reserved OS names (e.g. `CON`, `PRN` on Windows).
+5. Must not start or end with a space or dot.
+
+**Parameters:**
+- `name: str` — the project name the user typed
+
+**Returns:** `True` if valid.
+**Raises:** `InvalidProjectNameError` with a specific message.
+
+---
+
+#### Method 2: `is_base_path_valid`
+
+**What it does:**
+Checks that a base path the user specified for their project is a real,
+accessible directory on the file system.
+
+**Rules:**
+1. Path must not be empty.
+2. The directory must exist.
+3. The directory must be writable.
+
+**Parameters:**
+- `path: str` — the base directory path
+
+**Returns:** `True` if valid.
+**Raises:** `InvalidBasePathError` if the path is bad.
+
+---
+
+#### Method 3: `is_scenes_number_valid`
+
+**What it does:**
+Checks that the number of scenes the user wants to create is within the
+accepted range. A project with 0 scenes or millions of scenes makes no sense.
+
+**Rules:**
+1. `n` must be an integer.
+2. `n` must be at least 1 (`MIN_SCENES_NUMBER` from constants).
+3. `n` must not exceed the maximum allowed (from constants).
+
+**Parameters:**
+- `n: int` — the number of scenes
+
+**Returns:** `True` if valid.
+**Raises:** `InvalidScenesNumberError` if out of range.
+
+---
+
+#### Method 4: `has_enough_disk_space`
+
+**What it does:**
+Checks that the disk at the given path has enough free space to safely create
+and use a project. This is a pure logic check — it takes the `free_bytes`
+value as a parameter (read by the adapter) rather than reading it itself.
+
+**Why it receives the bytes instead of reading them:**
+Because reading disk space requires talking to the operating system, which
+is I/O. Domain Services do not do I/O. Instead, the Application Service
+(ProjectLifecycleService) reads the free bytes using `FileStoragePort.get_free_bytes()`,
+then passes that value here for the logical comparison.
+
+**Rule:**
+`free_bytes` must be greater than or equal to `required_bytes`.
+
+**Parameters:**
+- `free_bytes: int` — how many bytes are free on disk (read by adapter)
+- `required_bytes: int` — how many bytes the project needs
+
+**Returns:** `True` if enough space.
+**Raises:** `InsufficientDiskSpaceError` with both values shown.
+
+---
+
+### Full Python Class
+
+```python
+# domain/services/project_validation_service.py
+
+from __future__ import annotations
+
+import re
+import os
+
+from domain.exceptions import (
+    InvalidProjectNameError,
+    InvalidBasePathError,
+    InvalidScenesNumberError,
+    InsufficientDiskSpaceError,
+)
+from constants import (
+    MAX_PROJECT_NAME_LENGTH,
+    MIN_SCENES_NUMBER,
+    MAX_SCENES_NUMBER,
+    RESERVED_OS_NAMES,
+    ILLEGAL_NAME_CHARS,
+)
+
+
+class ProjectValidationService:
+    """
+    Domain Service — Pure Logic Only.
+
+    Validates all project-level data. Has zero Port dependencies.
+
+    NOTE on disk space: has_enough_disk_space() receives the
+    free_bytes as a parameter. The Application Service reads
+    disk space using FileStoragePort and passes the result here.
+    This keeps this class pure (no I/O).
+    """
+
+    def is_project_name_valid(self, name: str) -> bool:
+        """
+        Check that a project name is safe to use as a folder name.
+
+        Args:
+            name: The project name (e.g. "MyAnimation").
+
+        Returns:
+            True if valid.
+
+        Raises:
+            InvalidProjectNameError: With a specific message explaining
+                                     which rule failed.
+
+        Examples:
+            is_project_name_valid("MyAnimation")   -> True
+            is_project_name_valid("")              -> raises error
+            is_project_name_valid("My/Animation")  -> raises error
+            is_project_name_valid("CON")           -> raises error (Windows reserved)
+        """
+        if not name or not name.strip():
+            raise InvalidProjectNameError("Project name cannot be empty.")
+
+        if len(name) > MAX_PROJECT_NAME_LENGTH:
+            raise InvalidProjectNameError(
+                f"Project name is too long ({len(name)} chars). "
+                f"Maximum: {MAX_PROJECT_NAME_LENGTH} chars."
+            )
+
+        for char in ILLEGAL_NAME_CHARS:
+            if char in name:
+                raise InvalidProjectNameError(
+                    f"Project name contains an illegal character: '{char}'. "
+                    f"Illegal characters: {ILLEGAL_NAME_CHARS}"
+                )
+
+        if name.upper() in RESERVED_OS_NAMES:
+            raise InvalidProjectNameError(
+                f"'{name}' is a reserved system name and cannot be used "
+                f"as a project name."
+            )
+
+        if name.startswith(".") or name.endswith("."):
+            raise InvalidProjectNameError(
+                "Project name cannot start or end with a dot."
+            )
+
+        if name != name.strip():
+            raise InvalidProjectNameError(
+                "Project name cannot start or end with a space."
+            )
+
+        return True
+
+    def is_base_path_valid(self, path: str) -> bool:
+        """
+        Check that a base path is an existing, writable directory.
+
+        Args:
+            path: The directory path (e.g. "/home/user/projects").
+
+        Returns:
+            True if valid.
+
+        Raises:
+            InvalidBasePathError: If path is empty, not a directory,
+                                  or not writable.
+        """
+        if not path or not path.strip():
+            raise InvalidBasePathError("Base path cannot be empty.")
+
+        if not os.path.isdir(path):
+            raise InvalidBasePathError(
+                f"Base path does not exist or is not a directory: '{path}'"
+            )
+
+        if not os.access(path, os.W_OK):
+            raise InvalidBasePathError(
+                f"Base path is not writable: '{path}'. "
+                f"Check your file system permissions."
+            )
+
+        return True
+
+    def is_scenes_number_valid(self, n: int) -> bool:
+        """
+        Check that the number of scenes is within the accepted range.
+
+        Args:
+            n: The number of scenes (e.g. 5).
+
+        Returns:
+            True if valid.
+
+        Raises:
+            InvalidScenesNumberError: If n is not an int or out of range.
+
+        Examples:
+            is_scenes_number_valid(5)    -> True
+            is_scenes_number_valid(0)    -> raises error
+            is_scenes_number_valid(-1)   -> raises error
+            is_scenes_number_valid(1000) -> raises error
+        """
+        if not isinstance(n, int):
+            raise InvalidScenesNumberError(
+                f"Number of scenes must be an integer. Got: {type(n).__name__}"
+            )
+
+        if n < MIN_SCENES_NUMBER:
+            raise InvalidScenesNumberError(
+                f"Number of scenes must be at least {MIN_SCENES_NUMBER}. Got: {n}"
+            )
+
+        if n > MAX_SCENES_NUMBER:
+            raise InvalidScenesNumberError(
+                f"Number of scenes cannot exceed {MAX_SCENES_NUMBER}. Got: {n}"
+            )
+
+        return True
+
+    def has_enough_disk_space(
+        self,
+        free_bytes: int,
+        required_bytes: int,
+    ) -> bool:
+        """
+        Check that the available disk space is enough for the project.
+
+        NOTE: This method receives free_bytes as a parameter.
+        The Application Service reads disk space using FileStoragePort
+        and passes the result here. This keeps this class free of I/O.
+
+        Args:
+            free_bytes:     How many bytes are free on the target disk.
+            required_bytes: How many bytes the project needs.
+
+        Returns:
+            True if enough space exists.
+
+        Raises:
+            InsufficientDiskSpaceError: Showing both values in GB.
+        """
+        if free_bytes < required_bytes:
+            free_gb = round(free_bytes / (1024 ** 3), 2)
+            required_gb = round(required_bytes / (1024 ** 3), 2)
+            raise InsufficientDiskSpaceError(
+                f"Not enough disk space. "
+                f"Required: {required_gb} GB. "
+                f"Available: {free_gb} GB."
+            )
+
+        return True
+```
+
+---
+
+## Subsection 6.5.4 — Service 4: SyncValidationService
+
+### What Is It?
+
+`SyncValidationService` is the rule enforcer for the audio-video synchronization
+operation. Syncing is the act of linking a Scene to an AudioClip so that
+when the scene is rendered, its video and audio play together.
+
+This service's most important rule is the **duration matching rule**. Before
+any Scene and AudioClip can be linked, their durations must match within a
+tolerance. This is because the video and audio must end at exactly the same
+moment — if the video is 16.8 seconds but the audio clip is 18.0 seconds,
+the audio will be cut off or the video will end before the audio. Either way,
+the result is broken.
+
+### The Tolerance Explained
+
+Why allow any tolerance at all? Because of floating-point arithmetic. When
+you split an audio file using FFmpeg and then measure the resulting clips,
+the measurements sometimes differ by tiny amounts — like 16.800 vs 16.797.
+These differences are not real errors. They are rounding artifacts. The
+tolerance (50 milliseconds) absorbs these artifacts while still catching
+real mismatches.
+
+```
++================================================================+
+|         THE TOLERANCE RULE — VISUALIZED                        |
++================================================================+
+|                                                                |
+|  Scene 3 duration:   16.800 seconds                            |
+|  Clip 3 duration:    16.797 seconds                            |
+|  Difference:          0.003 seconds  (3 ms)                    |
+|  Tolerance:           0.050 seconds  (50 ms)                   |
+|  3ms < 50ms  -->  WITHIN TOLERANCE  -->  SYNC ALLOWED          |
+|                                                                |
+|  Scene 4 duration:    7.000 seconds                            |
+|  Clip 4 duration:     9.300 seconds                            |
+|  Difference:          2.300 seconds  (2300 ms)                 |
+|  Tolerance:           0.050 seconds  (50 ms)                   |
+|  2300ms > 50ms  -->  EXCEEDS TOLERANCE  -->  SYNC REFUSED      |
+|                                                                |
++================================================================+
+```
+
+### Who Calls SyncValidationService?
+
+```
++------------------------------------------------------------------+
+|  CALLERS OF SyncValidationService                                |
++------------------------------------------------------------------+
+|                                                                  |
+|  SyncService                                                     |
+|  → calls sync_pair_is_valid() before linking one scene+clip      |
+|  → calls all_sync_pairs_are_valid() before "sync all"            |
+|  → calls is_already_synced() to warn about duplicate syncs       |
+|                                                                  |
++------------------------------------------------------------------+
+```
+
+### All Methods — Explained in Full
+
+---
+
+#### Method 1: `sync_pair_is_valid`
+
+**What it does:**
+Checks that one specific Scene can be linked to one specific AudioClip.
+This is the core sync validation.
+
+**Rules:**
+1. Neither `scene.scene_duration` nor `clip.audio_clip_duration` can be None.
+2. The absolute difference between both durations must be ≤ tolerance.
+
+**Parameters:**
+- `scene: Scene` — the scene to link
+- `clip: AudioClip` — the audio clip to link it to
+- `tolerance_seconds: float` — maximum allowed difference (default 0.05)
+
+**Returns:** `True` if valid.
+**Raises:** `SyncValidationError` with both durations and the difference shown.
+
+---
+
+#### Method 2: `all_sync_pairs_are_valid`
+
+**What it does:**
+Runs `sync_pair_is_valid()` on every scene-clip pair at once. This is called
+before the `sync all` command. If even one pair fails, the whole operation
+is refused and the failing pairs are reported.
+
+**Parameters:**
+- `scenes: list[Scene]` — all scenes
+- `clips: list[AudioClip]` — all clips, in matching order
+
+**Returns:** `True` if all pairs are valid.
+**Raises:** `SyncValidationError` listing all failing pairs.
+
+---
+
+#### Method 3: `is_already_synced`
+
+**What it does:**
+Checks whether a scene is already synced. This is used to warn the user
+before overwriting an existing sync link.
+
+**Rule:**
+Returns `True` if `scene.synced_with_audio == True`.
+
+**Parameters:**
+- `scene: Scene` — the scene to check
+
+**Returns:** `True` if already synced, `False` if not yet synced.
+
+---
+
+### Full Python Class
+
+```python
+# domain/services/sync_validation_service.py
+
+from __future__ import annotations
+
+from typing import List, Tuple
+
+from domain.entities.scene import Scene
+from domain.entities.audio_clip import AudioClip
+from domain.exceptions import SyncValidationError
+
+
+class SyncValidationService:
+    """
+    Domain Service — Pure Logic Only.
+
+    Validates all sync operations before SyncService commits them.
+    Has zero Port dependencies.
+
+    The sync operation links a Scene to an AudioClip so their
+    durations match exactly. This service enforces that rule.
+    """
+
+    DEFAULT_TOLERANCE_SECONDS: float = 0.05  # 50 milliseconds
+
+    def sync_pair_is_valid(
+        self,
+        scene: Scene,
+        clip: AudioClip,
+        tolerance_seconds: float = DEFAULT_TOLERANCE_SECONDS,
+    ) -> bool:
+        """
+        Check that one Scene can be linked to one AudioClip.
+
+        The durations must match within the given tolerance.
+
+        Args:
+            scene:              The scene to link.
+            clip:               The audio clip to link it to.
+            tolerance_seconds:  Maximum allowed duration difference.
+
+        Returns:
+            True if the pair is valid.
+
+        Raises:
+            SyncValidationError: Showing both durations and the gap.
+
+        Example:
+            Scene 3 duration: 16.800s
+            Clip 3 duration:  16.797s
+            Difference:        0.003s  <- within 0.05s tolerance -> OK
+
+            Scene 4 duration:  7.000s
+            Clip 4 duration:   9.300s
+            Difference:        2.300s  <- exceeds 0.05s tolerance -> FAIL
+        """
+        if scene.scene_duration is None:
+            raise SyncValidationError(
+                f"Cannot sync Scene {scene.scene_id}: scene has no duration set."
+            )
+
+        if clip.audio_clip_duration is None:
+            raise SyncValidationError(
+                f"Cannot sync Scene {scene.scene_id} to Clip {clip.audio_clip_id}: "
+                f"clip has no duration recorded."
+            )
+
+        difference = abs(scene.scene_duration - clip.audio_clip_duration)
+
+        if difference > tolerance_seconds:
+            raise SyncValidationError(
+                f"Cannot sync Scene {scene.scene_id} to Clip {clip.audio_clip_id}. "
+                f"Duration mismatch: "
+                f"Scene={scene.scene_duration:.3f}s, "
+                f"Clip={clip.audio_clip_duration:.3f}s, "
+                f"Difference={difference:.3f}s "
+                f"(tolerance is {tolerance_seconds}s). "
+                f"Adjust the scene duration to match the clip."
+            )
+
+        return True
+
+    def all_sync_pairs_are_valid(
+        self,
+        scenes: List[Scene],
+        clips: List[AudioClip],
+        tolerance_seconds: float = DEFAULT_TOLERANCE_SECONDS,
+    ) -> bool:
+        """
+        Check that ALL scene-clip pairs are valid before 'sync all'.
+
+        Runs sync_pair_is_valid() on every pair. Collects all failures
+        and reports them together rather than stopping at the first one.
+
+        Args:
+            scenes:             All scenes in order.
+            clips:              All clips in matching order.
+            tolerance_seconds:  Maximum allowed duration difference.
+
+        Returns:
+            True if all pairs are valid.
+
+        Raises:
+            SyncValidationError: Listing every failing pair.
+        """
+        if len(scenes) != len(clips):
+            raise SyncValidationError(
+                f"Number of scenes ({len(scenes)}) does not match "
+                f"number of audio clips ({len(clips)}). "
+                f"Cannot sync all."
+            )
+
+        failures: List[str] = []
+
+        for scene, clip in zip(scenes, clips):
+            if scene.scene_duration is None or clip.audio_clip_duration is None:
+                failures.append(
+                    f"  Scene {scene.scene_id} <-> Clip {clip.audio_clip_id}: "
+                    f"missing duration"
+                )
+                continue
+
+            difference = abs(scene.scene_duration - clip.audio_clip_duration)
+            if difference > tolerance_seconds:
+                failures.append(
+                    f"  Scene {scene.scene_id} <-> Clip {clip.audio_clip_id}: "
+                    f"Scene={scene.scene_duration:.3f}s, "
+                    f"Clip={clip.audio_clip_duration:.3f}s, "
+                    f"Diff={difference:.3f}s"
+                )
+
+        if failures:
+            failure_list = "\n".join(failures)
+            raise SyncValidationError(
+                f"The following scene-clip pairs have mismatched durations:\n"
+                f"{failure_list}\n"
+                f"Fix the durations before running 'sync all'."
+            )
+
+        return True
+
+    def is_already_synced(self, scene: Scene) -> bool:
+        """
+        Check whether a scene already has an audio clip linked to it.
+
+        Args:
+            scene: The scene to inspect.
+
+        Returns:
+            True if already synced, False if not.
+        """
+        return scene.synced_with_audio is True and scene.audio_clip_path is not None
+```
+
+---
+
+## Subsection 6.5.5 — Service 5: TimelineService
+
+### What Is It?
+
+`TimelineService` is the **time calculator** of SuperManim. It takes a list
+of Scene objects and calculates exactly when each scene starts and ends in the
+final video. These calculations are pure arithmetic — no I/O, no database,
+no external tools.
+
+This service is critical because SuperManim's audio synchronization depends
+entirely on knowing the exact second where each scene begins. If Scene 2 must
+match audio that starts at second 12.5, the system must know that Scene 2
+starts at exactly 12.5 — not 12.4, not 12.6.
+
+### The Core Calculation
+
+Every scene's start time is the sum of all durations of the scenes before it:
+
+```
++================================================================+
+|              THE TIMELINE CALCULATION — FULL EXAMPLE           |
++================================================================+
+|                                                                |
+|  Input: 5 scenes with these durations:                         |
+|                                                                |
+|  Scene 1:  duration = 12.5 sec                                 |
+|  Scene 2:  duration = 18.5 sec                                 |
+|  Scene 3:  duration = 16.8 sec                                 |
+|  Scene 4:  duration =  7.0 sec                                 |
+|  Scene 5:  duration =  5.2 sec                                 |
+|                                                                |
+|  Scene 1:  start =  0.0             end =  0.0 + 12.5 = 12.5  |
+|  Scene 2:  start = 12.5             end = 12.5 + 18.5 = 31.0  |
+|  Scene 3:  start = 31.0             end = 31.0 + 16.8 = 47.8  |
+|  Scene 4:  start = 47.8             end = 47.8 +  7.0 = 54.8  |
+|  Scene 5:  start = 54.8             end = 54.8 +  5.2 = 60.0  |
+|                                                                |
+|  Total video duration = 60.0 seconds                           |
+|  (Must equal audio file duration for sync to work.)            |
+|                                                                |
++================================================================+
+```
+
+### Full Python Class
+
+```python
+# domain/services/timeline_service.py
+
+from __future__ import annotations
+
+from typing import List, Optional
+
+from domain.entities.scene import Scene
+
+
+class TimelineService:
+    """
+    Domain Service — Pure Logic Only.
+
+    Calculates scene start times and end times from their durations.
+    Has zero Port dependencies. Pure arithmetic.
+
+    Every time a scene duration changes, the Application Service
+    calls this service to recalculate the affected start times
+    and then saves the updated scenes.
+    """
+
+    def calculate_timeline(self, scenes: List[Scene]) -> List[Scene]:
+        """
+        Calculate and set start_time and end_time for all scenes.
+
+        Iterates through all scenes in order. Each scene's start_time
+        is the end_time of the previous scene.
+
+        Args:
+            scenes: All scenes in the project, in order by scene_index.
+
+        Returns:
+            The same list of scenes with start_time and end_time
+            filled in on every scene. Scenes with no duration are
+            given None for both times.
+
+        Example:
+            scenes[0].scene_duration = 12.5
+            scenes[1].scene_duration = 18.5
+            After call:
+            scenes[0].scene_start_time = 0.0,  scene_end_time = 12.5
+            scenes[1].scene_start_time = 12.5, scene_end_time = 31.0
+        """
+        current_time: float = 0.0
+
+        for scene in scenes:
+            if scene.scene_duration is None:
+                scene.scene_start_time = None
+                scene.scene_end_time = None
+            else:
+                scene.scene_start_time = round(current_time, 6)
+                scene.scene_end_time   = round(current_time + scene.scene_duration, 6)
+                current_time = scene.scene_end_time
+
+        return scenes
+
+    def get_total_duration(self, scenes: List[Scene]) -> float:
+        """
+        Calculate the total duration of all scenes combined.
+
+        Scenes with no duration set are treated as 0.
+
+        Args:
+            scenes: All scenes in the project.
+
+        Returns:
+            The sum of all scene durations in seconds.
+
+        Example:
+            scenes with durations [12.5, 18.5, 16.8, 7.0, 5.2]
+            → returns 60.0
+        """
+        return sum(
+            s.scene_duration for s in scenes if s.scene_duration is not None
+        )
+
+    def get_start_time_for_scene(
+        self,
+        scenes: List[Scene],
+        scene_id: int,
+    ) -> Optional[float]:
+        """
+        Get the start time of one specific scene by its ID.
+
+        Args:
+            scenes:   All scenes in the project.
+            scene_id: The ID of the scene you want the start time for.
+
+        Returns:
+            The start_time in seconds, or None if the scene has
+            no duration set.
+
+        Raises:
+            ValueError: If no scene with this ID exists in the list.
+        """
+        for scene in scenes:
+            if scene.scene_id == scene_id:
+                return scene.scene_start_time
+
+        raise ValueError(
+            f"No scene with ID {scene_id} found in the provided scene list."
+        )
+
+    def recalculate_after_change(
+        self,
+        scenes: List[Scene],
+        changed_scene_id: int,
+    ) -> List[Scene]:
+        """
+        Recalculate start/end times only for scenes AFTER the changed one.
+
+        When one scene's duration changes, only its own end_time and the
+        start_times of all following scenes need updating. Scenes before
+        the changed one are not affected.
+
+        This is more efficient than recalculating everything for large
+        projects where only one scene changed.
+
+        Args:
+            scenes:           All scenes, in order.
+            changed_scene_id: The ID of the scene whose duration changed.
+
+        Returns:
+            The updated list of scenes.
+
+        Example:
+            5 scenes, Scene 3 duration changed.
+            Scene 1 → NOT recalculated (before Scene 3)
+            Scene 2 → NOT recalculated (before Scene 3)
+            Scene 3 → recalculated (changed)
+            Scene 4 → recalculated (after Scene 3)
+            Scene 5 → recalculated (after Scene 3)
+        """
+        # Find the position of the changed scene
+        changed_index = None
+        for i, scene in enumerate(scenes):
+            if scene.scene_id == changed_scene_id:
+                changed_index = i
+                break
+
+        if changed_index is None:
+            # Changed scene not found — recalculate everything to be safe
+            return self.calculate_timeline(scenes)
+
+        # Get the start_time of the changed scene (which stays the same)
+        start_time_at_change = scenes[changed_index].scene_start_time or 0.0
+
+        # Recalculate from the changed scene onward
+        current_time = start_time_at_change
+        for scene in scenes[changed_index:]:
+            if scene.scene_duration is None:
+                scene.scene_start_time = None
+                scene.scene_end_time = None
+            else:
+                scene.scene_start_time = round(current_time, 6)
+                scene.scene_end_time   = round(current_time + scene.scene_duration, 6)
+                current_time = scene.scene_end_time
+
+        return scenes
+```
+
+---
+
+## Subsection 6.5.6 — Service 6: HashService
+
+### What Is It?
+
+`HashService` is the **fingerprint calculator** of SuperManim. Its single job
+is to compute SHA-256 hashes of files or strings. This is the engine behind
+SuperManim's incremental rendering feature — the feature that lets you skip
+re-rendering scenes whose code has not changed.
+
+A SHA-256 hash is a 64-character string computed from the exact byte-by-byte
+contents of a file. If you change even ONE character in the file, the hash
+becomes completely different. If the file stays exactly the same, the hash
+stays exactly the same.
+
+### Full Python Class
+
+```python
+# domain/services/hash_service.py
+
+from __future__ import annotations
+
+import hashlib
+from typing import Optional
+
+
+class HashService:
+    """
+    Domain Service — Pure Logic Only.
+
+    Computes SHA-256 fingerprints of files and strings.
+    Has zero Port dependencies. Uses Python's built-in hashlib.
+
+    This service is the foundation of SuperManim's smart
+    incremental rendering: if a scene's code file hash
+    matches the stored hash, the scene is skipped.
+    """
+
+    CHUNK_SIZE: int = 65536  # Read files in 64 KB chunks for efficiency
+
+    def compute_file_hash(self, file_path: str) -> str:
+        """
+        Compute the SHA-256 hash of a file on disk.
+
+        Reads the file in chunks so large files do not fill memory.
+
+        Args:
+            file_path: Path to the file to hash.
+
+        Returns:
+            A 64-character lowercase hex string (SHA-256 digest).
+
+        Raises:
+            FileNotFoundError: If the file does not exist.
+            IOError: If the file cannot be read.
+
+        Example:
+            compute_file_hash("my_scenes/example.py")
+            → "a3f8c2d1e4b9ff37c128a6d9e0b45721b3c8e9f0d2a7c5e1b4f8a2d6c9e3b7f1"
+        """
+        sha256 = hashlib.sha256()
+
+        with open(file_path, "rb") as f:
+            while True:
+                chunk = f.read(self.CHUNK_SIZE)
+                if not chunk:
+                    break
+                sha256.update(chunk)
+
+        return sha256.hexdigest()
+
+    def compute_string_hash(self, text: str) -> str:
+        """
+        Compute the SHA-256 hash of a plain text string.
+
+        Args:
+            text: The string to hash.
+
+        Returns:
+            A 64-character lowercase hex string.
+
+        Example:
+            compute_string_hash("Hello World")
+            → "a591a6d40bf420404a011733cfb7b190d62c65bf0bcda32b..."
+        """
+        return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+    def hashes_match(self, hash_a: Optional[str], hash_b: Optional[str]) -> bool:
+        """
+        Compare two hash strings for equality.
+
+        If either hash is None, they are considered NOT matching.
+        (A None hash means "never computed" which always means "needs render".)
+
+        Args:
+            hash_a: First hash string (or None).
+            hash_b: Second hash string (or None).
+
+        Returns:
+            True if both are non-None and identical.
+            False if either is None or they differ.
+
+        Example:
+            hashes_match("abc123", "abc123")  → True
+            hashes_match("abc123", "xyz789")  → False
+            hashes_match(None, "abc123")      → False
+            hashes_match(None, None)          → False
+        """
+        if hash_a is None or hash_b is None:
+            return False
+        return hash_a == hash_b
+
+    def file_has_changed(
+        self,
+        file_path: str,
+        stored_hash: Optional[str],
+    ) -> bool:
+        """
+        Check whether a file's content has changed since the stored hash
+        was recorded.
+
+        Computes the current hash of the file and compares it to the
+        stored hash. If they differ (or if the stored hash is None),
+        the file has changed.
+
+        Args:
+            file_path:   Path to the file on disk.
+            stored_hash: The hash stored from the last render (or None).
+
+        Returns:
+            True if the file has changed (needs re-render).
+            False if the file is identical to when it was last rendered.
+
+        This method combines compute_file_hash + hashes_match in one
+        convenient call for the RenderOrchestrationService.
+        """
+        current_hash = self.compute_file_hash(file_path)
+        return not self.hashes_match(current_hash, stored_hash)
+```
+
+---
+
+---
+
+# SECTION 6.6 — APPLICATION SERVICES
+
+Application Services are where the real work gets done. They coordinate
+multi-step workflows. They call Domain Services for logic. They call Ports
+for I/O. They use Entity objects as data carriers throughout.
+
+The key rule: **any check that requires talking to a Port belongs here, not
+in a Domain Service.** For example, checking whether a project folder exists
+on disk requires calling `FileStoragePort.directory_exists()`. That call goes
+in the Application Service, not in `ProjectValidationService`.
+
+```
++================================================================+
+|              THE EIGHT APPLICATION SERVICES                    |
++================================================================+
+|                                                                |
+|  Subsection 6.6.1  AppStateService                             |
+|  "Which project is currently open?"                            |
+|                                                                |
+|  Subsection 6.6.2  ProjectLifecycleService                     |
+|  "Create, open, close, and delete projects."                   |
+|                                                                |
+|  Subsection 6.6.3  SceneService                                |
+|  "Add, update, and delete scenes."                             |
+|                                                                |
+|  Subsection 6.6.4  AudioService                                |
+|  "Load, split, and convert audio."                             |
+|                                                                |
+|  Subsection 6.6.5  SyncService                                 |
+|  "Link scenes to audio clips."                                 |
+|                                                                |
+|  Subsection 6.6.6  RenderOrchestrationService                  |
+|  "Decide what to render and render it."                        |
+|                                                                |
+|  Subsection 6.6.7  PreviewService                              |
+|  "Generate quick low-quality previews."                        |
+|                                                                |
+|  Subsection 6.6.8  ExportService                               |
+|  "Assemble all clips into the final video."                    |
+|                                                                |
++================================================================+
+```
+
+---
+
+## Subsection 6.6.1 — Service 7: AppStateService
+
+### What Is It?
+
+`AppStateService` is the **session memory** of SuperManim. It runs from the
+moment the tool starts to the moment it closes. It has one job: track the
+global state of the tool — not the state of any project, but the state of
+the tool itself.
+
+The most important thing it tracks is: **is there a project currently open?**
+And if yes, which one?
+
+This service is slightly special. It does not live in `core/services/` like
+the other application services. It lives in its own `app_state/` folder.
+This is intentional: it manages state that exists BEFORE any project is
+open. It is always running. All other services only run when they are needed.
+
+### The Two States of the Tool
+
+```
++================================================================+
+|              THE TWO STATES APPSTATESERVICE TRACKS            |
++================================================================+
+|                                                                |
+|  STATE 1 — No Project Open                                     |
+|  ──────────────────────────────────────────────────────────── |
+|  session.is_project_open = False                               |
+|  session.current_project_name = None                           |
+|                                                                |
+|  Shell prompt: supermanim>                                     |
+|  Available commands: new project, open project, list, exit     |
+|  All other commands print: "No project is open."              |
+|                                                                |
+|  STATE 2 — One Project Open                                    |
+|  ──────────────────────────────────────────────────────────── |
+|  session.is_project_open = True                                |
+|  session.current_project_name = "MyAnimation"                  |
+|                                                                |
+|  Shell prompt: supermanim [MyAnimation]>                       |
+|  All commands available.                                       |
+|                                                                |
++================================================================+
+```
+
+### What AppStateService Uses
+
+```
+AppStateService
+    |
+    |--- SessionRepositoryPort    (reads/writes session.db)
+         Implemented by: SqliteAppStateRepository
+```
+
+It calls ONE Port only. No domain service calls. No other service calls.
+
+### Full Python Class
+
+```python
+# app_state/app_state_service.py
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import List, Optional
+
+from domain.ports.repository_ports.session_repository_port import SessionRepositoryPort
+
+
+@dataclass
+class AppSession:
+    """
+    A simple data object holding the current session state.
+    This is what AppStateService keeps in memory.
+    """
+    is_project_open:      bool
+    current_project_name: Optional[str]
+    current_project_path: Optional[str]
+
+
+@dataclass
+class RecentProject:
+    """One entry in the recent projects list."""
+    project_name: str
+    project_path: str
+    last_opened_at: str
+    open_count: int
+
+
+class AppStateService:
+    """
+    Application Service.
+
+    Manages the global session state of the SuperManim tool.
+    Reads from and writes to session.db via SessionRepositoryPort.
+
+    This is the ONLY service that reads or writes session.db.
+    No other service touches this file.
+
+    Always running. Always in memory. The guardian of STATE 1 vs STATE 2.
+    """
+
+    def __init__(self, session_repo: SessionRepositoryPort) -> None:
+        self._session_repo = session_repo
+        self._session: Optional[AppSession] = None
+
+    # ──────────────────────────────────────────────────────────────────
+    #  STARTUP
+    # ──────────────────────────────────────────────────────────────────
+
+    def initialize(self) -> AppSession:
+        """
+        Load the session state from session.db on startup.
+
+        Called once by bootstrap.py when the tool starts.
+
+        Returns:
+            The current AppSession. If no session.db exists yet,
+            returns a fresh session with is_project_open = False.
+        """
+        raw = self._session_repo.load_session()
+        if raw is None:
+            self._session = AppSession(
+                is_project_open=False,
+                current_project_name=None,
+                current_project_path=None,
+            )
+        else:
+            self._session = AppSession(
+                is_project_open=raw.is_project_open,
+                current_project_name=raw.last_project_name,
+                current_project_path=raw.last_project_path,
+            )
+        return self._session
+
+    # ──────────────────────────────────────────────────────────────────
+    #  READ
+    # ──────────────────────────────────────────────────────────────────
+
+    def get_session(self) -> AppSession:
+        """
+        Return the current in-memory session state.
+
+        Called by CliShell before every command to check STATE 1 vs 2.
+
+        Returns:
+            The AppSession object.
+
+        Raises:
+            RuntimeError: If initialize() was never called.
+        """
+        if self._session is None:
+            raise RuntimeError(
+                "AppStateService.initialize() must be called before get_session()."
+            )
+        return self._session
+
+    def is_project_open(self) -> bool:
+        """
+        Quick check: is any project currently open?
+
+        Returns:
+            True if a project is open (STATE 2).
+            False if no project is open (STATE 1).
+        """
+        return self.get_session().is_project_open
+
+    def get_recent_projects(self) -> List[RecentProject]:
+        """
+        Return the list of recently opened projects.
+
+        Sorted by most-recently-opened first.
+
+        Returns:
+            A list of RecentProject objects (up to 10).
+        """
+        return self._session_repo.load_recent_projects()
+
+    # ──────────────────────────────────────────────────────────────────
+    #  WRITE
+    # ──────────────────────────────────────────────────────────────────
+
+    def set_project_open(self, project_name: str, project_path: str) -> None:
+        """
+        Mark a project as open in memory and in session.db.
+
+        Also adds or updates this project in the recent projects list.
+
+        Args:
+            project_name: The name of the project.
+            project_path: The full folder path of the project.
+
+        Called by: ProjectLifecycleService after opening a project.
+        """
+        self._session = AppSession(
+            is_project_open=True,
+            current_project_name=project_name,
+            current_project_path=project_path,
+        )
+        self._session_repo.save_session(
+            is_project_open=True,
+            project_name=project_name,
+            project_path=project_path,
+        )
+        self._session_repo.upsert_recent_project(
+            project_name=project_name,
+            project_path=project_path,
+        )
+
+    def set_project_closed(self) -> None:
+        """
+        Mark no project as open in memory and in session.db.
+
+        Called by: ProjectLifecycleService when closing a project.
+        """
+        self._session = AppSession(
+            is_project_open=False,
+            current_project_name=None,
+            current_project_path=None,
+        )
+        self._session_repo.save_session(
+            is_project_open=False,
+            project_name=None,
+            project_path=None,
+        )
+
+    def try_reopen_last_project(self) -> Optional[AppSession]:
+        """
+        At startup: if session.db says a project was last open,
+        return its info so ProjectLifecycleService can try to reopen it.
+
+        Returns:
+            The AppSession if a project was last open (is_project_open=True).
+            None if the last session had no open project.
+
+        Called by: bootstrap.py during startup.
+        """
+        session = self.get_session()
+        if session.is_project_open and session.current_project_path:
+            return session
+        return None
+```
+
+---
+
+## Subsection 6.6.2 — Service 8: ProjectLifecycleService
+
+### What Is It?
+
+`ProjectLifecycleService` manages the complete life of a project — from the
+moment it is created to the moment it is deleted. It coordinates the file
+system operations, the database initialization, and the session state.
+
+```
++================================================================+
+|         THE FOUR LIFECYCLE STAGES IT MANAGES                   |
++================================================================+
+|                                                                |
+|  BIRTH        "new project MyAnimation"                        |
+|  Create the folder. Create the DB. Open the project.           |
+|                                                                |
+|  OPEN         "open project MyAnimation"                       |
+|  Load the existing project from disk into memory.              |
+|                                                                |
+|  CLOSE        "close project"                                  |
+|  Save state. Clear memory. Go back to STATE 1.                 |
+|                                                                |
+|  DEATH        "delete project MyAnimation"                     |
+|  Close first. Then delete the entire project folder.           |
+|                                                                |
++================================================================+
+```
+
+### Ports and Domain Services It Uses
+
+```
+ProjectLifecycleService
+    |
+    |--- ProjectValidationService    (Domain: validate name, path, disk)
+    |--- FileStoragePort             (create/delete folders, get free bytes)
+    |--- ProjectRepositoryPort       (init/read project_data.db)
+    |--- AppStateService             (update session state)
+    |--- NotificationPort            (print messages to user)
+```
+
+### Full Python Class
+
+```python
+# core/services/project_lifecycle_service.py
+
+from __future__ import annotations
+
+from typing import Optional
+
+from domain.entities.project import Project
+from domain.ports.repository_ports.project_repository_port import ProjectRepositoryPort
+from domain.ports.system_ports.file_storage_port import FileStoragePort
+from domain.ports.notification_ports.notification_port import NotificationPort
+from domain.services.project_validation_service import ProjectValidationService
+from app_state.app_state_service import AppStateService
+from constants import (
+    PROJECT_SUBDIRS,
+    ASSETS_SUBDIRS,
+    MIN_ABS_DISK_SPACE_BYTES,
+)
+
+
+class ProjectLifecycleService:
+    """
+    Application Service.
+
+    Manages creating, opening, closing, and deleting projects.
+    Coordinates: ProjectValidationService, FileStoragePort,
+    ProjectRepositoryPort, and AppStateService.
+    """
+
+    def __init__(
+        self,
+        project_validation: ProjectValidationService,
+        file_storage:       FileStoragePort,
+        project_repo:       ProjectRepositoryPort,
+        app_state:          AppStateService,
+        notifier:           NotificationPort,
+    ) -> None:
+        self._project_validation = project_validation
+        self._file_storage       = file_storage
+        self._project_repo       = project_repo
+        self._app_state          = app_state
+        self._notifier           = notifier
+        self._current_project:   Optional[Project] = None
+
+    # ──────────────────────────────────────────────────────────────────
+    #  CREATE
+    # ──────────────────────────────────────────────────────────────────
+
+    def create_project(self, name: str, base_path: str) -> Project:
+        """
+        Create a brand new project from scratch.
+
+        Steps:
+            1.  Validate project name.
+            2.  Validate base path exists and is writable.
+            3.  Check disk space.
+            4.  Build the full project path.
+            5.  Check: does this project folder already exist?
+            6.  Create the project root folder.
+            7.  Create all subfolders (scenes/, audio_clips/, etc.)
+            8.  Initialize project_data.db inside the folder.
+            9.  Save the Project entity to the database.
+            10. Update AppStateService: project is now open.
+            11. Load the project into memory.
+            12. Notify the user.
+
+        Args:
+            name:      The project name (e.g. "MyAnimation").
+            base_path: The parent directory (e.g. "/home/user/projects").
+
+        Returns:
+            The newly created Project entity.
+
+        Raises:
+            InvalidProjectNameError:    If name fails validation.
+            InvalidBasePathError:       If base_path is invalid.
+            InsufficientDiskSpaceError: If not enough free space.
+            ProjectAlreadyExistsError:  If a folder with this name exists.
+        """
+        # Step 1: Validate name
+        self._project_validation.is_project_name_valid(name)
+
+        # Step 2: Validate base path (checks it exists and is writable via OS)
+        self._project_validation.is_base_path_valid(base_path)
+
+        # Step 3: Check disk space
+        free_bytes = self._file_storage.get_free_bytes(base_path)
+        self._project_validation.has_enough_disk_space(
+            free_bytes=free_bytes,
+            required_bytes=MIN_ABS_DISK_SPACE_BYTES,
+        )
+
+        # Step 4: Build full project path
+        project_path = self._file_storage.join_path(base_path, name)
+
+        # Step 5: Check if already exists
+        if self._file_storage.directory_exists(project_path):
+            raise ProjectAlreadyExistsError(
+                f"A project folder already exists at: '{project_path}'"
+            )
+
+        # Step 6: Create root folder
+        self._file_storage.create_directory(project_path)
+
+        # Step 7: Create subfolders
+        for subdir in PROJECT_SUBDIRS:
+            self._file_storage.create_directory(
+                self._file_storage.join_path(project_path, subdir)
+            )
+        for subdir in ASSETS_SUBDIRS:
+            self._file_storage.create_directory(
+                self._file_storage.join_path(project_path, "assets", subdir)
+            )
+
+        # Step 8 + 9: Initialize database and save project record
+        db_path = self._file_storage.join_path(project_path, "project_data.db")
+        project = Project(
+            project_name=name,
+            project_path=project_path,
+            project_db_path=db_path,
+        )
+        self._project_repo.initialize_database(db_path)
+        self._project_repo.save_project(project)
+
+        # Step 10: Update session
+        self._app_state.set_project_open(name, project_path)
+
+        # Step 11: Load into memory
+        self._current_project = project
+
+        # Step 12: Notify
+        self._notifier.send_success(
+            f"Project '{name}' created successfully at: {project_path}"
+        )
+
+        return project
+
+    # ──────────────────────────────────────────────────────────────────
+    #  OPEN
+    # ──────────────────────────────────────────────────────────────────
+
+    def open_project(self, project_path: str) -> Project:
+        """
+        Open an existing project from its folder path.
+
+        Steps:
+            1. Check the folder exists.
+            2. Check project_data.db exists inside it.
+            3. Load the Project entity from the database.
+            4. Update AppStateService.
+            5. Load into memory.
+            6. Notify the user.
+
+        Args:
+            project_path: The full path to the project folder.
+
+        Returns:
+            The loaded Project entity.
+
+        Raises:
+            ProjectNotFoundError: If the folder or database is missing.
+        """
+        if not self._file_storage.directory_exists(project_path):
+            raise ProjectNotFoundError(
+                f"Project folder not found: '{project_path}'"
+            )
+
+        db_path = self._file_storage.join_path(project_path, "project_data.db")
+        if not self._file_storage.file_exists(db_path):
+            raise ProjectNotFoundError(
+                f"project_data.db not found in: '{project_path}'. "
+                f"This may not be a valid SuperManim project folder."
+            )
+
+        project = self._project_repo.load_project(db_path)
+        self._app_state.set_project_open(project.project_name, project_path)
+        self._current_project = project
+
+        self._notifier.send_info(
+            f"Project '{project.project_name}' opened."
+        )
+
+        return project
+
+    # ──────────────────────────────────────────────────────────────────
+    #  CLOSE
+    # ──────────────────────────────────────────────────────────────────
+
+    def close_project(self) -> None:
+        """
+        Close the currently open project.
+
+        Clears the in-memory project object and updates session state.
+        The project folder remains on disk untouched.
+        """
+        if self._current_project is None:
+            self._notifier.send_info("No project is currently open.")
+            return
+
+        name = self._current_project.project_name
+        self._current_project = None
+        self._app_state.set_project_closed()
+        self._notifier.send_info(f"Project '{name}' closed.")
+
+    # ──────────────────────────────────────────────────────────────────
+    #  DELETE
+    # ──────────────────────────────────────────────────────────────────
+
+    def delete_project(self, project_path: str) -> None:
+        """
+        Permanently delete a project and all its files.
+
+        Steps:
+            1. If this project is currently open, close it first.
+            2. Delete the entire project folder from disk.
+            3. Remove from recent projects list.
+            4. Notify the user.
+
+        Args:
+            project_path: The full path to the project folder.
+
+        WARNING: This is irreversible. All scenes, audio clips,
+                 renders, and exports are deleted permanently.
+        """
+        # Close if currently open
+        if (
+            self._current_project is not None
+            and self._current_project.project_path == project_path
+        ):
+            self.close_project()
+
+        if not self._file_storage.directory_exists(project_path):
+            raise ProjectNotFoundError(
+                f"Cannot delete: project folder not found at '{project_path}'"
+            )
+
+        self._file_storage.delete_directory_recursive(project_path)
+        self._notifier.send_success(
+            f"Project at '{project_path}' has been permanently deleted."
+        )
+
+    # ──────────────────────────────────────────────────────────────────
+    #  READ
+    # ──────────────────────────────────────────────────────────────────
+
+    def get_current_project(self) -> Project:
+        """
+        Return the currently open Project entity.
+
+        Raises:
+            NoProjectOpenError: If no project is currently open.
+        """
+        if self._current_project is None:
+            raise NoProjectOpenError(
+                "No project is open. Use 'new project' or 'open project' first."
+            )
+        return self._current_project
+```
+
+---
+
+## Subsection 6.6.3 — Service 9: SceneService
+
+### What Is It?
+
+`SceneService` manages all operations on individual scenes — adding them,
+updating their properties, deleting them, moving them, and always keeping
+the timeline accurate after every change.
+
+### Ports and Domain Services It Uses
+
+```
+SceneService
+    |
+    |--- SceneValidationService      (Domain: validate IDs, durations, paths)
+    |--- ProjectValidationService    (Domain: validate scenes_number)
+    |--- TimelineService             (Domain: recalculate start/end times)
+    |--- SceneWritePort              (save, update, delete scenes in DB)
+    |--- SceneReadPort               (load scenes from DB)
+    |--- NotificationPort            (user messages)
+```
+
+### Full Python Class
+
+```python
+# core/services/scene_service.py
+
+from __future__ import annotations
+
+import os
+from typing import List
+
+from domain.entities.scene import Scene
+from domain.ports.repository_ports.scene_write_port import SceneWritePort
+from domain.ports.repository_ports.scene_read_port import SceneReadPort
+from domain.ports.notification_ports.notification_port import NotificationPort
+from domain.services.scene_validation_service import SceneValidationService
+from domain.services.project_validation_service import ProjectValidationService
+from domain.services.timeline_service import TimelineService
+
+
+class SceneService:
+    """
+    Application Service.
+
+    Manages all operations on Scene entities:
+    - Creating scenes (set scenes_number)
+    - Setting duration
+    - Assigning code files
+    - Deleting scenes
+    - Moving scenes (reordering)
+    - Always recalculates the timeline after any change.
+    """
+
+    def __init__(
+        self,
+        scene_validation:   SceneValidationService,
+        project_validation: ProjectValidationService,
+        timeline_service:   TimelineService,
+        scene_write_port:   SceneWritePort,
+        scene_read_port:    SceneReadPort,
+        notifier:           NotificationPort,
+    ) -> None:
+        self._scene_validation   = scene_validation
+        self._project_validation = project_validation
+        self._timeline           = timeline_service
+        self._scene_write        = scene_write_port
+        self._scene_read         = scene_read_port
+        self._notifier           = notifier
+
+    def set_scenes_number(self, n: int) -> List[Scene]:
+        """
+        Create exactly N scenes for this project.
+
+        Validates n. Creates Scene objects with default values.
+        Saves them all. Returns the new list.
+
+        Args:
+            n: Number of scenes to create.
+
+        Returns:
+            List of N newly created Scene objects.
+        """
+        self._project_validation.is_scenes_number_valid(n)
+
+        scenes = []
+        for i in range(1, n + 1):
+            scene = Scene(
+                scene_id=i,
+                scene_index=i - 1,
+                previous_scene_id=(i - 1) if i > 1 else None,
+                next_scene_id=(i + 1) if i < n else None,
+            )
+            scenes.append(scene)
+
+        for scene in scenes:
+            self._scene_write.save_scene(scene)
+
+        self._notifier.send_info(f"{n} scenes created.")
+        return scenes
+
+    def set_scene_duration(self, scene_id: int, duration: float) -> Scene:
+        """
+        Set the duration of one specific scene. Recalculates timeline.
+
+        Steps:
+            1. Validate scene_id.
+            2. Validate duration.
+            3. Load the scene.
+            4. Update duration.
+            5. Save the scene.
+            6. Load all scenes.
+            7. Recalculate timeline.
+            8. Save all updated scenes.
+
+        Args:
+            scene_id: The scene to update.
+            duration: The new duration in seconds.
+
+        Returns:
+            The updated Scene object.
+        """
+        total = self._scene_read.count_scenes()
+        self._scene_validation.is_scene_id_valid(scene_id, total)
+        self._scene_validation.is_scene_duration_valid(duration)
+
+        scene = self._scene_read.load_scene(scene_id)
+        scene.scene_duration = duration
+        self._scene_write.save_scene(scene)
+
+        # Recalculate timeline for all scenes after the change
+        all_scenes = self._scene_read.load_all_scenes()
+        updated = self._timeline.recalculate_after_change(all_scenes, scene_id)
+        self._scene_write.save_all_scenes(updated)
+
+        self._notifier.send_info(
+            f"Scene {scene_id} duration set to {duration} seconds."
+        )
+        return scene
+
+    def set_scene_code(self, scene_id: int, code_path: str) -> Scene:
+        """
+        Assign a Python code file to a scene.
+
+        Steps:
+            1. Validate scene_id.
+            2. Validate code path (must be existing .py file).
+            3. Load the scene.
+            4. Update code_path and code_content.
+            5. Save the scene.
+
+        Args:
+            scene_id:  The scene to update.
+            code_path: Path to the .py file.
+
+        Returns:
+            The updated Scene object.
+        """
+        total = self._scene_read.count_scenes()
+        self._scene_validation.is_scene_id_valid(scene_id, total)
+        self._scene_validation.is_scene_code_path_valid(code_path)
+
+        scene = self._scene_read.load_scene(scene_id)
+        scene.scene_code_path = code_path
+
+        # Store the file content as a snapshot
+        with open(code_path, "r", encoding="utf-8") as f:
+            scene.scene_code_content = f.read()
+
+        self._scene_write.save_scene(scene)
+
+        self._notifier.send_info(
+            f"Scene {scene_id} code file set to: '{code_path}'"
+        )
+        return scene
+
+    def set_scene_name(self, scene_id: int, name: str) -> Scene:
+        """
+        Set the human-readable name label for a scene.
+
+        Args:
+            scene_id: The scene to update.
+            name:     The label (e.g. "Introduction").
+
+        Returns:
+            The updated Scene object.
+        """
+        total = self._scene_read.count_scenes()
+        self._scene_validation.is_scene_id_valid(scene_id, total)
+
+        scene = self._scene_read.load_scene(scene_id)
+        scene.scene_name = name
+        self._scene_write.save_scene(scene)
+
+        self._notifier.send_info(f"Scene {scene_id} name set to: '{name}'")
+        return scene
+
+    def delete_scene(self, scene_id: int) -> None:
+        """
+        Delete one scene from the project. Recalculates timeline.
+
+        IMPORTANT: Only deletes the database record.
+        Does NOT delete the code file or any rendered video.
+
+        Args:
+            scene_id: The scene to delete.
+        """
+        total = self._scene_read.count_scenes()
+        self._scene_validation.is_scene_id_valid(scene_id, total)
+
+        self._scene_write.delete_scene(scene_id)
+
+        # Recalculate timeline after deletion
+        all_scenes = self._scene_read.load_all_scenes()
+        updated = self._timeline.calculate_timeline(all_scenes)
+        self._scene_write.save_all_scenes(updated)
+
+        self._notifier.send_info(f"Scene {scene_id} deleted.")
+
+    def get_all_scenes(self) -> List[Scene]:
+        """
+        Return all scenes in order.
+
+        Returns:
+            List of Scene objects ordered by scene_index.
+        """
+        return self._scene_read.load_all_scenes()
+
+    def get_scene(self, scene_id: int) -> Scene:
+        """
+        Return one scene by its ID.
+
+        Args:
+            scene_id: The scene to load.
+
+        Returns:
+            The Scene entity object.
+        """
+        total = self._scene_read.count_scenes()
+        self._scene_validation.is_scene_id_valid(scene_id, total)
+        return self._scene_read.load_scene(scene_id)
+```
+
+---
+
+## Subsection 6.6.4 — Service 10: AudioService
+
+### What Is It?
+
+`AudioService` manages everything related to the audio file in a project.
+Loading the master audio, splitting it into clips, converting its format,
+and measuring its duration.
+
+### Ports and Domain Services It Uses
+
+```
+AudioService
+    |
+    |--- AudioValidationService    (Domain: validate file, split points)
+    |--- AudioRepositoryPort       (save/load AudioFile + AudioClip records)
+    |--- AudioProcessorPort        (FFmpeg: measure duration, cut, convert)
+    |--- AudioAnalyzerPort         (pydub: detect silence boundaries)
+    |--- FileStoragePort           (copy audio file into project folder)
+    |--- NotificationPort          (user messages)
+```
+
+### Full Python Class
+
+```python
+# core/services/audio_service.py
+
+from __future__ import annotations
+
+import os
+from typing import List, Optional
+
+from domain.entities.audio_file import AudioFile
+from domain.entities.audio_clip import AudioClip
+from domain.ports.repository_ports.audio_repository_port import AudioRepositoryPort
+from domain.ports.media_ports.audio_processor_port import AudioProcessorPort
+from domain.ports.media_ports.audio_analyzer_port import AudioAnalyzerPort
+from domain.ports.system_ports.file_storage_port import FileStoragePort
+from domain.ports.notification_ports.notification_port import NotificationPort
+from domain.services.audio_validation_service import AudioValidationService
+
+
+class AudioService:
+    """
+    Application Service.
+
+    Manages all audio-related operations:
+    - Loading the master audio file into the project
+    - Splitting audio at manual time points
+    - Splitting audio automatically at silence boundaries
+    - Converting audio format
+    - Measuring audio duration
+    """
+
+    def __init__(
+        self,
+        audio_validation: AudioValidationService,
+        audio_repo:       AudioRepositoryPort,
+        audio_processor:  AudioProcessorPort,
+        audio_analyzer:   AudioAnalyzerPort,
+        file_storage:     FileStoragePort,
+        notifier:         NotificationPort,
+    ) -> None:
+        self._audio_validation = audio_validation
+        self._audio_repo       = audio_repo
+        self._audio_processor  = audio_processor
+        self._audio_analyzer   = audio_analyzer
+        self._file_storage     = file_storage
+        self._notifier         = notifier
+
+    def add_audio_file(self, source_path: str, project_path: str) -> AudioFile:
+        """
+        Load a master audio file into the project.
+
+        Steps:
+            1. Validate the source file path.
+            2. Copy the file into the project's audio_clips/ folder.
+            3. Measure the duration using AudioProcessorPort (FFmpeg).
+            4. Create an AudioFile entity.
+            5. Save to database.
+            6. Notify user.
+
+        Args:
+            source_path:  Path to the original audio file on the user's system.
+            project_path: Root path of the current project.
+
+        Returns:
+            The newly created AudioFile entity.
+        """
+        # Step 1: Validate
+        self._audio_validation.is_audio_file_path_valid(source_path)
+
+        # Step 2: Copy into project
+        dest_dir  = self._file_storage.join_path(project_path, "audio_clips")
+        filename  = os.path.basename(source_path)
+        dest_path = self._file_storage.join_path(dest_dir, filename)
+        self._file_storage.copy_file(source_path, dest_path)
+
+        # Step 3: Measure duration
+        duration = self._audio_processor.get_duration(dest_path)
+
+        # Step 4: Build entity
+        audio_file = AudioFile(
+            audio_file_id=1,             # First (and usually only) audio file
+            audio_file_path=dest_path,
+            audio_file_duration=duration,
+            audio_file_format=os.path.splitext(filename)[1].lower().lstrip("."),
+        )
+
+        # Step 5: Save
+        self._audio_repo.save_audio_file(audio_file)
+
+        # Step 6: Notify
+        self._notifier.send_success(
+            f"Audio file added. Duration: {duration:.3f} seconds."
+        )
+
+        return audio_file
+
+    def split_audio_at_points(
+        self,
+        audio_file_id: int,
+        split_points: List[float],
+        project_path: str,
+    ) -> List[AudioClip]:
+        """
+        Split the master audio file at specific time points.
+
+        Args:
+            audio_file_id: The ID of the AudioFile to split.
+            split_points:  List of time points in seconds (e.g. [12.5, 31.0, 47.8]).
+            project_path:  Root path of the current project.
+
+        Returns:
+            List of AudioClip entities, one per segment.
+
+        Example:
+            split_points = [12.5, 31.0, 47.8]
+            Produces 4 clips:
+                clip_001.mp3:  0.0  to 12.5 seconds
+                clip_002.mp3: 12.5  to 31.0 seconds
+                clip_003.mp3: 31.0  to 47.8 seconds
+                clip_004.mp3: 47.8  to end
+        """
+        audio_file = self._audio_repo.load_audio_file(audio_file_id)
+        duration   = audio_file.audio_file_duration
+
+        # Validate each split point
+        for point in split_points:
+            self._audio_validation.is_split_point_valid(point, duration)
+
+        # Build segment boundaries: [0, p1, p2, p3, end]
+        boundaries = [0.0] + sorted(split_points) + [duration]
+
+        clips: List[AudioClip] = []
+        dest_dir = self._file_storage.join_path(project_path, "audio_clips")
+
+        for i, (start, end) in enumerate(zip(boundaries, boundaries[1:]), start=1):
+            clip_filename = f"clip_{i:03d}.{audio_file.audio_file_format}"
+            clip_path     = self._file_storage.join_path(dest_dir, clip_filename)
+
+            self._audio_processor.cut_segment(
+                input_path=audio_file.audio_file_path,
+                output_path=clip_path,
+                start_seconds=start,
+                end_seconds=end,
+            )
+
+            clip_duration = self._audio_processor.get_duration(clip_path)
+
+            clip = AudioClip(
+                audio_clip_id=i,
+                audio_file_id=audio_file_id,
+                audio_clip_index=i,
+                audio_clip_path=clip_path,
+                audio_clip_format=audio_file.audio_file_format,
+                audio_clip_duration=clip_duration,
+                audio_clip_start_time=start,
+                audio_clip_end_time=end,
+            )
+            self._audio_repo.save_audio_clip(clip)
+            clips.append(clip)
+
+        self._notifier.send_success(
+            f"Audio split into {len(clips)} clips."
+        )
+        return clips
+
+    def split_audio_by_silence(
+        self,
+        audio_file_id: int,
+        project_path: str,
+        min_silence_len_ms: int = 700,
+        silence_thresh_db: int = -40,
+    ) -> List[AudioClip]:
+        """
+        Split the master audio automatically at silence boundaries.
+
+        Uses AudioAnalyzerPort (pydub) to detect silence.
+        Then calls split_audio_at_points() with the detected boundaries.
+
+        Args:
+            audio_file_id:       The ID of the AudioFile to split.
+            project_path:        Root path of the current project.
+            min_silence_len_ms:  Minimum silence length to detect (ms).
+            silence_thresh_db:   Silence threshold in decibels.
+
+        Returns:
+            List of AudioClip entities.
+        """
+        audio_file = self._audio_repo.load_audio_file(audio_file_id)
+
+        self._notifier.send_info("Analyzing audio for silence boundaries...")
+
+        split_points = self._audio_analyzer.detect_silence_boundaries(
+            audio_path=audio_file.audio_file_path,
+            min_silence_len_ms=min_silence_len_ms,
+            silence_thresh_db=silence_thresh_db,
+        )
+
+        self._notifier.send_info(
+            f"Found {len(split_points)} silence boundary(ies). "
+            f"Creating {len(split_points) + 1} clips..."
+        )
+
+        return self.split_audio_at_points(
+            audio_file_id=audio_file_id,
+            split_points=split_points,
+            project_path=project_path,
+        )
+
+    def get_audio_file(self, audio_file_id: int) -> AudioFile:
+        """Load and return the AudioFile entity."""
+        return self._audio_repo.load_audio_file(audio_file_id)
+
+    def get_all_clips(self) -> List[AudioClip]:
+        """Return all AudioClip entities for this project."""
+        return self._audio_repo.load_all_clips()
+```
+
+---
+
+## Subsection 6.6.5 — Service 11: SyncService
+
+### What Is It?
+
+`SyncService` links scenes to audio clips. It ensures that when a scene is
+rendered, the correct audio plays alongside its video. It enforces the
+duration matching rule by delegating to `SyncValidationService`.
+
+### Ports and Domain Services It Uses
+
+```
+SyncService
+    |
+    |--- SyncValidationService    (Domain: validate duration match)
+    |--- SceneWritePort           (update scene with sync status)
+    |--- SceneReadPort            (load scenes)
+    |--- AudioRepositoryPort      (load/update audio clips)
+    |--- NotificationPort         (user messages)
+```
+
+### Full Python Class
+
+```python
+# core/services/sync_service.py
+
+from __future__ import annotations
+
+from typing import List
+
+from domain.entities.scene import Scene
+from domain.entities.audio_clip import AudioClip
+from domain.ports.repository_ports.scene_write_port import SceneWritePort
+from domain.ports.repository_ports.scene_read_port import SceneReadPort
+from domain.ports.repository_ports.audio_repository_port import AudioRepositoryPort
+from domain.ports.notification_ports.notification_port import NotificationPort
+from domain.services.sync_validation_service import SyncValidationService
+
+
+class SyncService:
+    """
+    Application Service.
+
+    Links Scene entities to AudioClip entities.
+
+    The sync operation:
+    1. Validates that scene duration == clip duration (within tolerance).
+    2. Updates Scene: synced_with_audio=True, audio_clip_path=<clip_path>
+    3. Updates AudioClip: scene_id=<scene_id>, audio_clip_is_synced=True
+    Both sides always updated together.
+    """
+
+    def __init__(
+        self,
+        sync_validation: SyncValidationService,
+        scene_write:     SceneWritePort,
+        scene_read:      SceneReadPort,
+        audio_repo:      AudioRepositoryPort,
+        notifier:        NotificationPort,
+    ) -> None:
+        self._sync_validation = sync_validation
+        self._scene_write     = scene_write
+        self._scene_read      = scene_read
+        self._audio_repo      = audio_repo
+        self._notifier        = notifier
+
+    def sync_scene_to_clip(self, scene_id: int, clip_id: int) -> None:
+        """
+        Link one scene to one audio clip.
+
+        Steps:
+            1. Load the Scene object.
+            2. Load the AudioClip object.
+            3. Warn if already synced (do not block — allow re-sync).
+            4. Validate duration match via SyncValidationService.
+            5. Update Scene: set synced_with_audio and audio_clip_path.
+            6. Update AudioClip: set scene_id and is_synced.
+            7. Save both.
+            8. Notify user.
+
+        Args:
+            scene_id: The scene to link.
+            clip_id:  The audio clip to link it to.
+        """
+        scene = self._scene_read.load_scene(scene_id)
+        clip  = self._audio_repo.load_clip(clip_id)
+
+        # Warn if already synced (re-sync is allowed, just warn)
+        if self._sync_validation.is_already_synced(scene):
+            self._notifier.send_info(
+                f"Scene {scene_id} was already synced. Re-syncing..."
+            )
+
+        # Validate duration match
+        self._sync_validation.sync_pair_is_valid(scene, clip)
+
+        # Update Scene
+        scene.synced_with_audio = True
+        scene.audio_clip_path   = clip.audio_clip_path
+        self._scene_write.save_scene(scene)
+
+        # Update AudioClip
+        clip.scene_id              = scene_id
+        clip.audio_clip_is_synced  = True
+        self._audio_repo.save_audio_clip(clip)
+
+        self._notifier.send_success(
+            f"Scene {scene_id} synced to audio clip {clip_id}. "
+            f"({scene.scene_duration:.3f}s == {clip.audio_clip_duration:.3f}s)"
+        )
+
+    def sync_all(self, scenes: List[Scene], clips: List[AudioClip]) -> None:
+        """
+        Link every scene to its matching clip at once.
+
+        Validates ALL pairs first. If any pair fails, nothing is synced.
+        If all pass, links every pair.
+
+        Args:
+            scenes: All scenes in order.
+            clips:  All clips in matching order.
+        """
+        # Validate all pairs first (atomic — fail fast before any changes)
+        self._sync_validation.all_sync_pairs_are_valid(scenes, clips)
+
+        # All pairs are valid — now link them all
+        for scene, clip in zip(scenes, clips):
+            scene.synced_with_audio = True
+            scene.audio_clip_path   = clip.audio_clip_path
+            self._scene_write.save_scene(scene)
+
+            clip.scene_id             = scene.scene_id
+            clip.audio_clip_is_synced = True
+            self._audio_repo.save_audio_clip(clip)
+
+        self._notifier.send_success(
+            f"All {len(scenes)} scenes synced successfully."
+        )
+
+    def unsync_scene(self, scene_id: int) -> None:
+        """
+        Remove the audio link from one scene.
+
+        Args:
+            scene_id: The scene to unsync.
+        """
+        scene = self._scene_read.load_scene(scene_id)
+
+        # Also unsync the clip if it was linked
+        if scene.audio_clip_path:
+            clips = self._audio_repo.load_all_clips()
+            for clip in clips:
+                if clip.scene_id == scene_id:
+                    clip.scene_id             = None
+                    clip.audio_clip_is_synced = False
+                    self._audio_repo.save_audio_clip(clip)
+                    break
+
+        scene.synced_with_audio = False
+        scene.audio_clip_path   = None
+        self._scene_write.save_scene(scene)
+
+        self._notifier.send_info(f"Scene {scene_id} unsynced.")
+```
+
+---
+
+## Subsection 6.6.6 — Service 12: RenderOrchestrationService
+
+### What Is It?
+
+`RenderOrchestrationService` is the most complex service in the system. It is
+the brain behind SuperManim's core feature: smart incremental rendering. It
+receives a render request and decides the full strategy — which scenes to skip,
+which to render, what order, and what to do with failures.
+
+### The Complete Render Decision for One Scene
+
+```
++================================================================+
+|         THE RENDER DECISION FOR ONE SCENE                      |
++================================================================+
+|                                                                |
+|  INPUT: scene_id (e.g. 3)                                      |
+|                                                                |
+|  GATE 1: Does this scene exist?                                |
+|  SceneValidationService.is_scene_id_valid()                    |
+|  FAIL → refuse. "Scene X does not exist."                      |
+|                                                                |
+|  GATE 2: Is this scene ready to render?                        |
+|  SceneValidationService.is_scene_ready_to_render(scene)        |
+|  FAIL → refuse. Name the missing requirement.                  |
+|                                                                |
+|  GATE 3: Has the code file changed?                            |
+|  current_hash = HashService.compute_file_hash(scene.code_path) |
+|  stored_hash  = SceneCachePort.get_scene_hash(scene_id)        |
+|                                                                |
+|  HashService.hashes_match(current, stored)?                    |
+|  YES → SKIP. The code has not changed. Use existing .mp4.      |
+|  NO  → RENDER. The code changed.                               |
+|  stored is None → RENDER. Never rendered before.               |
+|                                                                |
+|  RENDER STEPS (if we reach here):                              |
+|  1. SceneStatusPort.mark_as_pending(scene_id)                  |
+|  2. RenderRunnerPort.render(scene) → produces .mp4             |
+|  3. If success:                                                |
+|       FileStoragePort.save_clip(scene_id, path)                |
+|       SceneCachePort.save_hash(scene_id, current_hash)         |
+|       SceneStatusPort.mark_as_rendered(scene_id, output_path)  |
+|  4. If failure:                                                |
+|       SceneStatusPort.mark_as_failed(scene_id, error_message)  |
+|                                                                |
++================================================================+
+```
+
+### Ports and Domain Services It Uses
+
+```
+RenderOrchestrationService
+    |
+    |--- SceneValidationService    (Domain: is scene ready?)
+    |--- HashService               (Domain: compute hashes)
+    |--- SceneReadPort             (load scenes)
+    |--- SceneStatusPort           (mark rendered/failed/pending)
+    |--- SceneCachePort            (read/write stored hashes)
+    |--- RenderRunnerPort          (calls Manim to render)
+    |--- FileStoragePort           (save output clip)
+    |--- NotificationPort          (progress messages)
+    |--- ProgressReporterPort      (progress bars)
+```
+
+### Full Python Class
+
+```python
+# core/services/render_orchestration_service.py
+
+from __future__ import annotations
+
+from typing import List
+
+from domain.entities.scene import Scene
+from domain.ports.repository_ports.scene_read_port import SceneReadPort
+from domain.ports.repository_ports.scene_status_port import SceneStatusPort
+from domain.ports.repository_ports.scene_cache_port import SceneCachePort
+from domain.ports.media_ports.render_runner_port import RenderRunnerPort
+from domain.ports.system_ports.file_storage_port import FileStoragePort
+from domain.ports.notification_ports.notification_port import NotificationPort
+from domain.ports.notification_ports.progress_reporter_port import ProgressReporterPort
+from domain.services.scene_validation_service import SceneValidationService
+from domain.services.hash_service import HashService
+
+
+class RenderOrchestrationService:
+    """
+    Application Service.
+
+    Decides what to render and coordinates the rendering workflow.
+    This is the service behind SuperManim's incremental rendering feature.
+
+    Core principle:
+    - Compute the current hash of each scene's code file.
+    - Compare to the stored hash from the last render.
+    - If they match: SKIP (nothing changed).
+    - If they differ (or no stored hash): RENDER.
+    """
+
+    def __init__(
+        self,
+        scene_validation:    SceneValidationService,
+        hash_service:        HashService,
+        scene_read:          SceneReadPort,
+        scene_status:        SceneStatusPort,
+        scene_cache:         SceneCachePort,
+        render_runner:       RenderRunnerPort,
+        file_storage:        FileStoragePort,
+        notifier:            NotificationPort,
+        progress_reporter:   ProgressReporterPort,
+    ) -> None:
+        self._scene_validation  = scene_validation
+        self._hash_service      = hash_service
+        self._scene_read        = scene_read
+        self._scene_status      = scene_status
+        self._scene_cache       = scene_cache
+        self._render_runner     = render_runner
+        self._file_storage      = file_storage
+        self._notifier          = notifier
+        self._progress          = progress_reporter
+
+    def render_scene(self, scene_id: int, force: bool = False) -> None:
+        """
+        Render one specific scene.
+
+        Args:
+            scene_id: The scene to render.
+            force:    If True, skip the hash check and always render.
+        """
+        total = self._scene_read.count_scenes()
+        self._scene_validation.is_scene_id_valid(scene_id, total)
+
+        scene = self._scene_read.load_scene(scene_id)
+        self._scene_validation.is_scene_ready_to_render(scene)
+
+        if not force:
+            stored_hash = self._scene_cache.get_scene_hash(scene_id)
+            if not self._hash_service.file_has_changed(scene.scene_code_path, stored_hash):
+                self._notifier.send_info(
+                    f"Scene {scene_id}: code unchanged. Skipping render."
+                )
+                return
+
+        self._do_render(scene)
+
+    def render_all(self, force: bool = False) -> None:
+        """
+        Render all scenes in the project.
+
+        For each scene:
+        - Checks readiness (has code + duration).
+        - Checks hash (skip if unchanged, unless force=True).
+        - Renders if needed.
+        - Reports a summary at the end.
+
+        Args:
+            force: If True, render all scenes regardless of hash changes.
+        """
+        all_scenes = self._scene_read.load_all_scenes()
+        total      = len(all_scenes)
+
+        rendered = 0
+        skipped  = 0
+        failed   = 0
+
+        self._notifier.send_info(f"Starting render of {total} scene(s)...")
+        self._progress.start(total=total, label="Rendering")
+
+        for scene in all_scenes:
+            self._progress.update(label=f"Scene {scene.scene_id}")
+
+            # Check readiness — if not ready, report and skip
+            try:
+                self._scene_validation.is_scene_ready_to_render(scene)
+            except Exception as e:
+                self._notifier.send_warning(
+                    f"Scene {scene.scene_id} skipped: {e}"
+                )
+                failed += 1
+                self._progress.advance()
+                continue
+
+            # Check hash — skip if unchanged
+            if not force:
+                stored_hash = self._scene_cache.get_scene_hash(scene.scene_id)
+                if not self._hash_service.file_has_changed(
+                    scene.scene_code_path, stored_hash
+                ):
+                    self._notifier.send_info(
+                        f"Scene {scene.scene_id}: unchanged. Skipping."
+                    )
+                    skipped += 1
+                    self._progress.advance()
+                    continue
+
+            # Render this scene
+            success = self._do_render(scene)
+            if success:
+                rendered += 1
+            else:
+                failed += 1
+
+            self._progress.advance()
+
+        self._progress.finish()
+        self._notifier.send_info(
+            f"\nRender complete.\n"
+            f"  Rendered: {rendered}\n"
+            f"  Skipped:  {skipped} (code unchanged)\n"
+            f"  Failed:   {failed}"
+        )
+
+    def _do_render(self, scene: Scene) -> bool:
+        """
+        Internal: Execute the actual render for one scene.
+
+        Marks scene as pending, calls RenderRunnerPort, saves output,
+        updates hash in cache, marks as rendered or failed.
+
+        Args:
+            scene: The Scene entity to render.
+
+        Returns:
+            True if render succeeded. False if it failed.
+        """
+        self._scene_status.mark_as_pending(scene.scene_id)
+        self._notifier.send_info(f"Rendering Scene {scene.scene_id}...")
+
+        try:
+            result = self._render_runner.render(scene)
+
+            if result.succeeded:
+                # Save the output file
+                self._file_storage.ensure_directory(result.output_path)
+
+                # Compute and store the new hash
+                current_hash = self._hash_service.compute_file_hash(
+                    scene.scene_code_path
+                )
+                self._scene_cache.save_hash(scene.scene_id, current_hash)
+
+                # Mark as rendered
+                self._scene_status.mark_as_rendered(
+                    scene_id=scene.scene_id,
+                    output_path=result.output_path,
+                    render_duration_seconds=result.elapsed_seconds,
+                )
+
+                self._notifier.send_success(
+                    f"Scene {scene.scene_id} rendered. "
+                    f"({result.elapsed_seconds:.1f}s)"
+                )
+                return True
+
+            else:
+                self._scene_status.mark_as_failed(
+                    scene_id=scene.scene_id,
+                    error_message=result.error_message or "Unknown render error.",
+                )
+                self._notifier.send_error(
+                    f"Scene {scene.scene_id} FAILED: {result.error_message}"
+                )
+                return False
+
+        except Exception as e:
+            self._scene_status.mark_as_failed(
+                scene_id=scene.scene_id,
+                error_message=str(e),
+            )
+            self._notifier.send_error(
+                f"Scene {scene.scene_id} FAILED with exception: {e}"
+            )
+            return False
+```
+
+---
+
+## Subsection 6.6.7 — Service 13: PreviewService
+
+### What Is It?
+
+`PreviewService` generates low-quality, fast previews of scenes so the user
+can check their work without waiting for a full high-quality render.
+
+Preview = 854x480 pixels, 30fps, ~15-20 seconds per scene.
+Full Render = 1920x1080 pixels, 60fps, ~2-4 minutes per scene.
+
+Previews are NEVER included in the final export. They live in the `previews/`
+folder only. They are visual check tools for the developer.
+
+### Key Differences From RenderOrchestrationService
+
+```
++================================================================+
+|         PREVIEW vs FULL RENDER                                 |
++================================================================+
+|                                                                |
+|                 PREVIEW            FULL RENDER                 |
+|  Quality        Low (480p)         High (1080p)                |
+|  Hash check     NO — always new    YES — skip if unchanged     |
+|  Audio check    NO — visual only   YES — in supermanim mode    |
+|  Output folder  previews/          output/                     |
+|  Used in export NO                 YES                         |
+|  Speed          ~15-20 sec         ~2-4 min per scene          |
+|                                                                |
++================================================================+
+```
+
+### Full Python Class
+
+```python
+# core/services/preview_service.py
+
+from __future__ import annotations
+
+from domain.entities.scene import Scene
+from domain.ports.repository_ports.scene_read_port import SceneReadPort
+from domain.ports.repository_ports.scene_status_port import SceneStatusPort
+from domain.ports.media_ports.preview_generator_port import PreviewGeneratorPort
+from domain.ports.system_ports.file_storage_port import FileStoragePort
+from domain.ports.notification_ports.notification_port import NotificationPort
+from domain.services.scene_validation_service import SceneValidationService
+
+
+class PreviewService:
+    """
+    Application Service.
+
+    Generates fast, low-quality previews of scenes.
+    Does NOT check hashes (always regenerates).
+    Does NOT check audio sync.
+    Output goes to: previews/scene_XX_preview.mp4
+    """
+
+    def __init__(
+        self,
+        scene_validation:    SceneValidationService,
+        scene_read:          SceneReadPort,
+        scene_status:        SceneStatusPort,
+        preview_generator:   PreviewGeneratorPort,
+        file_storage:        FileStoragePort,
+        notifier:            NotificationPort,
+    ) -> None:
+        self._scene_validation  = scene_validation
+        self._scene_read        = scene_read
+        self._scene_status      = scene_status
+        self._preview_generator = preview_generator
+        self._file_storage      = file_storage
+        self._notifier          = notifier
+
+    def preview_scene(self, scene_id: int, project_path: str) -> str:
+        """
+        Generate a low-quality preview for one scene.
+
+        The preview checklist (simpler than render checklist):
+            1. Does this scene exist?
+            2. Does this scene have a code file?
+            (No hash check. No audio check.)
+
+        Args:
+            scene_id:     The scene to preview.
+            project_path: Root path of the current project.
+
+        Returns:
+            The path to the generated preview file.
+        """
+        total = self._scene_read.count_scenes()
+        self._scene_validation.is_scene_id_valid(scene_id, total)
+
+        scene = self._scene_read.load_scene(scene_id)
+
+        # Only check for code file — no duration check, no audio check
+        if not scene.scene_code_path:
+            from domain.exceptions import SceneNotReadyToRenderError
+            raise SceneNotReadyToRenderError(
+                f"Scene {scene_id} has no code file assigned. "
+                f"Use: set scene {scene_id} code <path>"
+            )
+
+        # Build output path
+        preview_dir  = self._file_storage.join_path(project_path, "previews")
+        preview_path = self._file_storage.join_path(
+            preview_dir, f"scene_{scene_id:02d}_preview.mp4"
+        )
+        self._file_storage.ensure_directory(preview_dir)
+
+        self._notifier.send_info(
+            f"Generating preview for Scene {scene_id} (low quality)..."
+        )
+
+        result = self._preview_generator.generate_preview(
+            scene=scene,
+            output_path=preview_path,
+        )
+
+        if result.succeeded:
+            # Update the scene record with the preview path
+            self._scene_status.update_preview_path(scene_id, preview_path)
+
+            self._notifier.send_success(
+                f"Preview ready: {preview_path} "
+                f"({result.elapsed_seconds:.1f}s)"
+            )
+            return preview_path
+
+        else:
+            self._notifier.send_error(
+                f"Preview failed for Scene {scene_id}: {result.error_message}"
+            )
+            raise RuntimeError(result.error_message)
+
+    def preview_all(self, project_path: str) -> None:
+        """
+        Generate previews for all scenes that have a code file.
+
+        Scenes without a code file are skipped (not an error).
+
+        Args:
+            project_path: Root path of the current project.
+        """
+        all_scenes = self._scene_read.load_all_scenes()
+        total      = len(all_scenes)
+        previewed  = 0
+        skipped    = 0
+
+        self._notifier.send_info(f"Generating previews for {total} scenes...")
+
+        for scene in all_scenes:
+            if not scene.scene_code_path:
+                self._notifier.send_info(
+                    f"Scene {scene.scene_id}: no code file. Skipping."
+                )
+                skipped += 1
+                continue
+
+            try:
+                self.preview_scene(scene.scene_id, project_path)
+                previewed += 1
+            except Exception as e:
+                self._notifier.send_error(
+                    f"Scene {scene.scene_id} preview failed: {e}"
+                )
+                skipped += 1
+
+        self._notifier.send_info(
+            f"Preview complete. Previewed: {previewed}. Skipped: {skipped}."
+        )
+
+    def force_preview_scene(self, scene_id: int, project_path: str) -> str:
+        """
+        Force a new preview — delete any existing preview file first.
+
+        Args:
+            scene_id:     The scene to preview.
+            project_path: Root path of the current project.
+
+        Returns:
+            The path to the newly generated preview file.
+        """
+        preview_dir  = self._file_storage.join_path(project_path, "previews")
+        preview_path = self._file_storage.join_path(
+            preview_dir, f"scene_{scene_id:02d}_preview.mp4"
+        )
+
+        # Delete old preview if it exists
+        if self._file_storage.file_exists(preview_path):
+            self._file_storage.delete_file(preview_path)
+            self._notifier.send_info(f"Old preview deleted: {preview_path}")
+        else:
+            self._notifier.send_info("No existing preview found. Creating fresh.")
+
+        return self.preview_scene(scene_id, project_path)
+```
+
+---
+
+## Subsection 6.6.8 — Service 14: ExportService
+
+### What Is It?
+
+`ExportService` is the final step in the SuperManim workflow. It takes all
+individually rendered scene clips and assembles them into one final
+synchronized video file.
+
+This is where everything comes together. Every other service was working
+toward this moment — the moment when all clips are joined, all audio tracks
+are embedded, and the final video is ready.
+
+### The Export Checklist
+
+```
++================================================================+
+|              THE EXPORT CHECKLIST                              |
++================================================================+
+|                                                                |
+|  CHECK 1: Are all scenes rendered?                             |
+|  SceneReadPort.get_pending_scenes()                            |
+|  If any scenes are pending: STOP.                              |
+|  "Render all scenes before exporting."                         |
+|                                                                |
+|  CHECK 2: Do all scenes have audio? (supermanim mode only)     |
+|  AudioValidationService.all_scenes_have_audio(scenes)          |
+|  If any scenes lack audio: STOP.                               |
+|  "Run sync all before exporting."                              |
+|                                                                |
+|  THEN: Assemble with VideoAssemblerPort (FFmpeg).              |
+|                                                                |
++================================================================+
+```
+
+### Ports and Domain Services It Uses
+
+```
+ExportService
+    |
+    |--- AudioValidationService    (Domain: all scenes have audio?)
+    |--- SceneReadPort             (load all rendered scenes)
+    |--- VideoAssemblerPort        (FFmpeg: join clips)
+    |--- FileStoragePort           (paths and file checking)
+    |--- NotificationPort          (user messages)
+```
+
+### Full Python Class
+
+```python
+# core/services/export_service.py
+
+from __future__ import annotations
+
+from typing import List
+
+from domain.entities.scene import Scene
+from domain.ports.repository_ports.scene_read_port import SceneReadPort
+from domain.ports.media_ports.video_assembler_port import VideoAssemblerPort
+from domain.ports.system_ports.file_storage_port import FileStoragePort
+from domain.ports.notification_ports.notification_port import NotificationPort
+from domain.services.audio_validation_service import AudioValidationService
+
+
+class ExportService:
+    """
+    Application Service.
+
+    Assembles all rendered scene clips into one final video file.
+
+    The final video is placed in: exports/<ProjectName>_final.mp4
+
+    Each scene clip is joined with its matched audio clip (if synced).
+    The order of scenes in the video is determined by scene_index.
+    """
+
+    def __init__(
+        self,
+        audio_validation: AudioValidationService,
+        scene_read:       SceneReadPort,
+        video_assembler:  VideoAssemblerPort,
+        file_storage:     FileStoragePort,
+        notifier:         NotificationPort,
+    ) -> None:
+        self._audio_validation = audio_validation
+        self._scene_read       = scene_read
+        self._video_assembler  = video_assembler
+        self._file_storage     = file_storage
+        self._notifier         = notifier
+
+    def export(
+        self,
+        project_name: str,
+        project_path: str,
+        with_audio: bool = True,
+    ) -> str:
+        """
+        Assemble all rendered scenes into one final video.
+
+        Steps:
+            1. Load all scenes.
+            2. Check all scenes are rendered (none pending).
+            3. If with_audio: check all scenes have audio clips.
+            4. Build the list of (video_path, audio_path) pairs.
+            5. Call VideoAssemblerPort to join everything.
+            6. Verify the output file was created.
+            7. Notify user.
+
+        Args:
+            project_name: Name used for the output filename.
+            project_path: Root path of the project.
+            with_audio:   True = include audio. False = silent export.
+
+        Returns:
+            The path of the final exported video file.
+
+        Raises:
+            ExportNotReadyError: If any scenes are pending or unsynced.
+        """
+        # Step 1: Load all scenes
+        all_scenes = self._scene_read.load_all_scenes()
+
+        # Step 2: Check all scenes are rendered
+        pending = self._scene_read.get_pending_scenes()
+        if pending:
+            pending_ids = [s.scene_id for s in pending]
+            raise ExportNotReadyError(
+                f"Cannot export: the following scenes are not yet rendered: "
+                f"{pending_ids}. Run 'render all' first."
+            )
+
+        # Step 3: Check all scenes have audio (if needed)
+        if with_audio:
+            self._audio_validation.all_scenes_have_audio(all_scenes)
+
+        # Step 4: Build clip pairs list (ordered by scene_index)
+        ordered = sorted(all_scenes, key=lambda s: s.scene_index)
+        clip_pairs = [
+            (s.scene_output_path, s.audio_clip_path if with_audio else None)
+            for s in ordered
+        ]
+
+        # Step 5: Assemble
+        export_dir    = self._file_storage.join_path(project_path, "exports")
+        output_path   = self._file_storage.join_path(
+            export_dir, f"{project_name}_final.mp4"
+        )
+        self._file_storage.ensure_directory(export_dir)
+
+        self._notifier.send_info(
+            f"Assembling {len(ordered)} clips into final video..."
+        )
+
+        self._video_assembler.assemble(
+            clip_pairs=clip_pairs,
+            output_path=output_path,
+        )
+
+        # Step 6: Verify
+        if not self._file_storage.file_exists(output_path):
+            raise RuntimeError(
+                f"Assembly completed but output file not found: '{output_path}'"
+            )
+
+        file_size_mb = round(
+            self._file_storage.get_file_size_bytes(output_path) / (1024 ** 2), 2
+        )
+
+        # Step 7: Notify
+        self._notifier.send_success(
+            f"Export complete!\n"
+            f"  File:  {output_path}\n"
+            f"  Size:  {file_size_mb} MB\n"
+            f"  Clips: {len(ordered)} scenes"
+        )
+
+        return output_path
+```
+
+---
+
+---
+
+# SUMMARY TABLE — ALL SERVICES
+
+```
++===========================================================================+
+|                   ALL SERVICES AT A GLANCE                                |
++===========================================================================+
+|                                                                           |
+|  #    NAME                          TYPE         PORTS USED               |
+|  ─────────────────────────────────────────────────────────────────────── |
+|  6.5.1 SceneValidationService       Domain       None (pure logic)        |
+|  6.5.2 AudioValidationService       Domain       None (pure logic)        |
+|  6.5.3 ProjectValidationService     Domain       None (pure logic)        |
+|  6.5.4 SyncValidationService        Domain       None (pure logic)        |
+|  6.5.5 TimelineService              Domain       None (pure math)         |
+|  6.5.6 HashService                  Domain       None (stdlib hashlib)    |
+|  6.6.1 AppStateService              Application  SessionRepositoryPort    |
+|  6.6.2 ProjectLifecycleService      Application  FileStoragePort          |
+|                                                  ProjectRepositoryPort    |
+|  6.6.3 SceneService                 Application  SceneWritePort           |
+|                                                  SceneReadPort            |
+|  6.6.4 AudioService                 Application  AudioRepositoryPort      |
+|                                                  AudioProcessorPort       |
+|                                                  AudioAnalyzerPort        |
+|                                                  FileStoragePort          |
+|  6.6.5 SyncService                  Application  SceneWritePort           |
+|                                                  SceneReadPort            |
+|                                                  AudioRepositoryPort      |
+|  6.6.6 RenderOrchestrationService   Application  SceneReadPort            |
+|                                                  SceneStatusPort          |
+|                                                  SceneCachePort           |
+|                                                  RenderRunnerPort         |
+|                                                  FileStoragePort          |
+|  6.6.7 PreviewService               Application  SceneReadPort            |
+|                                                  SceneStatusPort          |
+|                                                  PreviewGeneratorPort     |
+|                                                  FileStoragePort          |
+|  6.6.8 ExportService                Application  SceneReadPort            |
+|                                                  VideoAssemblerPort       |
+|                                                  FileStoragePort          |
+|                                                                           |
++===========================================================================+
+```
+
+---
+
+*End of Module 6 — Services*
+
+*Domain Services think. Application Services act.*
+*Domain Services validate and calculate. Application Services coordinate and execute.*
+*Together, they form the complete brain of SuperManim.*
+
+
+## Subsection 6.5.1  Service 1 — Domain Validation Services
+
+### Subsubsection 6.5.1.1 What Is domain validation service?
+
+`Validation Service` is the **rule enforcer** of SuperManim. It is a Domain
 Service — meaning it contains pure logic with zero Port dependencies. It does
 not read from databases, does not call FFmpeg, does not touch any file. It
 only checks whether data meets the rules.
@@ -20937,12 +24970,6 @@ in the order they are actually used.
 +===========================================================================+
 ```
 
----
-
-*End of Module 6 — Services*
-
-*Domain Services are the thinking. Application Services are the doing.*
-*Together they form the complete brain of SuperManim.*
 
 
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
