@@ -26182,7 +26182,3081 @@ Module 9 Services (Application Services):
 
 
 
-Module 10 Project State Management:
+# Module 10 Project State Management:
+# Section 10.1 — The Big Picture: What This Module Is About
+
+## Subsection 10.1.1 — The Problem This Module Solves
+
+Imagine you open SuperManim, work on a project for two hours, and then close your computer.
+When you open SuperManim again tomorrow, what should happen?
+
+Without a state management system, the answer would be: nothing.
+The tool would open to a blank prompt. You would have to remember which project you were
+working on, type the path manually, and wait for everything to reload from scratch.
+
+With this module, the answer is: the tool remembers everything.
+It remembers which project you had open. It remembers how many scenes you had,
+how many were rendered, what the audio situation was, and what the last render looked like.
+It puts you back exactly where you left off.
+
+This is what Module 10 designs: **the complete memory system for SuperManim**.
+
+```
++=====================================================================+
+|              WHAT DOES "PROJECT STATE" MEAN?                        |
++=====================================================================+
+|                                                                     |
+|   Project state = the complete picture of a project right now.      |
+|                                                                     |
+|   It answers questions like:                                        |
+|   - Is a project currently open? Which one?                         |
+|   - What projects has the user worked on recently?                  |
+|   - How many scenes does the current project have?                  |
+|   - How many have been rendered? How many failed?                   |
+|   - Does it have audio? Is the audio synced to the scenes?          |
+|   - What is the render progress?                                    |
+|   - Has the project been exported? Where is the last export file?   |
+|   - How much total time has the user spent on this project?         |
+|                                                                     |
+|   All of these answers are saved to disk and restored instantly     |
+|   the next time the tool starts or the project is reopened.         |
+|                                                                     |
++=====================================================================+
+```
+
+---
+
+## Subsection 10.1.2 — The Fundamental Rule: One Project at a Time
+
+Before anything else, you must understand the most important rule in the entire system.
+This rule shapes every design decision in this module.
+
+```
++=====================================================================+
+|                    THE ONE-PROJECT RULE                             |
++=====================================================================+
+|                                                                     |
+|   SuperManim can only have ONE project open at any time.            |
+|                                                                     |
+|   It is not possible to have two projects open simultaneously.      |
+|   It is not possible to run two commands on two different projects  |
+|   in the same session.                                              |
+|                                                                     |
+|   There are EXACTLY TWO states the tool can ever be in:             |
+|                                                                     |
+|   ┌─────────────────────────────────────────────────────────────┐  |
+|   │  STATE 1 — NO PROJECT OPEN                                  │  |
+|   │                                                             │  |
+|   │  is_project_open = False                                    │  |
+|   │  The tool is running but nothing is loaded.                 │  |
+|   │  The user must create or open a project first.              │  |
+|   │                                                             │  |
+|   │  Only these commands work:                                  │  |
+|   │    new project, open project, list projects,                │  |
+|   │    help, version, exit                                       │  |
+|   │                                                             │  |
+|   │  Every other command is refused with a clear message:       │  |
+|   │    "No project is open. Open one first."                    │  |
+|   └─────────────────────────────────────────────────────────────┘  |
+|                                                                     |
+|   ┌─────────────────────────────────────────────────────────────┐  |
+|   │  STATE 2 — ONE PROJECT OPEN                                 │  |
+|   │                                                             │  |
+|   │  is_project_open = True                                     │  |
+|   │  One specific project is loaded in memory.                  │  |
+|   │  All commands are available.                                │  |
+|   │  Every command operates on this one project.               │  |
+|   └─────────────────────────────────────────────────────────────┘  |
+|                                                                     |
+|   The tool NEVER has two projects open. This is not a bug.          |
+|   It is a deliberate design choice that makes the system simple,    |
+|   safe, and easy to reason about.                                   |
+|                                                                     |
++=====================================================================+
+```
+
+---
+
+## Subsection 10.1.3 — Why Two Services Instead of One
+
+To manage project state, the system uses **two separate services**, not one.
+Each service has a completely different job, lives in a different place, and talks to a different database file.
+
+```
++=====================================================================+
+|         THE TWO SERVICES — WHY THEY EXIST SEPARATELY               |
++=====================================================================+
+|                                                                     |
+|   SERVICE 1: AppStateService  (also called SessionService)          |
+|   ─────────────────────────────────────────────────────────────   |
+|   Job:       Manages the APPLICATION-LEVEL state.                  |
+|              Which project was last open?                           |
+|              Which projects has the user opened recently?           |
+|   Database:  session.db  (one file for the whole OS user account)  |
+|   Lifetime:  Always running. Starts when the tool starts.          |
+|              Active even before any project is open.                |
+|                                                                     |
+|   SERVICE 2: ProjectStateService                                    |
+|   ─────────────────────────────────────────────────────────────   |
+|   Job:       Manages the PROJECT-LEVEL state.                      |
+|              How many scenes? How many rendered? Audio status?      |
+|              Render progress? Export history?                       |
+|   Database:  project_data.db  (one inside each project folder)     |
+|   Lifetime:  Only active when a project is open (STATE 2).         |
+|              Goes to sleep when the project is closed.              |
+|                                                                     |
++=====================================================================+
+```
+
+Here is why separating them is important:
+
+```
++=====================================================================+
+|          FOUR REASONS WHY TWO SERVICES IS THE RIGHT DESIGN          |
++=====================================================================+
+|                                                                     |
+|   1. SEPARATION OF CONCERNS                                         |
+|   AppStateService knows about the APPLICATION (OS-level).           |
+|   ProjectStateService knows about the CURRENT PROJECT.              |
+|   Clear boundary. Easy to understand. Easy to test separately.      |
+|                                                                     |
+|   2. DIFFERENT LIFETIMES                                            |
+|   AppStateService runs from the moment the tool starts.             |
+|   ProjectStateService only runs when a project is open.             |
+|   You cannot track a project's state if no project is open.         |
+|   Making them separate makes this lifecycle obvious and correct.    |
+|                                                                     |
+|   3. DIFFERENT DATABASE FILES                                        |
+|   session.db      = one file for the whole installed application.   |
+|   project_data.db = one file inside each project folder.            |
+|   Two services, two files. No confusion about which writes what.    |
+|                                                                     |
+|   4. FUTURE SCALABILITY                                             |
+|   If a GUI or web interface is added later:                         |
+|   AppStateService handles the session on any interface.             |
+|   ProjectStateService handles the project regardless of the UI.     |
+|   You change the adapter, not the service.                          |
+|                                                                     |
++=====================================================================+
+```
+
+---
+
+## Subsection 10.1.4 — The Two Database Files
+
+SuperManim uses two completely separate database files. They are completely different in every way.
+
+```
++=====================================================================+
+|            TWO DATABASE FILES — COMPLETELY DIFFERENT JOBS           |
++=====================================================================+
+|                                                                     |
+|   FILE 1 — session.db                                               |
+|   ─────────────────────────────────────────────────────────────   |
+|   What it stores:  Application-level session state.                 |
+|                    Which project was last open.                     |
+|                    The list of recently opened projects.            |
+|                                                                     |
+|   Where it lives:  In the OS application data folder.               |
+|     Windows:  %APPDATA%\SuperManim\session.db                       |
+|               e.g.  C:\Users\Ahmed\AppData\Roaming\SuperManim\      |
+|                     session.db                                      |
+|     macOS:    ~/Library/Application Support/SuperManim/session.db   |
+|     Linux:    ~/.supermanim/session.db                              |
+|               (or $XDG_DATA_HOME/SuperManim/session.db)             |
+|                                                                     |
+|   Who owns it:   AppStateService ONLY.                              |
+|                  No other service reads or writes this file.        |
+|   Created:       On first run of SuperManim.                        |
+|   Lifespan:      Lives as long as the app is installed.             |
+|                  Survives across all sessions.                      |
+|                                                                     |
+|   ─────────────────────────────────────────────────────────────   |
+|                                                                     |
+|   FILE 2 — project_data.db                                          |
+|   ─────────────────────────────────────────────────────────────   |
+|   What it stores:  Everything about ONE specific project.           |
+|                    Scenes, audio clips, cache records,              |
+|                    render history, project state snapshot,          |
+|                    and project settings.                            |
+|                                                                     |
+|   Where it lives:  Inside the project's own folder.                 |
+|     /projects/MyAnimation/project_data.db                           |
+|     /projects/Chapter1_Intro/project_data.db                        |
+|     (each project has its own separate copy)                        |
+|                                                                     |
+|   Who owns it:   All repository adapters.                           |
+|                  (each table is owned by a different adapter)       |
+|   Created:       When a new project is created.                     |
+|   Lifespan:      Lives as long as the project folder exists.        |
+|                                                                     |
++=====================================================================+
+```
+
+---
+
+# Section 10.2 — AppStateService and session.db (Application-Level State)
+
+## Subsection 10.2.1 — What Is session.db?
+
+`session.db` is a small SQLite database file. SuperManim creates it automatically the first time
+any project is ever created or opened. It lives in the standard OS application data directory.
+
+Its only job is to answer two questions:
+
+```
+Question 1: "What project did the user have open last time?"
+            Stored in: last_project_name and last_project_path
+
+Question 2: "What projects has this user worked on recently?"
+            Stored in: the recent_projects table
+```
+
+It does NOT store scenes. It does NOT store audio. It does NOT store render settings.
+It stores only session-level memory — information belonging to the application itself,
+not to any individual project.
+
+---
+
+## Subsection 10.2.2 — The Tables Inside session.db
+
+The file contains exactly two tables:
+
+### Subsubsection 10.2.2.1 — Table 1: app_session
+
+This table stores exactly **one row**. There is always exactly one row — no more.
+It represents the current (or most recent) session state.
+
+```
++=====================================================================+
+|                     TABLE: app_session                              |
+|               (always exactly ONE row in this table)                |
++=====================================================================+
+|                                                                     |
+|   Column              Type     Description                          |
+|   ─────────────────────────────────────────────────────────────   |
+|   last_project_name   TEXT     Name of the last opened project.     |
+|                                NULL if no project has ever opened.  |
+|                                                                     |
+|   last_project_path   TEXT     Full path to that project folder.    |
+|                                NULL if no project has ever opened.  |
+|                                                                     |
+|   last_opened_at      TEXT     ISO timestamp of when it was opened. |
+|                                e.g. "2024-11-12 14:18:05"           |
+|                                NULL if no project has ever opened.  |
+|                                                                     |
+|   is_project_open     INTEGER  0 = no project open (or clean exit). |
+|                                1 = a project was open when tool     |
+|                                    last closed (or crashed).        |
+|                                                                     |
++=====================================================================+
+```
+
+### Subsubsection 10.2.2.2 — Table 2: recent_projects
+
+This table stores up to **10 rows** — one for each recently opened project.
+New entries go to the top. Old entries fall off the bottom when the list exceeds 10.
+
+```
++=====================================================================+
+|                    TABLE: recent_projects                           |
+|                    (up to 10 rows, sorted newest first)             |
++=====================================================================+
+|                                                                     |
+|   Column             Type     Description                           |
+|   ─────────────────────────────────────────────────────────────   |
+|   project_name       TEXT     Name of the project.                  |
+|   project_path       TEXT     Full path to the project folder.      |
+|   project_mode       TEXT     "normal" / "simplemanim" /            |
+|                               "supermanim"                          |
+|   last_opened_at     TEXT     ISO timestamp of last open.           |
+|   open_count         INTEGER  Total number of times this project    |
+|                               was opened.                           |
+|                                                                     |
+|   Example contents:                                                 |
+|   ─────────────────────────────────────────────────────────────   |
+|   MyAnimation        /projects/MyAnimation       supermanim  ...  3|
+|   Chapter1_Intro     /projects/Chapter1_Intro    simplemanim ... 7 |
+|   TestProject        /projects/TestProject       normal      ...  1|
+|                                                                     |
++=====================================================================+
+```
+
+---
+
+## Subsection 10.2.3 — The AppStateService
+
+`AppStateService` is the **only** part of the entire system allowed to read and write `session.db`.
+No other service, adapter, entity, or command touches this file directly.
+
+```
++=====================================================================+
+|                   AppStateService — COMPLETE JOB                   |
++=====================================================================+
+|                                                                     |
+|   1. READ session.db at startup.                                    |
+|      This is the VERY FIRST thing that happens when SuperManim      |
+|      launches — before the prompt appears, before anything else.    |
+|      It reads the session state to decide what to do next.          |
+|                                                                     |
+|   2. WRITE to session.db whenever:                                  |
+|      - A project is opened (new or existing)                        |
+|      - A project is closed                                          |
+|      - The tool shuts down cleanly                                  |
+|                                                                     |
+|   3. PROVIDE state information to other parts of the system:        |
+|      - Is a project currently open?                                 |
+|      - What is the currently open project's name and path?          |
+|      - What does the recent projects list look like?                |
+|                                                                     |
+|   4. ENFORCE the one-project-at-a-time rule.                        |
+|      Before opening a new project, AppStateService checks if        |
+|      another project is already open. If yes, the current one       |
+|      must be closed first.                                          |
+|                                                                     |
+|   5. ALWAYS AVAILABLE — even when no project is open.               |
+|      It is the only service that runs before a project exists.      |
+|      All other services require a project to be open.               |
+|                                                                     |
++=====================================================================+
+```
+
+### Subsubsection 10.2.3.1 — How AppStateService Differs from All Other Services
+
+```
++=====================================================================+
+|       AppStateService vs. ALL OTHER Application Services            |
++=====================================================================+
+|                                                                     |
+|   ALL OTHER SERVICES (SceneService, RenderService, AudioService...) |
+|   - Need a project to be open before they can do anything           |
+|   - Read and write project_data.db through Repository Ports         |
+|   - Are refused if no project is open                               |
+|                                                                     |
+|   AppStateService:                                                  |
+|   - Operates on the APPLICATION itself, not on any project          |
+|   - Reads and writes session.db through SessionRepositoryPort       |
+|   - Always available — even before any project is open              |
+|   - The only service that can run in STATE 1                        |
+|                                                                     |
++=====================================================================+
+```
+
+### Subsubsection 10.2.3.2 — AppStateService Methods
+
+```python
+# application/use_case/app_state_service.py
+
+class AppStateService:
+    """
+    The application-level state watcher.
+    Manages session.db and enforces the one-project-at-a-time rule.
+    This service is ALWAYS available — even when no project is open.
+    It is the first service that runs when SuperManim starts.
+    """
+
+    def __init__(
+        self,
+        session_repo: SessionRepositoryPort,   # reads/writes session.db
+        notifier:     NotificationPort,         # shows messages to user
+    ):
+        self._session_repo = session_repo
+        self._notifier     = notifier
+
+    def load_session_on_startup(self) -> AppSession:
+        """
+        Called ONCE when SuperManim starts.
+        Reads session.db and returns the current session state.
+        This is the method that decides which STATE to start in.
+        Returns an AppSession entity.
+        """
+
+    def record_project_opened(
+        self,
+        project_name: str,
+        project_path: str,
+        project_mode: str
+    ) -> None:
+        """
+        Called every time a project is opened (new or existing).
+        Updates app_session table: sets is_project_open=1,
+                                   updates last_project_name,
+                                   updates last_project_path,
+                                   updates last_opened_at.
+        Updates recent_projects table: inserts or updates the row
+                                        for this project, moves it
+                                        to the top, increments
+                                        open_count.
+        """
+
+    def record_project_closed(self) -> None:
+        """
+        Called when a project is closed.
+        Sets is_project_open = 0 in the app_session table.
+        """
+
+    def record_clean_shutdown(self) -> None:
+        """
+        Called when the user types "exit" or "quit".
+        Sets is_project_open = 0 to mark a clean shutdown.
+        This is what tells the next startup it was a clean close,
+        not a crash.
+        """
+
+    def get_recent_projects(self) -> list[RecentProject]:
+        """
+        Returns the recent projects list from session.db.
+        Used by the "list projects" command.
+        """
+
+    def get_last_opened_project(self) -> RecentProject | None:
+        """
+        Returns the last opened project's name and path.
+        Returns None if no project has ever been opened.
+        """
+
+    def is_session_open(self) -> bool:
+        """
+        Returns True if a project is currently open in this session.
+        This is the authoritative answer to the question:
+        "Is a project open right now?"
+        """
+```
+
+### Subsubsection 10.2.3.3 — The Port and Adapter for AppStateService
+
+```
++=====================================================================+
+|         AppStateService PORT AND ADAPTER                            |
++=====================================================================+
+|                                                                     |
+|   PORT (the abstract interface — lives in core/ports/):             |
+|   ─────────────────────────────────────────────────────────────   |
+|   SessionRepositoryPort                                             |
+|   Defines WHAT operations are allowed on session.db.               |
+|   AppStateService uses only this interface.                         |
+|   It does not know or care that the storage is SQLite.              |
+|                                                                     |
+|   ADAPTER (the real implementation — lives in adapters/):           |
+|   ─────────────────────────────────────────────────────────────   |
+|   SqliteSessionRepository                                           |
+|   File: adapters/repositories/sqlite/sqlite_session_repository.py  |
+|   The ONLY class in the entire system that opens session.db         |
+|   and runs SQL commands on it.                                      |
+|   Implements SessionRepositoryPort.                                 |
+|   If you ever switch from SQLite to another database,               |
+|   only this file needs to change. Nothing else touches it.          |
+|                                                                     |
++=====================================================================+
+```
+
+---
+
+## Subsection 10.2.4 — The AppSession Entity (In-Memory Mirror of session.db)
+
+`AppStateService` works with a Python dataclass called `AppSession`.
+This is the **in-memory object** that mirrors what is stored in `session.db`.
+When the service reads the database, it fills this entity. When it needs to write,
+it reads this entity and saves it back.
+
+```python
+# core/entities/app_session.py
+
+from __future__ import annotations
+from dataclasses import dataclass, field
+from typing import Optional
+
+
+@dataclass
+class RecentProject:
+    """
+    One entry in the recent projects list.
+    Stored in session.db, table: recent_projects.
+    """
+    project_name:   str
+    project_path:   str
+    project_mode:   str
+    last_opened_at: str
+    open_count:     int = 1
+
+
+@dataclass
+class AppSession:
+    """
+    The in-memory mirror of session.db.
+    Represents the application-level session state.
+
+    This is NOT about any specific project.
+    It is about the application itself — what it remembers
+    across sessions, independently of any project.
+
+    ONLY AppStateService reads and writes this entity.
+    """
+
+    # ── CURRENT SESSION STATE ─────────────────────────────────────────
+    is_project_open:      bool          = False
+    current_project_name: Optional[str] = None
+    current_project_path: Optional[str] = None
+    session_opened_at:    Optional[str] = None
+
+    # ── LAST SESSION MEMORY ───────────────────────────────────────────
+    last_project_name:    Optional[str] = None
+    last_project_path:    Optional[str] = None
+    last_opened_at:       Optional[str] = None
+
+    # ── RECENT PROJECTS LIST ──────────────────────────────────────────
+    recent_projects:      list[RecentProject] = field(default_factory=list)
+    max_recent:           int                 = 10
+```
+
+---
+
+# Section 10.3 — Startup: All Cases Handled
+
+## Subsection 10.3.1 — What Happens When SuperManim Starts
+
+The very first thing SuperManim does when it launches — before showing any prompt —
+is run `AppStateService.load_session_on_startup()`. This method reads `session.db`
+and handles every possible case.
+
+There are **four possible startup cases**:
+
+---
+
+### Subsubsection 10.3.1.1 — Case 1: session.db Does Not Exist (First Run Ever)
+
+```
++=====================================================================+
+|   CASE 1: session.db DOES NOT EXIST                                 |
++=====================================================================+
+|                                                                     |
+|   When does this happen?                                            |
+|   This is the very first time this user has ever run SuperManim     |
+|   on this computer. The file has never been created.                |
+|                                                                     |
+|   What AppStateService does:                                        |
+|   Step 1. Check if session.db exists in the OS data folder.         |
+|   Step 2. It does not exist.                                        |
+|   Step 3. Create the OS data folder if it does not exist yet.       |
+|            (e.g. create ~/.supermanim/ on Linux)                    |
+|   Step 4. Create session.db with both empty tables.                 |
+|   Step 5. Create an empty AppSession in memory:                     |
+|            AppSession(is_project_open=False, recent_projects=[])    |
+|   Step 6. Return the empty session to the shell.                    |
+|   Step 7. Shell shows the welcome banner.                           |
+|   Step 8. Tool starts in STATE 1 — no project open.                 |
+|                                                                     |
+|   User sees:                                                        |
+|   ─────────────────────────────────────────────────────────────   |
+|   Welcome to SuperManim!                                            |
+|   No project is open.                                               |
+|   Use "new project <name>" to create your first project.            |
+|   supermanim> _                                                     |
+|                                                                     |
++=====================================================================+
+```
+
+---
+
+### Subsubsection 10.3.1.2 — Case 2: session.db Exists but is_project_open = 0 (Clean Close)
+
+```
++=====================================================================+
+|   CASE 2: session.db EXISTS, is_project_open = 0                   |
++=====================================================================+
+|                                                                     |
+|   When does this happen?                                            |
+|   The user has used SuperManim before and closed it cleanly         |
+|   (typed "exit" or "quit"). The last shutdown set                   |
+|   is_project_open = 0 correctly.                                    |
+|                                                                     |
+|   What AppStateService does:                                        |
+|   Step 1. Read session.db.                                          |
+|   Step 2. See is_project_open = 0.                                  |
+|   Step 3. Build an AppSession with is_project_open = False.         |
+|            Fill in last_project_name and recent_projects from       |
+|            what was stored, but do NOT open any project yet.        |
+|   Step 4. Tool starts in STATE 1.                                   |
+|                                                                     |
+|   User sees:                                                        |
+|   ─────────────────────────────────────────────────────────────   |
+|   No project is open.                                               |
+|   Last project: "MyAnimation"  (use "open project MyAnimation")     |
+|   supermanim> _                                                     |
+|                                                                     |
++=====================================================================+
+```
+
+---
+
+### Subsubsection 10.3.1.3 — Case 3: session.db Has Data but the Project Path is Gone
+
+```
++=====================================================================+
+|   CASE 3: session.db HAS DATA, BUT THE PROJECT FOLDER IS MISSING   |
++=====================================================================+
+|                                                                     |
+|   When does this happen?                                            |
+|   session.db has last_project_path = "/projects/MyAnimation"        |
+|   and is_project_open = 1, BUT when AppStateService checks that     |
+|   path on disk — the folder is gone.                                |
+|                                                                     |
+|   This happens when:                                                |
+|   - The user manually deleted the project folder.                   |
+|   - The project was on a USB drive that is no longer plugged in.    |
+|   - The project was moved to a different path.                      |
+|   - The disk was reformatted.                                       |
+|                                                                     |
+|   What AppStateService does:                                        |
+|   Step 1. Read session.db.                                          |
+|   Step 2. See is_project_open = 1 (or last_project_path exists).    |
+|   Step 3. Check if last_project_path exists on disk.               |
+|   Step 4. It does NOT exist.                                        |
+|   Step 5. Set is_project_open = 0 in session.db immediately.        |
+|   Step 6. Build AppSession with is_project_open = False.            |
+|   Step 7. Tool starts in STATE 1 with a warning message.            |
+|                                                                     |
+|   User sees:                                                        |
+|   ─────────────────────────────────────────────────────────────   |
+|   WARNING: Last project "MyAnimation" was not found at:            |
+|   /projects/MyAnimation/                                            |
+|   It may have been moved or deleted.                                |
+|   Use "list projects" to see your recent projects.                  |
+|   supermanim> _                                                     |
+|                                                                     |
++=====================================================================+
+```
+
+---
+
+### Subsubsection 10.3.1.4 — Case 4: session.db Has Data and the Project Path is Valid
+
+```
++=====================================================================+
+|   CASE 4: session.db HAS DATA AND THE PROJECT FOLDER EXISTS        |
++=====================================================================+
+|                                                                     |
+|   When does this happen?                                            |
+|   session.db has data pointing to a project, and that project       |
+|   folder still exists on disk with its project_data.db intact.      |
+|                                                                     |
+|   This covers TWO sub-cases:                                        |
+|   - The tool was closed with is_project_open = 1  (it crashed or   |
+|     was force-killed)                                               |
+|   - The tool was closed with is_project_open = 1  (an earlier       |
+|     version of the code forgot to set it to 0)                      |
+|   Either way, there is a valid project to reopen.                   |
+|                                                                     |
+|   What AppStateService does:                                        |
+|   Step 1. Read session.db.                                          |
+|   Step 2. See is_project_open = 1 (or last_project_path exists).    |
+|   Step 3. Check if last_project_path exists on disk — YES.         |
+|   Step 4. Check if project_data.db exists inside the folder — YES. |
+|   Step 5. Ask the user: "Do you want to reopen this project?"      |
+|   Step 6a. User says YES:                                           |
+|             -> Open the project via ProjectLifecycleService.        |
+|             -> Restore state via ProjectStateService.               |
+|             -> Tool starts in STATE 2.                              |
+|   Step 6b. User says NO:                                            |
+|             -> Set is_project_open = 0 in session.db.               |
+|             -> Tool starts in STATE 1.                              |
+|             -> User can use "list projects", "open project", or     |
+|                "new project".                                       |
+|                                                                     |
+|   User sees (before answering):                                     |
+|   ─────────────────────────────────────────────────────────────   |
+|   Last open project: "MyAnimation"                                  |
+|   Do you want to reopen it? [yes/no]: _                             |
+|                                                                     |
+|   If yes, user then sees:                                           |
+|   ─────────────────────────────────────────────────────────────   |
+|   Opening last project: MyAnimation                                 |
+|   Mode:       supermanim                                            |
+|   Scenes:     5 total  (3 rendered, 1 pending, 1 failed)            |
+|   Audio:      voice.mp3 (60.5 sec) — 4/5 scenes synced             |
+|   Progress:   60%                                                   |
+|   supermanim> _                                                     |
+|                                                                     |
++=====================================================================+
+```
+
+---
+
+## Subsection 10.3.2 — Startup Decision Flowchart
+
+```
+SuperManim launches
+        |
+        v
+AppStateService.load_session_on_startup()
+        |
+        v
+Does session.db exist?
+        |
+   NO ──┼── YES
+   |            |
+   v            v
+Create      Read is_project_open
+session.db       |
+   |        0 ──┼── 1
+   |        |          |
+   |        v          v
+   |     STATE 1   Does last_project_path
+   |     no        exist on disk?
+   |     project        |
+   |     open      NO ──┼── YES
+   |                |          |
+   |              Warn     Ask user:
+   |              "project  "Reopen?"
+   |              missing"       |
+   |                        YES ─┼── NO
+   |                        |         |
+   v                        v         v
+STATE 1                  STATE 2   STATE 1
+(no project)          (project    (no project)
+                        open)
+```
+
+---
+
+# Section 10.4 — What Happens When a Project is Opened or Closed
+
+## Subsection 10.4.1 — Opening a Project (new project OR open project)
+
+Every time a project is opened — whether by creating a new one or by reopening an existing one —
+the following steps happen in order:
+
+```
++=====================================================================+
+|   SEQUENCE: OPENING A PROJECT                                       |
++=====================================================================+
+|                                                                     |
+|   1. User types "new project MyAnimation"                           |
+|      OR "open project MyAnimation"                                  |
+|                                                                     |
+|   2. Shell dispatches the command to ProjectLifecycleService.       |
+|                                                                     |
+|   3. ProjectLifecycleService does its work:                         |
+|      For NEW project:                                               |
+|        a. Validates the name.                                       |
+|        b. Creates all folders on disk.                              |
+|        c. Creates project_data.db.                                  |
+|        d. Writes project_settings (locked fields written here,      |
+|           never to be changed again).                               |
+|        e. Creates the project_state table with default values.      |
+|        f. Creates the Project entity in memory.                     |
+|        g. Stores it in self._current_project.                       |
+|      For EXISTING project:                                          |
+|        a. Validates the name and finds the folder.                  |
+|        b. Opens project_data.db.                                    |
+|        c. Reads project_settings to build the Project entity.       |
+|        d. Reads scenes, audio, cache records into memory.           |
+|        e. Stores in self._current_project.                          |
+|                                                                     |
+|   4. ProjectStateService.restore_state(project_path) is called.    |
+|      It reads the project_state table and loads the snapshot.       |
+|      It also re-calculates all counters from the live tables        |
+|      (scenes, audio_clips) to make sure the snapshot is accurate.   |
+|      The snapshot is stored in memory as a ProjectState entity.     |
+|                                                                     |
+|   5. AppStateService.record_project_opened() is called.             |
+|      Updates session.db:                                            |
+|        app_session:       is_project_open = 1                       |
+|                           last_project_name = "MyAnimation"         |
+|                           last_project_path = "/projects/MyAnim"    |
+|                           last_opened_at = "2024-11-12 14:18:05"    |
+|        recent_projects:   INSERT or UPDATE the row for MyAnimation. |
+|                           Move it to the top.                       |
+|                           Increment open_count by 1.                |
+|                           Delete oldest row if list exceeds 10.     |
+|                                                                     |
+|   6. AppSession in memory is updated:                               |
+|        is_project_open = True                                       |
+|        current_project_name = "MyAnimation"                         |
+|                                                                     |
+|   7. Tool is now in STATE 2.                                        |
+|      The prompt shows a summary of the project state.               |
+|                                                                     |
++=====================================================================+
+```
+
+---
+
+## Subsection 10.4.2 — Closing a Project
+
+```
++=====================================================================+
+|   SEQUENCE: CLOSING A PROJECT                                       |
++=====================================================================+
+|                                                                     |
+|   1. User types "close project"                                     |
+|                                                                     |
+|   2. ProjectStateService.save_state() is called FIRST.              |
+|      The final snapshot is written to project_data.db.              |
+|      The total_work_time is updated (time elapsed since opening).   |
+|      state_updated_at is updated to now.                            |
+|                                                                     |
+|   3. ProjectLifecycleService closes the project:                    |
+|      - Any unsaved in-memory data is flushed to project_data.db.   |
+|      - self._current_project is set to None.                        |
+|                                                                     |
+|   4. ProjectStateService.clear_state() is called.                   |
+|      The in-memory ProjectState snapshot is cleared.                |
+|                                                                     |
+|   5. AppStateService.record_project_closed() is called.             |
+|      Updates session.db:  is_project_open = 0                       |
+|      Updates AppSession:  is_project_open = False                   |
+|                                                                     |
+|   6. Tool is back in STATE 1.                                       |
+|                                                                     |
++=====================================================================+
+```
+
+---
+
+## Subsection 10.4.3 — Closing One Project and Opening Another
+
+```
++=====================================================================+
+|   SEQUENCE: SWITCHING PROJECTS                                      |
++=====================================================================+
+|                                                                     |
+|   1. User closes the current project (see Subsection 10.4.2).      |
+|      Tool goes to STATE 1.                                          |
+|                                                                     |
+|   2. User opens a different project (see Subsection 10.4.1).        |
+|      Tool goes to STATE 2 with the new project.                     |
+|                                                                     |
+|   KEY POINT: The first project is completely untouched.             |
+|   Its project_data.db was saved and closed.                         |
+|   It is not in memory. It is just sitting on disk.                  |
+|   Only the second project is now active.                            |
+|                                                                     |
+|   session.db now reflects the second project:                       |
+|   last_project_name  = "Chapter1_Intro"                             |
+|   last_project_path  = "/projects/Chapter1_Intro"                   |
+|   is_project_open    = 1                                            |
+|   recent_projects:   "Chapter1_Intro" is at the top.               |
+|                      "MyAnimation"     is still in the list.        |
+|                                                                     |
++=====================================================================+
+```
+
+---
+
+## Subsection 10.4.4 — Clean Shutdown (User Types "exit")
+
+```
++=====================================================================+
+|   SEQUENCE: CLEAN SHUTDOWN                                          |
++=====================================================================+
+|                                                                     |
+|   1. User types "exit" or "quit".                                   |
+|                                                                     |
+|   2. If a project is open:                                          |
+|      ProjectStateService.save_state() is called.                    |
+|      All state is saved to project_data.db.                         |
+|      ProjectLifecycleService flushes everything.                    |
+|                                                                     |
+|   3. AppStateService.record_clean_shutdown() is called.             |
+|      Sets is_project_open = 0 in session.db.                        |
+|      This marks it as a CLEAN shutdown.                             |
+|                                                                     |
+|   4. SuperManim exits.                                              |
+|                                                                     |
+|   On next startup: Case 2 will apply (is_project_open = 0).         |
+|   The tool will start in STATE 1. No reopen prompt.                 |
+|                                                                     |
++=====================================================================+
+```
+
+---
+
+## Subsection 10.4.5 — Unclean Shutdown (Crash or Power Cut)
+
+This is the most important case to handle correctly.
+The tool did not get a chance to run any of its normal shutdown code.
+
+```
++=====================================================================+
+|   SEQUENCE: CRASH OR POWER LOSS                                     |
++=====================================================================+
+|                                                                     |
+|   What was on disk when it crashed:                                 |
+|   ─────────────────────────────────────────────────────────────   |
+|   session.db still has is_project_open = 1.                         |
+|   The "close project" step never ran.                               |
+|   is_project_open was never set to 0.                               |
+|                                                                     |
+|   project_data.db has whatever was last saved by save_state().      |
+|   ProjectStateService calls save_state() after every meaningful     |
+|   operation — not just at close time. So the last saved snapshot    |
+|   is as recent as the last completed operation.                     |
+|                                                                     |
+|   SQLite's WAL (Write-Ahead Log) mode ensures the database file     |
+|   itself is never corrupted by a crash mid-write. Any partial       |
+|   write is automatically rolled back when the file is next opened.  |
+|                                                                     |
+|   What happens on next startup:                                     |
+|   ─────────────────────────────────────────────────────────────   |
+|   Step 1. AppStateService reads session.db.                         |
+|   Step 2. Sees is_project_open = 1.                                 |
+|   Step 3. Checks if last_project_path exists on disk.               |
+|                                                                     |
+|   If the folder EXISTS:                                             |
+|   → This is CASE 4 from startup.                                    |
+|   → "Do you want to reopen last project?"                           |
+|   → If yes: project opens. ProjectStateService.restore_state()      |
+|     loads the last saved snapshot. The user sees the project        |
+|     exactly as it was at the last successful save_state() call.     |
+|   → Any work that was in-progress at the exact moment of the        |
+|     crash may need to be redone. But nothing is lost that was       |
+|     already completed.                                              |
+|                                                                     |
+|   If the folder DOES NOT EXIST:                                     |
+|   → This is CASE 3 from startup.                                    |
+|   → Show a warning. Start in STATE 1.                               |
+|                                                                     |
+|   WHY DATA IS NOT LOST:                                             |
+|   ─────────────────────────────────────────────────────────────   |
+|   save_state() is called automatically after every operation:       |
+|   after adding a scene, after a render completes, after adding      |
+|   audio, after exporting, after every meaningful change.            |
+|   The only thing that can be lost is an operation that was          |
+|   in progress at the exact moment of the crash.                     |
+|                                                                     |
++=====================================================================+
+```
+
+---
+
+# Section 10.5 — ProjectStateService and the project_state Table (Project-Level State)
+
+## Subsection 10.5.1 — What Is the project_state Table?
+
+Every project has a `project_state` table inside its own `project_data.db` file.
+This table stores a **snapshot** of the project — a quick summary of everything
+happening in the project right now.
+
+```
++=====================================================================+
+|              WHAT IS THE project_state TABLE?                       |
++=====================================================================+
+|                                                                     |
+|   project_state = A snapshot of the project's current condition     |
+|                                                                     |
+|   It is NOT a copy of all the data.                                 |
+|   The full detailed data (scene list, audio clip list, render jobs) |
+|   stays in their own tables. project_state stores SUMMARY NUMBERS. |
+|                                                                     |
+|   Think of it like a dashboard on a car:                            |
+|   The dashboard does not contain the engine. It shows you what the  |
+|   engine is doing right now — speed, fuel, temperature.             |
+|   project_state shows you what the project is doing right now.      |
+|                                                                     |
+|   Why is it useful?                                                 |
+|   ─────────────────────────────────────────────────────────────   |
+|   1. FAST RESTORE: When you reopen a project, loading the snapshot  |
+|      is one fast database read. No need to scan all scenes and      |
+|      re-count everything from scratch.                              |
+|                                                                     |
+|   2. PROMPT DISPLAY: The tool can show you a live status summary    |
+|      every time you open a project.                                 |
+|                                                                     |
+|   3. PROGRESS TRACKING: You can see exactly how far along you are   |
+|      (3 out of 5 scenes rendered = 60%).                            |
+|                                                                     |
+|   4. CRASH RECOVERY: After a crash, you know exactly where you      |
+|      left off without re-reading all the detailed tables.           |
+|                                                                     |
++=====================================================================+
+```
+
+---
+
+## Subsection 10.5.2 — Where project_state Fits Inside project_data.db
+
+```
+project_data.db   (one per project, inside the project folder)
+│
+├── table: project_settings    ← Managed by ProjectSettingsRepository
+│                                (locked fields read-only after creation)
+│
+├── table: project_state       ← Managed by ProjectStateService ONLY
+│                                (the snapshot — this entire section)
+│
+├── table: scenes              ← Managed by SqliteSceneRepository
+├── table: audio_clips         ← Managed by SqliteAudioRepository
+├── table: cache_records       ← Managed by SqliteCacheRepository
+└── table: render_history      ← Managed by SqliteRenderHistoryRepository
+```
+
+---
+
+## Subsection 10.5.3 — The Full project_state Table Design
+
+The table is divided into 9 sections. Each section covers a different aspect of the project.
+Here is the complete SQL definition with every field explained:
+
+### Subsubsection 10.5.3.1 — Section 1: Project Identity
+
+These four fields identify which project this snapshot belongs to.
+They are filled once when the project is created and never change.
+
+```sql
+-- SECTION 1: Project Identity
+-- =========================================================
+project_id    INTEGER PRIMARY KEY DEFAULT 1,
+-- Always 1. Each project has its own database file, so
+-- there is only ever one row in this table per project.
+
+project_name  TEXT NOT NULL,
+-- The name of the project. e.g. "MyAnimation"
+-- Copied from project_settings at creation time.
+
+project_path  TEXT NOT NULL,
+-- The full path to the project folder.
+-- e.g. "/projects/MyAnimation"
+-- Copied from project_settings at creation time.
+
+project_mode  TEXT NOT NULL,
+-- "normal", "simplemanim", or "supermanim"
+-- Copied from project_settings at creation time.
+```
+
+```
++------------------------------------------------------------+
+|   SECTION 1 EXAMPLE                                        |
++------------------------------------------------------------+
+|   project_id   = 1                                         |
+|   project_name = "MyAnimation"                             |
+|   project_path = "/projects/MyAnimation"                   |
+|   project_mode = "supermanim"                              |
++------------------------------------------------------------+
+```
+
+### Subsubsection 10.5.3.2 — Section 2: Scene Statistics
+
+These fields count the scenes and their current statuses.
+
+```sql
+-- SECTION 2: Scene Statistics
+-- =========================================================
+total_scenes     INTEGER DEFAULT 0,
+-- Total number of scenes in the project right now.
+
+rendered_scenes  INTEGER DEFAULT 0,
+-- Scenes that have been successfully rendered.
+
+pending_scenes   INTEGER DEFAULT 0,
+-- Scenes that exist but have not been rendered yet.
+
+failed_scenes    INTEGER DEFAULT 0,
+-- Scenes where the render attempt failed.
+
+skipped_scenes   INTEGER DEFAULT 0,
+-- Scenes that were skipped because their code was unchanged
+-- (fingerprint matched the cache — no render needed).
+```
+
+```
++------------------------------------------------------------+
+|   SECTION 2 EXAMPLE                                        |
++------------------------------------------------------------+
+|   total_scenes    = 5                                      |
+|   rendered_scenes = 3                                      |
+|   pending_scenes  = 1                                      |
+|   failed_scenes   = 1                                      |
+|   skipped_scenes  = 0                                      |
+|                                                            |
+|   Verification rule:                                       |
+|   total_scenes = rendered + pending + failed + skipped     |
+|   5 = 3 + 1 + 1 + 0  ✓                                    |
++------------------------------------------------------------+
+```
+
+### Subsubsection 10.5.3.3 — Section 3: Audio Status
+
+These fields describe whether the project has audio and what its current state is.
+
+```sql
+-- SECTION 3: Audio Status
+-- =========================================================
+has_audio            INTEGER DEFAULT 0,
+-- 0 = no audio file in this project.
+-- 1 = an audio file has been added.
+
+audio_file_path      TEXT DEFAULT NULL,
+-- Full path to the original audio file.
+-- e.g. "/projects/MyAnimation/audio_clips/voice.mp3"
+-- NULL if has_audio = 0.
+
+audio_file_duration  REAL DEFAULT NULL,
+-- Duration of the original audio file in seconds.
+-- e.g. 60.5
+-- NULL if has_audio = 0.
+
+audio_clips_count    INTEGER DEFAULT 0,
+-- Number of audio clips created from splitting the original audio.
+-- 0 if the audio has not been split yet.
+
+synced_scenes        INTEGER DEFAULT 0,
+-- Number of scenes that have been synced to an audio clip.
+-- A scene is synced when its duration matches its assigned audio clip.
+```
+
+```
++------------------------------------------------------------+
+|   SECTION 3 EXAMPLE — Project WITH audio                   |
++------------------------------------------------------------+
+|   has_audio           = 1                                  |
+|   audio_file_path     = "/projects/MyAnim/audio/voice.mp3" |
+|   audio_file_duration = 60.5                               |
+|   audio_clips_count   = 5                                  |
+|   synced_scenes       = 4                                  |
++------------------------------------------------------------+
+
++------------------------------------------------------------+
+|   SECTION 3 EXAMPLE — Project WITHOUT audio (simplemanim)  |
++------------------------------------------------------------+
+|   has_audio           = 0                                  |
+|   audio_file_path     = NULL                               |
+|   audio_file_duration = NULL                               |
+|   audio_clips_count   = 0                                  |
+|   synced_scenes       = 0                                  |
++------------------------------------------------------------+
+```
+
+### Subsubsection 10.5.3.4 — Section 4: Timeline Status
+
+These fields show whether the scene durations add up correctly to match the audio.
+
+```sql
+-- SECTION 4: Timeline Status
+-- =========================================================
+total_duration   REAL DEFAULT 0.0,
+-- The sum of all scene durations in seconds.
+-- e.g. if scene 1 = 12.5s, scene 2 = 18.5s, scene 3 = 16.8s...
+-- total_duration = 60.5
+
+timeline_valid   INTEGER DEFAULT 0,
+-- 1 = the timeline is correct (scene durations sum to audio duration).
+-- 0 = there is a mismatch (gap or overlap).
+
+timeline_gap     REAL DEFAULT NULL,
+-- If timeline_valid = 0, this stores how large the mismatch is in seconds.
+-- Positive = scenes are shorter than audio (there is a gap).
+-- Negative = scenes are longer than audio (there is an overlap).
+-- NULL if timeline_valid = 1.
+```
+
+```
++------------------------------------------------------------+
+|   SECTION 4 EXAMPLE — Correct timeline                     |
++------------------------------------------------------------+
+|   total_duration  = 60.5                                   |
+|   timeline_valid  = 1                                      |
+|   timeline_gap    = NULL                                   |
++------------------------------------------------------------+
+
++------------------------------------------------------------+
+|   SECTION 4 EXAMPLE — Gap in timeline                      |
++------------------------------------------------------------+
+|   total_duration  = 58.0                                   |
+|   timeline_valid  = 0                                      |
+|   timeline_gap    = 2.5                                     |
+|   (scenes total 58 sec, audio is 60.5 sec — 2.5 sec gap)  |
++------------------------------------------------------------+
+```
+
+### Subsubsection 10.5.3.5 — Section 5: Render Status
+
+These fields describe the most recent render operation and whether it had errors.
+
+```sql
+-- SECTION 5: Render Status
+-- =========================================================
+last_render_at        TEXT DEFAULT NULL,
+-- ISO timestamp of when the last render finished.
+-- e.g. "2024-11-12 14:30:00"
+-- NULL if the project has never been rendered.
+
+last_render_duration  REAL DEFAULT NULL,
+-- How long the last render took, in seconds.
+-- e.g. 185.5 (about 3 minutes)
+-- NULL if never rendered.
+
+render_progress       REAL DEFAULT 0.0,
+-- A number between 0.0 and 1.0 showing overall render completion.
+-- 0.0 = nothing rendered. 1.0 = everything rendered.
+-- Calculated as: rendered_scenes / total_scenes
+
+has_render_errors     INTEGER DEFAULT 0,
+-- 0 = no render errors in the project.
+-- 1 = at least one scene has a render error.
+
+last_error_scene      INTEGER DEFAULT NULL,
+-- The scene_id of the most recent scene that failed to render.
+-- NULL if has_render_errors = 0.
+```
+
+```
++------------------------------------------------------------+
+|   SECTION 5 EXAMPLE                                        |
++------------------------------------------------------------+
+|   last_render_at       = "2024-11-12 14:30:00"             |
+|   last_render_duration = 185.5 seconds                     |
+|   render_progress      = 0.6  (60% complete)               |
+|   has_render_errors    = 1                                  |
+|   last_error_scene     = 3    (scene 3 failed)             |
++------------------------------------------------------------+
+```
+
+### Subsubsection 10.5.3.6 — Section 6: Preview Status
+
+These fields track the low-quality preview generation.
+
+```sql
+-- SECTION 6: Preview Status
+-- =========================================================
+preview_scenes    INTEGER DEFAULT 0,
+-- Number of scenes that currently have a preview video.
+
+last_preview_at   TEXT DEFAULT NULL,
+-- ISO timestamp of the last time a preview was generated.
+-- NULL if no preview has ever been generated.
+```
+
+```
++------------------------------------------------------------+
+|   SECTION 6 EXAMPLE                                        |
++------------------------------------------------------------+
+|   preview_scenes  = 3                                      |
+|   last_preview_at = "2024-11-12 14:25:00"                  |
++------------------------------------------------------------+
+```
+
+### Subsubsection 10.5.3.7 — Section 7: Export Status
+
+These fields track whether the project is ready to export and the history of exports.
+
+```sql
+-- SECTION 7: Export Status
+-- =========================================================
+export_ready      INTEGER DEFAULT 0,
+-- 1 = all scenes are rendered and the project can be exported.
+-- 0 = not all scenes are rendered, export is not possible yet.
+-- This is True when: rendered_scenes == total_scenes
+--                    AND total_scenes > 0
+--                    AND failed_scenes == 0
+
+last_export_at    TEXT DEFAULT NULL,
+-- ISO timestamp of the last export.
+-- NULL if never exported.
+
+last_export_path  TEXT DEFAULT NULL,
+-- Full path of the last exported video file.
+-- e.g. "/projects/MyAnimation/exports/MyAnimation_final.mp4"
+-- NULL if never exported.
+
+export_count      INTEGER DEFAULT 0,
+-- Total number of times this project has been exported.
+```
+
+```
++------------------------------------------------------------+
+|   SECTION 7 EXAMPLE                                        |
++------------------------------------------------------------+
+|   export_ready     = 1                                     |
+|   last_export_at   = "2024-11-12 15:00:00"                 |
+|   last_export_path = "/projects/MyAnimation/exports/       |
+|                       MyAnimation_final.mp4"               |
+|   export_count     = 3                                     |
++------------------------------------------------------------+
+```
+
+### Subsubsection 10.5.3.8 — Section 8: Session Info
+
+These fields track usage history across all the times this project was opened.
+
+```sql
+-- SECTION 8: Session Info
+-- =========================================================
+opened_count     INTEGER DEFAULT 1,
+-- How many times this project has ever been opened.
+-- Starts at 1 when the project is first created.
+-- Incremented by 1 every time the project is opened.
+
+total_work_time  REAL DEFAULT 0.0,
+-- Total time the user has spent working on this project,
+-- in seconds.
+-- Updated when the project is closed:
+-- total_work_time += (time_of_close - time_of_open)
+```
+
+```
++------------------------------------------------------------+
+|   SECTION 8 EXAMPLE                                        |
++------------------------------------------------------------+
+|   opened_count    = 15                                     |
+|   total_work_time = 3625.0  (about 1 hour total across     |
+|                               all 15 sessions)             |
++------------------------------------------------------------+
+```
+
+### Subsubsection 10.5.3.9 — Section 9: Timestamps
+
+```sql
+-- SECTION 9: Timestamps
+-- =========================================================
+state_created_at  TEXT NOT NULL,
+-- ISO timestamp of when this project_state row was first created.
+-- This happens when the project is first created.
+-- This field never changes after that.
+
+state_updated_at  TEXT NOT NULL
+-- ISO timestamp of the last time ANY field in this row was updated.
+-- Updated on every save_state() call.
+-- This is how you know when the snapshot was last refreshed.
+```
+
+---
+
+## Subsection 10.5.4 — The Complete SQL Table Definition
+
+```sql
+CREATE TABLE IF NOT EXISTS project_state (
+
+    -- ═══════════════════════════════════════════════════════════════
+    -- SECTION 1: Project Identity
+    -- ═══════════════════════════════════════════════════════════════
+    project_id              INTEGER PRIMARY KEY DEFAULT 1,
+    project_name            TEXT    NOT NULL,
+    project_path            TEXT    NOT NULL,
+    project_mode            TEXT    NOT NULL,
+
+    -- ═══════════════════════════════════════════════════════════════
+    -- SECTION 2: Scene Statistics
+    -- ═══════════════════════════════════════════════════════════════
+    total_scenes            INTEGER DEFAULT 0,
+    rendered_scenes         INTEGER DEFAULT 0,
+    pending_scenes          INTEGER DEFAULT 0,
+    failed_scenes           INTEGER DEFAULT 0,
+    skipped_scenes          INTEGER DEFAULT 0,
+
+    -- ═══════════════════════════════════════════════════════════════
+    -- SECTION 3: Audio Status
+    -- ═══════════════════════════════════════════════════════════════
+    has_audio               INTEGER DEFAULT 0,
+    audio_file_path         TEXT    DEFAULT NULL,
+    audio_file_duration     REAL    DEFAULT NULL,
+    audio_clips_count       INTEGER DEFAULT 0,
+    synced_scenes           INTEGER DEFAULT 0,
+
+    -- ═══════════════════════════════════════════════════════════════
+    -- SECTION 4: Timeline Status
+    -- ═══════════════════════════════════════════════════════════════
+    total_duration          REAL    DEFAULT 0.0,
+    timeline_valid          INTEGER DEFAULT 0,
+    timeline_gap            REAL    DEFAULT NULL,
+
+    -- ═══════════════════════════════════════════════════════════════
+    -- SECTION 5: Render Status
+    -- ═══════════════════════════════════════════════════════════════
+    last_render_at          TEXT    DEFAULT NULL,
+    last_render_duration    REAL    DEFAULT NULL,
+    render_progress         REAL    DEFAULT 0.0,
+    has_render_errors       INTEGER DEFAULT 0,
+    last_error_scene        INTEGER DEFAULT NULL,
+
+    -- ═══════════════════════════════════════════════════════════════
+    -- SECTION 6: Preview Status
+    -- ═══════════════════════════════════════════════════════════════
+    preview_scenes          INTEGER DEFAULT 0,
+    last_preview_at         TEXT    DEFAULT NULL,
+
+    -- ═══════════════════════════════════════════════════════════════
+    -- SECTION 7: Export Status
+    -- ═══════════════════════════════════════════════════════════════
+    export_ready            INTEGER DEFAULT 0,
+    last_export_at          TEXT    DEFAULT NULL,
+    last_export_path        TEXT    DEFAULT NULL,
+    export_count            INTEGER DEFAULT 0,
+
+    -- ═══════════════════════════════════════════════════════════════
+    -- SECTION 8: Session Info
+    -- ═══════════════════════════════════════════════════════════════
+    opened_count            INTEGER DEFAULT 1,
+    total_work_time         REAL    DEFAULT 0.0,
+
+    -- ═══════════════════════════════════════════════════════════════
+    -- SECTION 9: Timestamps
+    -- ═══════════════════════════════════════════════════════════════
+    state_created_at        TEXT    NOT NULL,
+    state_updated_at        TEXT    NOT NULL
+);
+```
+
+---
+
+# Section 10.6 — ProjectStateService
+
+## Subsection 10.6.1 — What ProjectStateService Does
+
+```
++=====================================================================+
+|              ProjectStateService — COMPLETE JOB                     |
++=====================================================================+
+|                                                                     |
+|   1. RESTORE the project state when a project is opened.            |
+|      Reads the project_state table from project_data.db.            |
+|      Also re-reads all scene/audio tables and recalculates every    |
+|      counter to make sure the snapshot is accurate.                 |
+|      Loads the result into memory as a ProjectState entity.         |
+|                                                                     |
+|   2. SAVE the project state whenever something meaningful changes.  |
+|      Writes the in-memory ProjectState entity back to project_data.db.
+|      This happens after every important operation — not just at     |
+|      close time. This is what makes crash recovery work.            |
+|                                                                     |
+|   3. UPDATE individual parts of the state as operations happen.     |
+|      Different update methods exist for different events:           |
+|      - update_scene_stats()   → after any scene change              |
+|      - update_audio_status()  → after any audio change              |
+|      - update_render_status() → after any render event              |
+|      - update_export_status() → after any export event              |
+|      - update_preview_status()→ after any preview event             |
+|                                                                     |
+|   4. CLEAR the state when the project is closed.                    |
+|      Empties the in-memory ProjectState entity.                     |
+|                                                                     |
+|   5. PROVIDE the current state to anything that needs it.           |
+|      The prompt uses this to show the user a status summary.        |
+|                                                                     |
+|   6. ONLY ACTIVE IN STATE 2.                                        |
+|      Does nothing before a project is open.                         |
+|      Cannot be called when is_project_open = False.                 |
+|                                                                     |
++=====================================================================+
+```
+
+---
+
+## Subsection 10.6.2 — ProjectStateService Methods
+
+```python
+# application/use_case/project_state_service.py
+
+class ProjectStateService:
+    """
+    Manages the project_state table in project_data.db.
+    Only active when a project is open (STATE 2).
+
+    ONLY THIS SERVICE writes to the project_state table.
+    No other service, no other adapter, no other piece of code
+    writes to project_state directly. Ever.
+    """
+
+    def __init__(
+        self,
+        project_state_repo: ProjectStateRepositoryPort,  # reads/writes project_state
+        scene_repo:         SceneRepositoryPort,          # reads scenes for recalculation
+        audio_repo:         AudioRepositoryPort,          # reads audio for recalculation
+        notifier:           NotificationPort,
+    ):
+        self._project_state_repo = project_state_repo
+        self._scene_repo         = scene_repo
+        self._audio_repo         = audio_repo
+        self._notifier           = notifier
+        self._current_state: Optional[ProjectState] = None
+
+    def restore_state(self, project_path: str) -> ProjectState:
+        """
+        Called when a project is opened.
+
+        Steps:
+        1. Read the project_state table from project_data.db.
+        2. Read all scenes from the scenes table.
+        3. Read all audio clips from the audio_clips table.
+        4. Recalculate all counters from live data.
+           (total_scenes, rendered_scenes, pending_scenes,
+            failed_scenes, has_audio, audio_clips_count, etc.)
+        5. Update the snapshot with the recalculated values.
+        6. Save the updated snapshot back to project_data.db.
+        7. Store the snapshot as self._current_state.
+        8. Increment opened_count by 1.
+        9. Return the ProjectState entity.
+
+        Why recalculate? Because the snapshot might be slightly
+        out of sync if the previous session crashed before a
+        save_state() call could complete.
+        """
+
+    def save_state(self) -> None:
+        """
+        Writes the current in-memory ProjectState to project_data.db.
+        Called after every meaningful operation.
+
+        Sets state_updated_at to the current timestamp.
+        """
+
+    def clear_state(self) -> None:
+        """
+        Clears the in-memory ProjectState.
+        Called when the project is closed.
+        self._current_state is set to None.
+        """
+
+    def update_scene_stats(self) -> None:
+        """
+        Re-reads all scenes from the scenes table and recalculates:
+        - total_scenes
+        - rendered_scenes
+        - pending_scenes
+        - failed_scenes
+        - skipped_scenes
+        - total_duration
+        - render_progress
+        - export_ready (recalculated from scene stats)
+
+        Called after:
+        - A scene is added
+        - A scene is removed
+        - A scene render finishes (success or failure)
+        - A scene is skipped (unchanged fingerprint)
+        Then calls save_state() automatically.
+        """
+
+    def update_audio_status(self) -> None:
+        """
+        Re-reads the audio data and recalculates:
+        - has_audio
+        - audio_file_path
+        - audio_file_duration
+        - audio_clips_count
+        - synced_scenes
+        - timeline_valid
+        - timeline_gap
+
+        Called after:
+        - Audio is added to the project
+        - Audio is removed
+        - Audio is split into clips
+        - A scene is synced to its audio clip
+        Then calls save_state() automatically.
+        """
+
+    def update_render_status(
+        self,
+        render_duration_seconds: float,
+        had_errors:              bool,
+        error_scene_id:          Optional[int]
+    ) -> None:
+        """
+        Updates the render status fields:
+        - last_render_at        = now
+        - last_render_duration  = render_duration_seconds
+        - has_render_errors     = had_errors
+        - last_error_scene      = error_scene_id
+        Also calls update_scene_stats() to refresh scene counts.
+        Then calls save_state() automatically.
+
+        Called after any render operation finishes (or fails).
+        """
+
+    def update_preview_status(self) -> None:
+        """
+        Re-counts the number of scenes that have a preview file.
+        Updates:
+        - preview_scenes
+        - last_preview_at = now
+        Then calls save_state() automatically.
+
+        Called after a preview is generated for any scene.
+        """
+
+    def update_export_status(self, export_path: str) -> None:
+        """
+        Updates the export status fields:
+        - last_export_at   = now
+        - last_export_path = export_path
+        - export_count     += 1
+        Then calls save_state() automatically.
+
+        Called after an export completes successfully.
+        """
+
+    def get_current_state(self) -> Optional[ProjectState]:
+        """
+        Returns the current in-memory ProjectState.
+        Returns None if no project is open.
+        Used by the CLI to display the status summary.
+        """
+
+    def finalize_on_close(self) -> None:
+        """
+        Called just before the project is closed.
+        Updates total_work_time by adding the elapsed time
+        since the project was opened.
+        Then calls save_state() one final time.
+        """
+```
+
+---
+
+## Subsection 10.6.3 — The Port and Adapter for ProjectStateService
+
+```
++=====================================================================+
+|         ProjectStateService PORT AND ADAPTER                        |
++=====================================================================+
+|                                                                     |
+|   PORT (the abstract interface — lives in ports/repository_ports/): |
+|   ─────────────────────────────────────────────────────────────   |
+|   ProjectStateRepositoryPort                                        |
+|   File: ports/repository_ports/project_state_repository_port.py    |
+|   Defines WHAT operations are allowed on the project_state table.  |
+|   ProjectStateService uses only this interface.                     |
+|                                                                     |
+|   Methods defined in the port:                                      |
+|   create_state(state: ProjectState) -> None                         |
+|   load_state(project_id: int) -> ProjectState                       |
+|   save_state(state: ProjectState) -> None                           |
+|                                                                     |
+|   ADAPTER (the real implementation — lives in adapters/):           |
+|   ─────────────────────────────────────────────────────────────   |
+|   SqliteProjectStateRepository                                      |
+|   File: adapters/repositories/sqlite/                               |
+|         sqlite_project_state_repository.py                          |
+|   The ONLY class that opens project_data.db and runs SQL on         |
+|   the project_state table.                                          |
+|   Implements ProjectStateRepositoryPort.                            |
+|                                                                     |
++=====================================================================+
+```
+
+---
+
+# Section 10.7 — The ProjectState Python Entity
+
+## Subsection 10.7.1 — The ProjectState Dataclass
+
+This is the in-memory Python object. It is the live version of the `project_state` table.
+`ProjectStateService` keeps one of these in memory while a project is open.
+
+```python
+# core/entities/project_state.py
+
+from __future__ import annotations
+from dataclasses import dataclass, field
+from typing import Optional
+
+
+@dataclass
+class ProjectState:
+    """
+    The in-memory snapshot of a project's current condition.
+    This is the in-memory mirror of the project_state table
+    inside project_data.db.
+
+    ONLY ProjectStateService creates, reads, and updates this entity.
+    No other service or adapter touches it directly.
+    """
+
+    # ── SECTION 1: Project Identity ───────────────────────────────────
+    project_id:              int             = 1
+    project_name:            str             = ""
+    project_path:            str             = ""
+    project_mode:            str             = ""
+
+    # ── SECTION 2: Scene Statistics ───────────────────────────────────
+    total_scenes:            int             = 0
+    rendered_scenes:         int             = 0
+    pending_scenes:          int             = 0
+    failed_scenes:           int             = 0
+    skipped_scenes:          int             = 0
+
+    # ── SECTION 3: Audio Status ───────────────────────────────────────
+    has_audio:               bool            = False
+    audio_file_path:         Optional[str]   = None
+    audio_file_duration:     Optional[float] = None
+    audio_clips_count:       int             = 0
+    synced_scenes:           int             = 0
+
+    # ── SECTION 4: Timeline Status ────────────────────────────────────
+    total_duration:          float           = 0.0
+    timeline_valid:          bool            = False
+    timeline_gap:            Optional[float] = None
+
+    # ── SECTION 5: Render Status ──────────────────────────────────────
+    last_render_at:          Optional[str]   = None
+    last_render_duration:    Optional[float] = None
+    render_progress:         float           = 0.0
+    has_render_errors:       bool            = False
+    last_error_scene:        Optional[int]   = None
+
+    # ── SECTION 6: Preview Status ─────────────────────────────────────
+    preview_scenes:          int             = 0
+    last_preview_at:         Optional[str]   = None
+
+    # ── SECTION 7: Export Status ──────────────────────────────────────
+    export_ready:            bool            = False
+    last_export_at:          Optional[str]   = None
+    last_export_path:        Optional[str]   = None
+    export_count:            int             = 0
+
+    # ── SECTION 8: Session Info ───────────────────────────────────────
+    opened_count:            int             = 1
+    total_work_time:         float           = 0.0
+
+    # ── SECTION 9: Timestamps ─────────────────────────────────────────
+    state_created_at:        str             = ""
+    state_updated_at:        str             = ""
+
+    # ── DERIVED HELPERS (not stored, calculated on the fly) ───────────
+    @property
+    def render_progress_percent(self) -> int:
+        """Returns render progress as a 0–100 integer."""
+        if self.total_scenes == 0:
+            return 0
+        return int((self.rendered_scenes / self.total_scenes) * 100)
+
+    @property
+    def is_export_ready(self) -> bool:
+        """True only when all scenes are rendered with no failures."""
+        return (
+            self.total_scenes > 0
+            and self.rendered_scenes == self.total_scenes
+            and self.failed_scenes == 0
+        )
+```
+
+---
+
+# Section 10.8 — When Is project_state Updated?
+
+## Subsection 10.8.1 — Complete List of Update Triggers
+
+The `project_state` table is kept current by calling `save_state()` after every
+meaningful operation. Here is every event that triggers an update:
+
+```
++=====================================================================+
+|              ALL UPDATE TRIGGERS FOR project_state                  |
++=====================================================================+
+|                                                                     |
+|   EVENT 1: Project is opened                                        |
+|   ─────────────────────────────────────────────────────────────   |
+|   What changes:                                                     |
+|   → opened_count incremented by 1                                   |
+|   → All scene stats recalculated from live scenes table             |
+|   → Audio status recalculated from live audio_clips table           |
+|   → state_updated_at = now                                          |
+|                                                                     |
+|   EVENT 2: Scene is added                                           |
+|   ─────────────────────────────────────────────────────────────   |
+|   What changes:                                                     |
+|   → total_scenes += 1                                               |
+|   → pending_scenes += 1                                             |
+|   → total_duration recalculated                                     |
+|   → export_ready recalculated (now False because new pending scene) |
+|   → state_updated_at = now                                          |
+|                                                                     |
+|   EVENT 3: Scene is removed                                         |
+|   ─────────────────────────────────────────────────────────────   |
+|   What changes:                                                     |
+|   → total_scenes -= 1                                               |
+|   → The appropriate counter decremented (rendered/pending/failed)   |
+|   → total_duration recalculated                                     |
+|   → render_progress recalculated                                    |
+|   → export_ready recalculated                                       |
+|   → state_updated_at = now                                          |
+|                                                                     |
+|   EVENT 4: Scene renders successfully                               |
+|   ─────────────────────────────────────────────────────────────   |
+|   What changes:                                                     |
+|   → rendered_scenes += 1                                            |
+|   → pending_scenes -= 1  (or failed_scenes -= 1 if re-render)       |
+|   → render_progress recalculated                                    |
+|   → export_ready recalculated                                       |
+|   → last_render_at = now                                            |
+|   → state_updated_at = now                                          |
+|                                                                     |
+|   EVENT 5: Scene render fails                                       |
+|   ─────────────────────────────────────────────────────────────   |
+|   What changes:                                                     |
+|   → failed_scenes += 1                                              |
+|   → pending_scenes -= 1                                             |
+|   → has_render_errors = 1                                           |
+|   → last_error_scene = that scene's id                              |
+|   → export_ready = 0  (cannot export with failed scenes)            |
+|   → state_updated_at = now                                          |
+|                                                                     |
+|   EVENT 6: Scene is skipped (fingerprint matched, unchanged code)   |
+|   ─────────────────────────────────────────────────────────────   |
+|   What changes:                                                     |
+|   → skipped_scenes += 1                                             |
+|   → state_updated_at = now                                          |
+|                                                                     |
+|   EVENT 7: Audio is added to the project                            |
+|   ─────────────────────────────────────────────────────────────   |
+|   What changes:                                                     |
+|   → has_audio = 1                                                   |
+|   → audio_file_path = path to the audio file                        |
+|   → audio_file_duration = duration in seconds                       |
+|   → state_updated_at = now                                          |
+|                                                                     |
+|   EVENT 8: Audio is removed from the project                        |
+|   ─────────────────────────────────────────────────────────────   |
+|   What changes:                                                     |
+|   → has_audio = 0                                                   |
+|   → audio_file_path = NULL                                          |
+|   → audio_file_duration = NULL                                      |
+|   → audio_clips_count = 0                                           |
+|   → synced_scenes = 0                                               |
+|   → timeline_valid = 0                                              |
+|   → timeline_gap = NULL                                             |
+|   → state_updated_at = now                                          |
+|                                                                     |
+|   EVENT 9: Audio is split into clips                                |
+|   ─────────────────────────────────────────────────────────────   |
+|   What changes:                                                     |
+|   → audio_clips_count = new number of clips                         |
+|   → state_updated_at = now                                          |
+|                                                                     |
+|   EVENT 10: A scene is synced to its audio clip                     |
+|   ─────────────────────────────────────────────────────────────   |
+|   What changes:                                                     |
+|   → synced_scenes += 1                                              |
+|   → timeline_valid recalculated                                     |
+|   → timeline_gap recalculated                                       |
+|   → state_updated_at = now                                          |
+|                                                                     |
+|   EVENT 11: A preview is generated                                  |
+|   ─────────────────────────────────────────────────────────────   |
+|   What changes:                                                     |
+|   → preview_scenes += 1                                             |
+|   → last_preview_at = now                                           |
+|   → state_updated_at = now                                          |
+|                                                                     |
+|   EVENT 12: The project is exported                                 |
+|   ─────────────────────────────────────────────────────────────   |
+|   What changes:                                                     |
+|   → last_export_at = now                                            |
+|   → last_export_path = path of the output video file                |
+|   → export_count += 1                                               |
+|   → state_updated_at = now                                          |
+|                                                                     |
+|   EVENT 13: The project is closed                                   |
+|   ─────────────────────────────────────────────────────────────   |
+|   What changes:                                                     |
+|   → total_work_time += elapsed seconds since project was opened     |
+|   → state_updated_at = now                                          |
+|   → save_state() is called one final time                           |
+|                                                                     |
++=====================================================================+
+```
+
+---
+
+# Section 10.9 — Project Settings: Read-Only After Creation
+
+## Subsection 10.9.1 — What project_settings Is
+
+Every project has a `project_settings` table inside `project_data.db`.
+This is not the same as `project_state`. They are different tables with different purposes.
+
+```
++=====================================================================+
+|    project_state  vs.  project_settings — WHAT IS THE DIFFERENCE?  |
++=====================================================================+
+|                                                                     |
+|   project_state:                                                    |
+|   A LIVE SNAPSHOT of what the project looks like right now.         |
+|   Changes constantly during work.                                   |
+|   Managed by ProjectStateService.                                   |
+|   Example values: rendered_scenes=3, audio_file_duration=60.5       |
+|                                                                     |
+|   project_settings:                                                 |
+|   The CONFIGURATION of the project.                                 |
+|   Some fields are locked forever at creation time.                  |
+|   Others can be changed by the user through settings commands.      |
+|   Managed by ProjectSettingsRepository.                             |
+|   Example values: project_name="MyAnimation", export_format="mp4"   |
+|                                                                     |
++=====================================================================+
+```
+
+---
+
+## Subsection 10.9.2 — What project_settings Stores
+
+```
++=====================================================================+
+|             project_settings TABLE CONTENTS                         |
++=====================================================================+
+|                                                                     |
+|   LOCKED AT CREATION — Written ONCE, NEVER changed again:           |
+|   ─────────────────────────────────────────────────────────────   |
+|   project_name          TEXT    The name of the project.            |
+|   project_mode          TEXT    "normal"/"simplemanim"/"supermanim" |
+|   project_folder_path   TEXT    Where the project folder lives.     |
+|   project_db_path       TEXT    Path to this database file.         |
+|   project_created_at    TEXT    ISO timestamp of creation.          |
+|                                                                     |
+|   MUTABLE — Can be changed through "set" commands:                  |
+|   ─────────────────────────────────────────────────────────────   |
+|   project_updated_at    TEXT    Last time any setting changed.      |
+|   export_format         TEXT    mp4/webm/mov/avi. Default: "mp4"    |
+|   export_quality        TEXT    low/medium/high/ultra. Def: "high"  |
+|   export_name           TEXT    Custom output filename. Def: NULL   |
+|   render_resolution     TEXT    Default: "1920x1080"                |
+|   render_fps            INTEGER Default: 60                         |
+|   render_background_color TEXT  Default: "#000000"                  |
+|   preview_resolution    TEXT    Always "854x480" — NOT editable      |
+|   preview_fps           INTEGER Default: 30                         |
+|   audio_format          TEXT    Default: "mp3"                      |
+|                                                                     |
++=====================================================================+
+```
+
+---
+
+## Subsection 10.9.3 — The Read-Only Enforcement Rule
+
+```
++=====================================================================+
+|           WHO CAN READ AND WRITE project_settings                   |
++=====================================================================+
+|                                                                     |
+|   ALL SERVICES can READ project_settings:                           |
+|   Any service can call ProjectSettingsRepositoryPort.load_settings()|
+|   to read the current settings.                                     |
+|                                                                     |
+|   ONLY ProjectLifecycleService can WRITE the mutable fields:        |
+|   Commands like "set export format mp4" go through                  |
+|   ProjectLifecycleService, which calls:                             |
+|   set_export_format(), set_export_quality(),                        |
+|   set_render_resolution(), etc.                                     |
+|   These methods update project_settings through                     |
+|   ProjectSettingsRepositoryPort.                                    |
+|                                                                     |
+|   NOBODY can CHANGE the locked fields after creation:               |
+|   project_name, project_mode, project_folder_path,                  |
+|   project_created_at                                                |
+|   → Written once at creation. Never touched again.                  |
+|   → The adapter (SqliteProjectSettingsRepository) physically has    |
+|     no method that allows writing to these fields after creation.   |
+|     It is impossible to change them through the Port.               |
+|                                                                     |
++=====================================================================+
+```
+
+---
+
+# Section 10.10 — The Complete Architecture Picture
+
+## Subsection 10.10.1 — Full File, Service, and Entity Map
+
+```
++=====================================================================+
+|              THE COMPLETE STATE MANAGEMENT ARCHITECTURE             |
++=====================================================================+
+|                                                                     |
+|   OS APPLICATION DATA FOLDER                                        |
+|   (C:\Users\...\AppData\Roaming\SuperManim\ or ~/.supermanim/)      |
+|   │                                                                 |
+|   └── session.db                                                    |
+|       Owned EXCLUSIVELY by AppStateService.                         |
+|       ├── TABLE: app_session         (1 row)                        |
+|       │     is_project_open                                         |
+|       │     last_project_name                                       |
+|       │     last_project_path                                       |
+|       │     last_opened_at                                          |
+|       └── TABLE: recent_projects     (up to 10 rows)                |
+|             project_name, project_path, project_mode                |
+|             last_opened_at, open_count                              |
+|                                                                     |
+|   ─────────────────────────────────────────────────────────────   |
+|                                                                     |
+|   USER'S PROJECTS FOLDER  (/projects/)                              |
+|   │                                                                 |
+|   ├── MyAnimation/                                                  |
+|   │   ├── project_data.db                                           |
+|   │   │   ├── TABLE: project_settings  ← ProjectSettingsRepository  |
+|   │   │   │     LOCKED: project_name, project_mode, created_at      |
+|   │   │   │     MUTABLE: export_format, render_resolution, etc.     |
+|   │   │   ├── TABLE: project_state   ← ProjectStateService ONLY    |
+|   │   │   │     ALL 9 SECTIONS (identity, scenes, audio,            |
+|   │   │   │     timeline, render, preview, export,                  |
+|   │   │   │     session info, timestamps)                           |
+|   │   │   ├── TABLE: scenes          ← SqliteSceneRepository        |
+|   │   │   ├── TABLE: audio_clips     ← SqliteAudioRepository        |
+|   │   │   ├── TABLE: cache_records   ← SqliteCacheRepository        |
+|   │   │   └── TABLE: render_history  ← SqliteRenderHistoryRepository|
+|   │   ├── audio_clips/                                              |
+|   │   ├── scenes/                                                   |
+|   │   ├── output/                                                   |
+|   │   ├── previews/                                                 |
+|   │   ├── exports/                                                  |
+|   │   ├── assets/                                                   |
+|   │   ├── cache/                                                    |
+|   │   └── temp/                                                     |
+|   │                                                                 |
+|   └── Chapter1_Intro/                                               |
+|       └── project_data.db  (identical structure)                    |
+|                                                                     |
+|   ─────────────────────────────────────────────────────────────   |
+|                                                                     |
+|   IN MEMORY (while SuperManim is running)                           |
+|                                                                     |
+|   AppStateService holds:                                            |
+|     AppSession entity                                               |
+|       is_project_open, current_project_name,                        |
+|       current_project_path, recent_projects list                    |
+|                                                                     |
+|   ProjectLifecycleService holds (when a project is open):           |
+|     self._current_project = Project entity  ← ONE project only      |
+|                                                                     |
+|   ProjectStateService holds (when a project is open):               |
+|     self._current_state = ProjectState entity ← the live snapshot   |
+|                                                                     |
++=====================================================================+
+```
+
+---
+
+## Subsection 10.10.2 — Clean Architecture: Where Everything Lives in the Folder Structure
+
+```
+supermanim/
+│
+├── core/
+│   ├── entities/
+│   │   ├── app_session.py          ← AppSession + RecentProject dataclasses
+│   │   ├── project_state.py        ← ProjectState dataclass  (this module)
+│   │   ├── project.py              ← Project entity
+│   │   └── project_settings.py     ← ProjectSettings entity
+│   │
+│   └── services/                   ← Domain services (pure logic, no I/O)
+│       ├── hash_service.py
+│       ├── timeline_service.py
+│       └── ...
+│
+├── ports/
+│   └── repository_ports/
+│       ├── session_repository_port.py          ← Port for session.db
+│       ├── project_state_repository_port.py    ← Port for project_state table
+│       ├── project_settings_repository_port.py ← Port for project_settings table
+│       └── ...
+│
+├── application/
+│   └── use_case/
+│       ├── app_state_service.py        ← Manages session.db (this module)
+│       ├── project_state_service.py    ← Manages project_state (this module)
+│       ├── project_lifecycle_service.py
+│       └── ...
+│
+└── adapters/
+    └── repositories/
+        └── sqlite/
+            ├── sqlite_session_repository.py            ← Writes session.db
+            ├── sqlite_project_state_repository.py      ← Writes project_state
+            ├── sqlite_project_settings_repository.py   ← Writes project_settings
+            └── ...
+```
+
+---
+
+# Section 10.11 — What the User Sees
+
+## Subsection 10.11.1 — The Status Summary Display
+
+When a project is opened, the tool uses the restored `ProjectState` snapshot
+to immediately display a full project status summary. This comes entirely from
+one fast read of the `project_state` table — no scanning of all scenes needed.
+
+```
+supermanim> open project MyAnimation
+
+  Loading project: MyAnimation
+  ──────────────────────────────────────────────────────────
+  Mode:        supermanim
+  Opened:      15 times before
+  Work time:   ~1 hour total
+
+  Scenes:      5 total
+               ✓ 3 rendered
+               ○ 1 pending
+               ✗ 1 failed  (scene 3 — run "render scene 3" to retry)
+
+  Audio:       voice.mp3  (60.5 sec)
+               4/5 scenes synced  (scene 5 not synced yet)
+               Timeline: GAP of 2.5 sec  (scenes cover only 58 sec)
+
+  Render:      Last render:  2024-11-12 14:30
+               Progress:     60%
+               Last error:   scene 3
+
+  Preview:     3/5 scenes have a preview
+
+  Export:      Not ready (fix failed scenes first)
+               Last export:  2024-11-12 15:00
+               Export path:  exports/MyAnimation_final.mp4
+  ──────────────────────────────────────────────────────────
+
+  Project "MyAnimation" loaded.
+
+supermanim>
+```
+
+---
+
+## Subsection 10.11.2 — The Recent Projects Display
+
+When the user types `list projects`, the tool reads the `recent_projects` table
+from `session.db` and displays it:
+
+```
+supermanim> list projects
+
+  Recent Projects:
+  ──────────────────────────────────────────────────────────
+   1.  MyAnimation         supermanim   Last: 2024-11-12   3x opened
+   2.  Chapter1_Intro      simplemanim  Last: 2024-11-10   7x opened
+   3.  TestProject         normal       Last: 2024-10-28   1x opened
+  ──────────────────────────────────────────────────────────
+  Use "open project MyAnimation" to open one.
+
+supermanim>
+```
+
+---
+
+# Section 10.12 — Final Summary
+
+## Subsection 10.12.1 — The Six Things to Remember
+
+```
++=====================================================================+
+|               THE SIX RULES OF MODULE 10                           |
++=====================================================================+
+|                                                                     |
+|   RULE 1 — ONE PROJECT AT A TIME                                    |
+|   Two states: is_project_open = False  OR  is_project_open = True. |
+|   Only one project can be open. Ever.                               |
+|                                                                     |
+|   RULE 2 — TWO SEPARATE DATABASE FILES                              |
+|   session.db        = application-level memory.                     |
+|                       Tracks which project was last open.           |
+|                       Tracks the recent projects list.              |
+|   project_data.db   = one per project. Stores all project data.    |
+|                                                                     |
+|   RULE 3 — TWO SEPARATE SERVICES                                    |
+|   AppStateService:         always running. owns session.db.         |
+|   ProjectStateService:     only when a project is open.             |
+|                            owns the project_state table.            |
+|                                                                     |
+|   RULE 4 — THE SNAPSHOT (project_state) IS ALWAYS CURRENT           |
+|   save_state() is called after EVERY meaningful operation.          |
+|   Not just when closing. Not just once a minute.                    |
+|   After every scene change, every render, every audio event.        |
+|   This is what makes crash recovery work correctly.                 |
+|                                                                     |
+|   RULE 5 — PROJECT SETTINGS HAS LOCKED FIELDS                       |
+|   project_name, project_mode, project_created_at, path             |
+|   are written once at creation and can NEVER be changed again.      |
+|   The adapter physically has no method to change them.              |
+|                                                                     |
+|   RULE 6 — EXCLUSIVE OWNERSHIP                                      |
+|   Only AppStateService writes to session.db.                        |
+|   Only ProjectStateService writes to the project_state table.       |
+|   Only ProjectSettingsRepository writes to project_settings.        |
+|   No other code touches these. No exceptions. No shortcuts.         |
+|                                                                     |
++=====================================================================+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Section 10.1 Introduction to project State:
+## Subsection 10.1.1 THE FUNDAMENTAL RULE: ONE PROJECT AT A TIME
+
+Before anything else, we must establish the most important rule in the
+entire project system. This rule shapes everything — the Entity design,
+the session file, the AppState service, and every command that touches projects.
+
+```
++=====================================================================+
+|                  THE ONE-PROJECT RULE                               |
++=====================================================================+
+|                                                                     |
+|   SuperManim can only have ONE project open at any time.            |
+|                                                                     |
+|   It is not possible to have two projects open simultaneously.      |
+|   It is not possible to run two commands on two different projects  |
+|   in the same session.                                              |
+|                                                                     |
+|   There are exactly two states the tool can be in:                  |
+|                                                                     |
+|   STATE 1 — NO PROJECT OPEN                                         |
+|   The tool is running. No project is loaded.                        |
+|   is_project_open = False                                           |
+|   The user must either create a new project or open an existing one.|
+|   Every command except "new project", "open project",               |
+|   "list projects", "help", "version", and "exit" will be refused.   |
+|                                                                     |
+|   STATE 2 — ONE PROJECT OPEN                                        |
+|   The tool is running. One specific project is loaded in memory.    |
+|   is_project_open = True                                            |
+|   All commands are available.                                       |
+|   Every command operates on this one open project.                  |
+|                                                                     |
++=====================================================================+
+```
+
+The tool NEVER has two projects open. Period.
+
+---
+
+## Subsection 10.1.2 THE TWO FILES THAT MATTER (session.db and project_data.db)
+
+SuperManim uses two completely separate database files. They have different
+purposes, live in different locations, and are managed by different parts
+of the system.
+
+```
++=====================================================================+
+|             TWO DATABASE FILES — COMPLETELY DIFFERENT JOBS          |
++=====================================================================+
+|                                                                     |
+|   FILE 1 — session.db                                               |
+|   ─────────────────────────────────────────────────────────────     |
+|   Purpose:  Tracks the application-level session state.             |
+|             Which project was last open?                            |
+|             Which projects has the user opened recently?            |
+|                                                                     |
+|   Location: Operating-system specific application data folder.      |
+|             Windows:  %APPDATA%\SuperManim\session.db               |
+|             macOS:    ~/Library/Application Support/SuperManim/     |
+|                        session.db                                   |
+|             Linux:    ~/.supermanim/session.db                      |
+|                       (or $XDG_DATA_HOME/SuperManim/session.db)     |
+|                                                                     |
+|   Who owns it:  sessionService ONLY.                                |
+|                 No other Service touches this file.                 |
+|   Created:      On first run of SuperManim.                         |
+|   Survives:     All sessions. Lives as long as the app is installed.|
+|                                                                     |
+|   ─────────────────────────────────────────────────────────────     |
+|                                                                     |
+|   FILE 2 — project_data.db                                          |
+|   ─────────────────────────────────────────────────────────────     |
+|   Purpose:  Stores everything about ONE specific project.           |
+|             Scenes, audio, cache, render history, settings.         |
+|                                                                     |
+|   Location: Inside the project's own folder on disk.                |
+|             /projects/MyAnimation/project_data.db                   |
+|             /projects/Chapter1_Intro/project_data.db                |
+|             (each project has its own separate copy)                |
+|                                                                     |
+|   Who owns it:  All repository adapters (SqliteSceneRepository,     |
+|                 SqliteProjectRepository, etc.).                     |
+|                 ProjectSettings table is READ-ONLY after creation.  |
+|   Created:      When a new project is created.                      |
+|   Survives:     Only as long as the project folder exists.          |
+|                                                                     |
++=====================================================================+
+```
+
+---
+
+## Subsection 10.1.3 THE session.db FILE IN DEPTH
+
+### Subsubsection 10.1.3.1  What Is session.db?
+
+`session.db` is a small SQLite database that SuperManim keeps in the
+operating system's standard application data directory. It is created
+automatically the first time the user ever creates or opens a project.
+
+Its entire job is to answer two questions:
+
+```
+Question 1: "What project did the user have open last time?"
+            Answer: stored in last_opened_project
+
+Question 2: "What projects has this user worked on recently?"
+            Answer: stored in the recent_projects list
+```
+
+That is all this file does. It does not store scenes. It does not store
+audio clips. It does not store render settings. It stores session-level
+memory — the information that belongs to the application itself rather
+than to any specific project.
+
+### Subsubsection 10.1.3.2  Where session.db Lives
+
+The location follows each operating system's standard for application data.
+SuperManim follows this convention so the file is stored in the right place
+on every operating system:
+
+```
++=====================================================================+
+|                WHERE session.db LIVES ON EACH OS                    |
++=====================================================================+
+|                                                                     |
+|   WINDOWS                                                           |
+|   %APPDATA%\SuperManim\session.db                                   |
+|   Expands to something like:                                        |
+|   C:\Users\Ahmed\AppData\Roaming\SuperManim\session.db              |
+|                                                                     |
+|   macOS                                                             |
+|   ~/Library/Application Support/SuperManim/session.db              |
+|   Expands to something like:                                        |
+|   /Users/Ahmed/Library/Application Support/SuperManim/session.db   |
+|                                                                     |
+|   LINUX                                                             |
+|   ~/.supermanim/session.db                                          |
+|   Or if XDG_DATA_HOME is set:                                       |
+|   $XDG_DATA_HOME/SuperManim/session.db                              |
+|   Expands to something like:                                        |
+|   /home/ahmed/.supermanim/session.db                                |
+|                                                                     |
++=====================================================================+
+```
+
+### Subsubsection 10.1.3.3  What Is Inside session.db
+
+The file contains two tables:
+
+```
++=====================================================================+
+|                     session.db STRUCTURE                            |
++=====================================================================+
+|                                                                     |
+|   TABLE 1: app_session                                              |
+|   ─────────────────────────────────────────────────────────────    |
+|   Stores exactly ONE row — the current/last session state.          |
+|                                                                     |
+|   Column               Type        Description                      |
+|   ─────────────────────────────────────────────────────────────    |
+|   last_project_name    TEXT        Name of the last opened project. |
+|                                    NULL if no project ever opened.  |
+|   last_project_path    TEXT        Full path to that project folder.|
+|   last_opened_at       TEXT        Timestamp when it was opened.    |
+|                                                                     |
+|                                                                     |
+|   TABLE 2: recent_projects                                          |
+|   ─────────────────────────────────────────────────────────────    |
+|   Stores the list of recently opened projects.                      |
+|   New entries are added at the top. Old entries fall off the        |
+|   bottom when the list exceeds the maximum (default: 10).           |
+|                                                                     |
+|   Column               Type        Description                      |
+|   ─────────────────────────────────────────────────────────────    |
+|   project_name         TEXT        Name of the project.             |
+|   project_path         TEXT        Full path to the project folder. |
+|                                                                      |
+|                                                                     |
+|   last_opened_at       TEXT        When the user last opened it.    |
+|   open_count           INTEGER     How many times it was opened.    |
+|                                                                     |
++=====================================================================+
+```
+
+### Subsubsection 10.1.3.4  How session.db Is Used in Practice
+
+#### **When SuperManim starts:**
+
+The `AppStateService` reads `session.db` at startup. This is the very
+first thing the application does before showing the prompt. It reads
+`is_project_open` and `last_project_name` to decide which state to start in.
+
+```
++-------------------------------------------------------------+
+|   WHAT HAPPENS WHEN SUPERMANIM STARTS                       |
++-------------------------------------------------------------+
+|                                                             |
+|    projectStateService reads session.db                     |
+|                                                             |
+|   Case A: session.db does not exist yet                     |
+|   (first time ever running SuperManim)                      |
+|   -> Create the file and both tables.                       |
+|   -> Start in STATE 1 (no project open).                    |
+|   -> Show the prompt. Wait for user.                         |
+|                                                             |
+|   Case B: session.db exists, is_project_open = 0           |
+|   (user closed the tool cleanly last time)                  |
+|   -> Start in STATE 1 (no project open).                    |
+|   -> Show the prompt. Wait for user.                         |
+|                                                             |
+|   Case C: session.db exists, is_project_open = 1           |
+|   (the tool was closed while a project was open,            |
+|    OR the previous session crashed)                         |
+|   -> Read last_project_name and last_project_path.          |
+|   -> Attempt to reopen that project automatically.          |
+|   -> If successful: start in STATE 2 (project open).        |
+|   -> If project folder is missing: start in STATE 1,        |
+|      show a warning that the last project was not found.    |
+|                                                             |
++-------------------------------------------------------------+
+```
+
+**When a project is opened:**
+
+Every time the user opens a project (whether with `new project` or
+`open project`), the `ProjectStateService` updates `session.db` immediately:
+
+```
+1. Update app_session table:
+   last_project_name  = "MyAnimation"
+   last_project_path  = "/projects/MyAnimation"
+   last_opened_at     = "2024-11-12 14:18:05"
+   is_project_open    = True
+
+2. Update or insert into recent_projects table:
+   If "MyAnimation" already exists in the list:
+     Update its last_opened_at and increment open_count.
+     Move it to the top of the list.
+   If "MyAnimation" is new to the list:
+     Insert a new row at the top.
+     If list now exceeds 10 items, delete the oldest entry.
+```
+
+**When the tool closes cleanly:**
+
+```
+ProjectStateService updates app_session:
+  is_project_open = 0
+  (everything else stays as-is for reference)
+```
+
+---
+
+
+
+# PART 4 — THE ProjectStateService
+
+## What Is AppStateService?
+
+The `AppStateService` is a special Application Service inside the Core.
+It has one job that no other Service has: it is the ONLY part of the
+system allowed to read and write `session.db`.
+
+Think of it as a watcher — it watches over the application's own state
+(which is different from any individual project's state) and keeps
+`session.db` perfectly synchronized with reality.
+
+```
++=====================================================================+
+|                    AppStateService — ITS JOB                        |
++=====================================================================+
+|                                                                     |
+|   1. READ session.db at startup to determine initial state.         |
+|                                                                     |
+|   2. WRITE to session.db whenever:                                  |
+|      - A project is opened (new or existing)                        |
+|      - A project is closed                                          |
+|      - The tool shuts down cleanly                                  |
+|                                                                     |
+|   3. PROVIDE the current session state to anyone who needs it:      |
+|      - is_project_open?                                             |
+|      - what is the currently open project's name and path?          |
+|      - what is the recent projects list?                            |
+|                                                                     |
+|   4. ENFORCE the one-project-at-a-time rule.                        |
+|      Before opening a new project, AppStateService checks if        |
+|      another project is already open. If yes, it tells the system   |
+|      to close the current one first.                                |
+|                                                                     |
++=====================================================================+
+```
+
+## How AppStateService Differs from Other Services
+
+The other Application Services (SceneLifecycleService, RenderPipelineService,
+etc.) all operate on the currently open project. They read and write
+`project_data.db` through their Port interfaces.
+
+`AppStateService` is different in three ways:
+
+```
++=====================================================================+
+|      AppStateService vs OTHER Application Services                  |
++=====================================================================+
+|                                                                     |
+|   OTHER SERVICES:                                                   |
+|   - Operate ON a project (they need a project to be open)           |
+|   - Read and write project_data.db                                  |
+|   - Work through Repository Ports                                   |
+|   - Refused if no project is open                                   |
+|                                                                     |
+|   AppStateService:                                                  |
+|   - Operates on the APPLICATION itself (not on any project)         |
+|   - Reads and writes session.db                                     |
+|   - Works through its own SessionRepositoryPort                     |
+|   - Always available — even when no project is open                 |
+|   - Is the ONLY service that runs before a project exists           |
+|                                                                     |
++=====================================================================+
+```
+
+## What Ports AppStateService Uses
+
+```python
+# AppStateService uses only one Port:
+
+class AppStateService:
+
+    def __init__(
+        self,
+        session_repo:  SessionRepositoryPort,   # reads/writes session.db
+        notifier:      NotificationPort,         # tells user what happened
+    ):
+        self._session_repo = session_repo
+        self._notifier     = notifier
+```
+
+The `SessionRepositoryPort` is implemented by one Adapter:
+`SqliteSessionRepository`, which is the only piece of code in the
+entire system that opens and writes to `session.db`. Just like
+`SqliteSceneRepository` is the only piece of code that touches
+the scenes table in `project_data.db`, `SqliteSessionRepository`
+is the only piece of code that touches `session.db`.
+
+## The AppStateService Methods
+
+```python
+class AppStateService:
+    """
+    The application-level state watcher.
+    Manages session.db and enforces the one-project-at-a-time rule.
+    This service is available at all times — even when no project is open.
+    """
+
+    def load_session_on_startup(self) -> AppSession:
+        """
+        Called once when SuperManim starts.
+        Reads session.db and returns the current session state.
+        Decides whether to auto-reopen the last project.
+        """
+
+    def record_project_opened(self, project_name: str,
+                               project_path: str,
+                               project_mode: str) -> None:
+        """
+        Called by ProjectLifecycleService every time a project is opened.
+        Updates app_session and recent_projects in session.db.
+        """
+
+    def record_project_closed(self) -> None:
+        """
+        Called by ProjectLifecycleService when a project is closed.
+        Sets is_project_open = 0 in session.db.
+        """
+
+    def record_clean_shutdown(self) -> None:
+        """
+        Called when the user types "exit" or "quit".
+        Sets is_project_open = 0 to mark clean shutdown.
+        """
+
+    def get_recent_projects(self) -> list[RecentProject]:
+        """
+        Returns the list of recently opened projects from session.db.
+        Used by the "list projects" command.
+        """
+
+    def get_last_opened_project(self) -> RecentProject | None:
+        """
+        Returns the last opened project's name and path, or None
+        if no project has ever been opened.
+        """
+
+    def is_session_open(self) -> bool:
+        """
+        Returns True if a project is currently open in this session.
+        This is the authoritative answer to "is a project open right now?"
+        """
+```
+
+---
+
+# PART 5 — THE AppSession ENTITY
+
+The `AppStateService` works with a small Entity called `AppSession`.
+This Entity represents the data inside `session.db` — the application-level
+session state. It is the in-memory representation of what is stored in
+the session database.
+
+```python
+# core/entities/app_session.py
+
+from __future__ import annotations
+from dataclasses import dataclass, field
+from typing import Optional
+
+
+@dataclass
+class RecentProject:
+    """
+    One entry in the recent projects list.
+    Stored in session.db, table: recent_projects.
+    """
+    project_name:     str
+    project_path:     str
+    project_mode:     str
+    last_opened_at:   str
+    open_count:       int   = 1
+
+
+@dataclass
+class AppSession:
+    """
+    Represents the application-level session state.
+    This is the in-memory mirror of what is stored in session.db.
+
+    This Entity is NOT about any specific project.
+    It is about the application itself — what it remembers
+    between sessions, independently of any project.
+
+    ONLY AppStateService reads and writes this Entity.
+    """
+
+    # ── CURRENT SESSION STATE ─────────────────────────────────────────
+    is_project_open:        bool                    = False
+    current_project_name:   Optional[str]           = None
+    current_project_path:   Optional[str]           = None
+    session_opened_at:      Optional[str]           = None
+
+    # ── LAST SESSION MEMORY ───────────────────────────────────────────
+    last_project_name:      Optional[str]           = None
+    last_project_path:      Optional[str]           = None
+    last_opened_at:         Optional[str]           = None
+
+    # ── RECENT PROJECTS LIST ──────────────────────────────────────────
+    recent_projects:        list[RecentProject]     = field(default_factory=list)
+    max_recent:             int                     = 10
+```
+
+---
+
+# PART 6 — PROJECT SETTINGS: READ-ONLY AFTER CREATION
+
+## Where Project Settings Live
+
+Every project has a `project_settings` table inside its own
+`project_data.db` file. This is NOT a separate file. It is a table
+inside the same database that stores scenes, audio clips, and cache records.
+
+```
+project_data.db  (one file per project, inside the project folder)
+│
+├── table: scenes          <- SceneLifecycleService reads/writes this
+├── table: audio_clips     <- AudioPreparationService reads/writes this
+├── table: cache_records   <- RenderCacheService reads/writes this
+├── table: render_history  <- RenderPipelineService reads/writes this
+└── table: project_settings  <- READ-ONLY after initial creation
+```
+
+## What Project Settings Stores
+
+The `project_settings` table stores the configuration that was locked in
+when the project was created plus settings that change during the project's
+life (export settings, render defaults).
+
+```
++=====================================================================+
+|                project_settings TABLE CONTENTS                      |
++=====================================================================+
+|                                                                     |
+|   LOCKED AT CREATION (never change after project is created):       |
+|   ─────────────────────────────────────────────────────────────    |
+|   project_name          TEXT    The name given at creation.         |
+|   project_mode          TEXT    "normal"/"simplemanim"/"supermanim" |
+|   project_folder_path   TEXT    Where the project lives on disk.    |
+|   project_db_path       TEXT    Path to this database file.         |
+|   project_created_at    TEXT    Timestamp of creation.              |
+|                                                                     |
+|   UPDATED DURING THE PROJECT'S LIFE:                                |
+|   ─────────────────────────────────────────────────────────────    |
+|   project_updated_at    TEXT    Last time anything changed.         |
+|   export_format         TEXT    mp4/webm/mov/avi. Default: "mp4"   |
+|   export_quality        TEXT    low/medium/high/ultra. Def: "high" |
+|   export_name           TEXT    Custom output filename. Default: NULL|
+|   render_resolution     TEXT    Default: "1920x1080"                |
+|   render_fps            INTEGER Default: 60                         |
+|   render_background_color TEXT  Default: "#000000"                  |
+|   preview_resolution    TEXT    Always "854x480" (not editable)     |
+|   preview_fps           INTEGER Default: 30                         |
+|   audio_format          TEXT    Default: "mp3"                      |
+|                                                                     |
++=====================================================================+
+```
+
+## The Read-Only Rule for project_settings
+
+You said: **no one can edit this table.** Let us be precise about what
+this means in the system.
+
+The locked fields (project_name, project_mode, project_folder_path,
+project_created_at) are written exactly once — when the project is
+created — and can never be changed by any command or any service
+after that moment.
+
+The updatable fields (export_format, export_quality, render_resolution,
+etc.) CAN be changed by the user through commands like `set export format`
+and `set export quality`. But the rule is that only ONE specific class is
+allowed to write to this table: the `ProjectSettingsRepository` adapter.
+No other Service, no other Adapter, no other piece of code writes to
+`project_settings` directly.
+
+```
++=====================================================================+
+|              WHO CAN READ AND WRITE project_settings               |
++=====================================================================+
+|                                                                     |
+|   ALL SERVICES can READ project_settings through the Port:          |
+|   ProjectSettingsRepositoryPort.load_settings(project_id)          |
+|                                                                     |
+|   ONLY ProjectLifecycleService can UPDATE the mutable fields:       |
+|   set_export_format(), set_export_quality(), set_export_name(),     |
+|   set_render_resolution(), etc.                                     |
+|   It does this through ProjectSettingsRepositoryPort.               |
+|                                                                     |
+|   NO ONE can UPDATE the locked fields after creation:               |
+|   project_name, project_mode, project_folder_path,                 |
+|   project_created_at                                                |
+|   These are written once. Never touched again.                      |
+|                                                                     |
+|   THE ADAPTER (SqliteProjectSettingsRepository) enforces this:      |
+|   It has a method update_settings() that only accepts the           |
+|   mutable fields. It has no method that allows changing             |
+|   project_name, project_mode, or project_created_at.               |
+|   It is physically impossible to change them through the Port.      |
+|                                                                     |
++=====================================================================+
+```
+
+---
+
+
+# PART 8 — HOW EVERYTHING CONNECTS: THE COMPLETE SYSTEM FLOW
+
+## Flow 1 — SuperManim Starts With No Previous Session
+
+```
++=====================================================================+
+|   STARTUP — FIRST TIME EVER (no session.db exists yet)             |
++=====================================================================+
+|                                                                     |
+|   1. SuperManim launches.                                           |
+|   2. AppStateService checks for session.db in the OS data folder.  |
+|   3. session.db does not exist.                                     |
+|   4. AppStateService creates session.db with empty tables.          |
+|   5. AppSession is created in memory:                               |
+|      AppSession(is_project_open=False, recent_projects=[])          |
+|   6. Shell shows the welcome banner.                                |
+|   7. Shell shows the prompt:  supermanim>                           |
+|   8. Tool is in STATE 1 — waiting for user to create/open project. |
+|                                                                     |
+|   supermanim> _                                                     |
+|                                                                     |
++=====================================================================+
+```
+
+## Flow 2 — User Creates a New Project
+
+```
++=====================================================================+
+|   USER TYPES: new project MyAnimation                               |
++=====================================================================+
+|                                                                     |
+|   1. Shell calls ProjectLifecycleService.create_project(            |
+|          "MyAnimation")                                             |
+|                                                                     |
+|   2. ProjectLifecycleService:                                       |
+|      a. Validates the name (no spaces, not empty).                  |
+|      b. Checks no project with this name already exists.            |
+|      c. Creates all folders on disk via FileStoragePort.            |
+|      d. Creates project_data.db inside the folder.                  |
+|      e. Creates and populates project_settings table (locked        |
+|         fields written here — project_name, mode, path,             |
+|         created_at — never to be changed again).                    |
+|      f. Creates the Project Entity in memory.                       |
+|      g. Stores the Project in self._current_project.               |
+|                                                                     |
+|   3. ProjectLifecycleService calls AppStateService.                 |
+|      record_project_opened(                                         |
+|          project_name = "MyAnimation",                              |
+|          project_path = "/projects/MyAnimation",                    |
+|          project_mode = "supermanim"                                |
+|      )                                                              |
+|                                                                     |
+|   4. AppStateService updates session.db:                            |
+|      app_session table:                                             |
+|        is_project_open    = 1                                       |
+|        last_project_name  = "MyAnimation"                           |
+|        last_project_path  = "/projects/MyAnimation"                 |
+|        last_opened_at     = "2024-11-12 14:18:05"                   |
+|      recent_projects table:                                         |
+|        INSERT new row for "MyAnimation"                             |
+|                                                                     |
+|   5. AppSession in memory is updated:                               |
+|      is_project_open       = True                                   |
+|      current_project_name  = "MyAnimation"                          |
+|                                                                     |
+|   6. Tool is now in STATE 2 — one project open.                     |
+|                                                                     |
+|   7. Shell shows confirmation. Prompt returns.                      |
+|                                                                     |
++=====================================================================+
+```
+
+## Flow 3 — User Closes the Project and Opens a Different One
+
+```
++=====================================================================+
+|   CLOSING ONE PROJECT AND OPENING ANOTHER                           |
++=====================================================================+
+|                                                                     |
+|   STEP A: User types "close project"                                |
+|   ─────────────────────────────────────────────────────────────    |
+|   1. Shell calls ProjectLifecycleService.close_project()            |
+|   2. ProjectLifecycleService saves any unsaved data.                |
+|   3. ProjectLifecycleService calls                                  |
+|      AppStateService.record_project_closed()                        |
+|   4. AppStateService updates session.db:                            |
+|      is_project_open = 0                                            |
+|   5. AppSession in memory: is_project_open = False                  |
+|   6. self._current_project = None                                   |
+|   7. Tool is back in STATE 1 — no project open.                     |
+|                                                                     |
+|   STEP B: User types "open project Chapter1_Intro"                  |
+|   ─────────────────────────────────────────────────────────────    |
+|   1. Shell calls ProjectLifecycleService.open_project(              |
+|          "Chapter1_Intro")                                          |
+|   2. ProjectLifecycleService:                                       |
+|      a. Finds the folder at /projects/Chapter1_Intro/               |
+|      b. Opens project_data.db from that folder.                     |
+|      c. Reads project_settings table to load the Project Entity.    |
+|      d. Reads all scene records to load Scenes.                     |
+|      e. Stores in self._current_project.                            |
+|   3. Calls AppStateService.record_project_opened(                   |
+|          "Chapter1_Intro", "/projects/Chapter1_Intro", "simplemanim"|
+|      )                                                              |
+|   4. AppStateService updates session.db:                            |
+|      is_project_open   = 1                                          |
+|      last_project_name = "Chapter1_Intro"                           |
+|      recent_projects   updated — "Chapter1_Intro" moved to top      |
+|   5. Tool is in STATE 2 — Chapter1_Intro is now the open project.  |
+|                                                                     |
+|   THE KEY POINT: MyAnimation is completely unaware any of this      |
+|   happened. Its project_data.db was not touched. Its Project Entity |
+|   is no longer in memory. Only Chapter1_Intro exists now.           |
+|                                                                     |
++=====================================================================+
+```
+
+## Flow 4 — SuperManim Restarts After a Previous Session
+
+```
++=====================================================================+
+|   STARTUP — RETURNING USER (session.db exists from before)          |
++=====================================================================+
+|                                                                     |
+|   1. SuperManim launches.                                           |
+|   2. AppStateService reads session.db.                              |
+|   3. session.db has:                                                |
+|      is_project_open   = 1                                          |
+|      last_project_name = "MyAnimation"                              |
+|      last_project_path = "/projects/MyAnimation"                    |
+|                                                                     |
+|   4. AppStateService checks: does /projects/MyAnimation/ exist?     |
+|                                                                     |
+|      Case A: YES — the folder and database are still there.         |
+|      -> AppStateService tells ProjectLifecycleService to open it.   |
+|      -> Tool starts in STATE 2 with MyAnimation already open.       |
+|      -> The user sees:                                              |
+|                                                                     |
+|         Opening last project: MyAnimation                           |
+|         Project "MyAnimation" loaded.                               |
+|         Mode:   supermanim                                          |
+|         Scenes: 5  (3 rendered, 1 pending, 1 failed)               |
+|         supermanim>                                                  |
+|                                                                     |
+|      Case B: NO — the folder was deleted or moved.                  |
+|      -> AppStateService cannot reopen the project.                  |
+|      -> Sets is_project_open = 0 in session.db.                     |
+|      -> Tool starts in STATE 1 with a warning:                      |
+|                                                                     |
+|         WARNING: Last project "MyAnimation" was not found at        |
+|         /projects/MyAnimation/. It may have been moved or deleted.  |
+|         supermanim>                                                  |
+|                                                                     |
++=====================================================================+
+```
+
+---
+
+# PART 9 — THE COMPLETE TWO-FILE PICTURE
+
+Here is the full picture showing both files, who owns each one,
+what each stores, and how they relate to each other.
+
+```
++=====================================================================+
+|              THE COMPLETE FILE AND SERVICE PICTURE                  |
++=====================================================================+
+|                                                                     |
+|   OS APPLICATION DATA FOLDER                                        |
+|   (%APPDATA%\SuperManim\  or  ~/.supermanim/)                       |
+|   │                                                                 |
+|   └── session.db                                                    |
+|       │  Owned by: AppStateService ONLY                             |
+|       │  Contains:                                                  |
+|       ├── table: app_session                                        |
+|       │     is_project_open, last_project_name,                     |
+|       │     last_project_path, last_opened_at                       |
+|       └── table: recent_projects                                    |
+|             project_name, project_path, project_mode,               |
+|             last_opened_at, open_count                              |
+|                                                                     |
+|   ─────────────────────────────────────────────────────────────    |
+|                                                                     |
+|   USER'S PROJECTS FOLDER                                            |
+|   (/projects/)                                                      |
+|   │                                                                 |
+|   ├── MyAnimation/                                                  |
+|   │   ├── project_data.db                                           |
+|   │   │   ├── table: project_settings  <- READ-ONLY locked fields  |
+|   │   │   │         Writable: export_format, export_quality,        |
+|   │   │   │                   render_resolution, etc.               |
+|   │   │   │         Locked:   project_name, project_mode,           |
+|   │   │   │                   project_created_at                    |
+|   │   │   ├── table: scenes                                         |
+|   │   │   ├── table: audio_clips                                    |
+|   │   │   └── table: cache_records                                  |
+|   │   │                                                             |
+|   │   ├── audio_clips/                                              |
+|   │   ├── scenes/                                                   |
+|   │   ├── output/                                                   |
+|   │   ├── previews/                                                 |
+|   │   ├── exports/                                                  |
+|   │   ├── assets/                                                   |
+|   │   ├── cache/                                                    |
+|   │   └── temp/                                                     |
+|   │                                                                 |
+|   └── Chapter1_Intro/                                               |
+|       └── project_data.db                                           |
+|           └── (same table structure as above)                       |
+|                                                                     |
+|   ─────────────────────────────────────────────────────────────    |
+|                                                                     |
+|   IN MEMORY (while SuperManim is running)                           |
+|                                                                     |
+|   AppStateService holds:                                            |
+|     AppSession (is_project_open, current_project_name,              |
+|                 recent_projects list)                               |
+|                                                                     |
+|   ProjectLifecycleService holds (when open):                        |
+|     self._current_project = Project(...)    <- ONE project only     |
+|                                                                     |
++=====================================================================+
+```
+
+---
+
+# PART 10 — FINAL SUMMARY: THE FOUR THINGS TO REMEMBER
+
+```
++================================================================+
+|                                                                |
+|   1. ONE PROJECT AT A TIME                                     |
+|      The tool has exactly two states:                          |
+|      is_project_open = False  (waiting for user)              |
+|      is_project_open = True   (one project loaded)            |
+|      Two projects cannot be open simultaneously. Ever.         |
+|                                                                |
+|   2. TWO SEPARATE DATABASE FILES                               |
+|      session.db       lives in the OS data folder.            |
+|                       tracks which project was last open.      |
+|                       tracks the recent projects list.         |
+|                       owned exclusively by AppStateService.    |
+|                                                                |
+|      project_data.db  lives inside the project folder.        |
+|                       stores everything about that project.    |
+|                       owned by all repository adapters.        |
+|                                                                |
+|   3. PROJECT SETTINGS IS READ-ONLY FOR LOCKED FIELDS           |
+|      project_settings is a table inside project_data.db.       |
+|      Locked fields (project_name, mode, created_at, path)      |
+|      are written once at creation and never changed again.     |
+|      Mutable fields (export_format, quality, resolution)       |
+|      can only be changed through ProjectLifecycleService.      |
+|                                                                |
+|   4. AppStateService IS THE ONLY WATCHER OF session.db         |
+|      No other Service reads or writes session.db.              |
+|      AppStateService is always running.                        |
+|      It is the only Service active before any project opens.   |
+|                                                                |
++================================================================+
+```
+
+
+
 
 
 
