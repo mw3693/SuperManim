@@ -1,0 +1,1029 @@
+# SuperManim — Answers to Your Four Questions + Complete Project Structure
+
+---
+
+# PART ONE — ANSWER TO QUESTION ONE
+## "Can I divide the domain services like `timeline_service` and `hash_service`,
+ or should I keep each one as a single file?"
+
+**Short answer: Keep each domain service as ONE single file. Do not divide them.**
+
+Here is why, explained in simple terms.
+
+---
+
+### What is a Domain Service?
+
+A domain service is a file that lives inside your `core/services/` folder.
+It contains **pure logic only** — no database calls, no file reading, no FFmpeg, nothing external.
+
+Think of it like a math textbook.
+A math textbook only contains math rules. It does not contain a printer, a phone,
+or a database connection. It is just clean knowledge.
+
+Your domain services are the same. They only contain the rules of your project.
+
+---
+
+### The `timeline_service.py` — What Does It Do?
+
+The `timeline_service.py` is responsible for one single topic: **time and sequence**.
+
+Everything that involves time logic belongs inside this one file. Examples:
+
+**Function 1: `calculate_scene_duration(start_time, end_time)`**
+- You give it a start time and an end time.
+- It gives you back the duration in seconds.
+- This is a pure calculation. No database needed.
+
+**Function 2: `validate_timeline_has_no_gaps(scenes)`**
+- You give it a list of scenes with their start and end times.
+- It checks: is there any empty time gap between scenes?
+- Example: Scene 1 ends at 12.5 seconds. Scene 2 starts at 14.0 seconds.
+  That is a gap of 1.5 seconds. This function finds that and reports it.
+
+**Function 3: `validate_timeline_has_no_overlaps(scenes)`**
+- You give it a list of scenes.
+- It checks: do any two scenes overlap in time?
+- Example: Scene 1 covers 0 to 15 seconds. Scene 2 covers 13 to 25 seconds.
+  They overlap at 13–15 seconds. This function finds that.
+
+**Function 4: `build_timeline_from_scenes(scenes)`**
+- You give it a list of scenes.
+- It builds a full ordered timeline object that shows the complete sequence.
+
+**Function 5: `reorder_scenes_by_start_time(scenes)`**
+- You give it scenes in any order.
+- It sorts them by start time and returns them in the correct order.
+
+**Function 6: `split_timeline_at_position(timeline, position_seconds)`**
+- You give it a timeline and a time position (e.g., 30.0 seconds).
+- It splits the timeline into two halves: before 30 seconds and after 30 seconds.
+
+All of these functions are about **time and sequence**. They all belong in ONE file
+called `timeline_service.py`. There is no reason to split them into smaller files,
+because they all deal with the same topic. Splitting them would make your project
+harder to navigate, not easier.
+
+---
+
+### The `hash_service.py` — What Does It Do?
+
+The `hash_service.py` is responsible for one single topic: **fingerprinting**.
+
+A fingerprint (called a hash) is a short code that uniquely identifies a file's content.
+If you change even one character in a file, the hash completely changes.
+SuperManim uses hashes to know whether a scene has changed since last time.
+
+**Function 1: `compute_file_hash(file_path) -> str`**
+- You give it a path to a file on disk.
+- It reads the file content and runs the SHA-256 algorithm on it.
+- It returns a long string like `"a3f8b2c..."`.
+- Same file content = always same hash. Changed file = completely different hash.
+
+**Function 2: `compute_string_hash(text_content) -> str`**
+- Same idea, but instead of a file path, you give it a text string directly.
+- Useful for hashing small pieces of data without creating a file.
+
+**Function 3: `hashes_are_equal(hash_one, hash_two) -> bool`**
+- You give it two hash strings.
+- It returns True if they are equal, False if not.
+- Simple comparison, but having it as a named function makes the code readable.
+
+**Function 4: `scene_has_changed(old_hash, new_hash) -> bool`**
+- A named wrapper around the comparison above.
+- Returns True if the scene's fingerprint changed (meaning the scene needs re-rendering).
+- Makes the calling code read like English: `if scene_has_changed(old, new): render it`
+
+All of these functions are about **computing and comparing fingerprints**.
+They all belong in ONE file called `hash_service.py`.
+
+---
+
+### The Rule To Remember
+
+> If all the functions in a service file are about the same topic, keep them in one file.
+> Only split a file when it has grown so large (200+ lines) that you cannot read it
+> comfortably, AND when two clearly separate topics have accidentally ended up
+> in the same file.
+
+Your `timeline_service.py` and `hash_service.py` are both focused on exactly one
+topic each. Keep them as single files. Do not divide them.
+
+---
+---
+
+# PART TWO — ANSWER TO QUESTION TWO
+## "Are there any Application Services related to timeline and hash, and if yes, what are they?"
+
+**Short answer: Yes. There are TWO application services that use the domain services.**
+
+But first, let us understand the difference between a Domain Service and an Application Service,
+because this is the most important thing to understand.
+
+---
+
+### Domain Service vs Application Service — The Simple Difference
+
+```
+DOMAIN SERVICE (lives in core/services/)
+─────────────────────────────────────────────────────────────────────
+This is a PURE MATH FUNCTION FILE.
+It takes data in. It does logic. It returns a result.
+It NEVER talks to a database.
+It NEVER reads a file from disk.
+It NEVER calls an external tool.
+It just does calculation and returns answers.
+
+Example: timeline_service.compute_scene_duration(start=0, end=12.5)
+Returns: 12.5
+It did math. Nothing else.
+
+
+APPLICATION SERVICE (lives in application/use_case/)
+─────────────────────────────────────────────────────────────────────
+This is a WORKFLOW COORDINATOR FILE.
+It USES the domain service to get answers.
+It ALSO talks to repositories to load and save data.
+It ALSO calls other ports to do real work.
+It is the "manager" that connects all the pieces together.
+
+Example: render_service.render_scene(scene_id)
+Step 1: Load scene from database (uses repository)
+Step 2: Compute scene's current hash (uses hash domain service)
+Step 3: Load old hash from cache (uses cache repository)
+Step 4: Compare hashes (uses hash domain service again)
+Step 5: If different → call Manim (uses render runner port)
+Step 6: Save new hash to cache (uses cache repository)
+Step 7: Report progress (uses progress reporter port)
+```
+
+The domain service only does one small step (step 2 and step 4 above).
+The application service does the entire workflow from step 1 to step 7.
+
+---
+
+### Application Service That Uses `hash_service`: `render_service.py`
+
+This already exists in your project. Here is what it does and why it needs `hash_service`:
+
+`render_service.py` (located in `application/use_case/render_service.py`) is the
+service that decides which scenes to render and which to skip.
+
+**Its full workflow looks like this:**
+
+```
+User runs: supermanim render --project MyAnimation
+
+RenderService does:
+1. Load all scenes from project_data.db
+2. For each scene:
+   a. Read the scene's Python file from disk
+   b. Compute a hash of that file using hash_service.compute_file_hash()
+   c. Load the stored hash from the cache_records table in the database
+   d. Compare the two hashes using hash_service.hashes_are_equal()
+   e. If EQUAL   → scene has not changed → SKIP → use the cached video
+   f. If DIFFERENT → scene has changed   → CALL MANIM → render it
+   g. Save the new hash to cache_records after rendering
+3. Assemble all video clips in order using the timeline
+4. Merge with audio if present
+5. Export the final video
+```
+
+So `render_service.py` calls `hash_service.py` at steps 2b and 2d.
+Without the hash service, the render service would have to contain the
+hashing logic itself, which would break the separation of concerns.
+
+---
+
+### Application Service That Uses `timeline_service`: `sync_service.py`
+
+This already exists in your project. Here is what it does and why it needs `timeline_service`:
+
+`sync_service.py` (located in `application/use_case/sync_service.py`) is the
+service that keeps all the audio clips and scenes perfectly time-aligned.
+
+**Its full workflow looks like this:**
+
+```
+User adds a new audio clip or changes a scene duration.
+
+SyncService does:
+1. Load all scenes and audio clips from the database
+2. Build the current timeline using timeline_service.build_timeline_from_scenes()
+3. Check for gaps using timeline_service.validate_timeline_has_no_gaps()
+4. Check for overlaps using timeline_service.validate_timeline_has_no_overlaps()
+5. If problems found → report them to the user
+6. If no problems → confirm everything is aligned
+7. Update the database with the validated timeline
+```
+
+So `sync_service.py` calls `timeline_service.py` at steps 2, 3, and 4.
+
+---
+
+### Also: `scene_service.py` Uses Both
+
+`scene_service.py` (in `application/use_case/scene_service.py`) also uses both.
+
+When you add a new scene or change a scene's time range:
+- It uses `timeline_service` to validate that the new scene fits without overlap.
+- It uses `hash_service` to compute and store the initial hash of the scene file.
+
+---
+
+### Summary of the Connections
+
+```
+hash_service.py (domain)
+    └── used by → render_service.py (application)
+    └── used by → scene_service.py (application)
+
+timeline_service.py (domain)
+    └── used by → sync_service.py (application)
+    └── used by → scene_service.py (application)
+    └── used by → export_service.py (application) [when assembling final video order]
+```
+
+You do NOT need to create new application services just for hash or timeline.
+The ones you already have are the correct ones. You just need to make sure
+`render_service`, `sync_service`, `scene_service`, and `export_service`
+import and use these domain services when they need them.
+
+---
+---
+
+# PART THREE — ANSWER TO QUESTION THREE
+## "What helper functions should I put in the `utils/` folder? Explain each one in simple terms."
+
+The `utils/` folder is for **general tools that have no business logic**.
+Think of it as your toolbox. A hammer in a toolbox does not care whether you are
+building a house or fixing a fence. It just hammers nails.
+
+Your utils functions are the same. They do not care about scenes, projects, or audio.
+They just do small, reusable jobs that many parts of the project need.
+
+Here is every useful function you should put in `utils/utilities.py`, each explained simply:
+
+---
+
+### Group 1 — Path and File Name Helpers
+
+**`sanitize_filename(name: str) -> str`**
+
+Problem: A user types a project name like `"My Project / 2024 : Test!"`.
+That name has slashes, colons, and exclamation marks. Those characters are
+illegal in file and folder names on Windows and some Linux systems.
+
+This function takes any string and removes or replaces illegal characters.
+It turns `"My Project / 2024 : Test!"` into `"My_Project_2024_Test"`.
+
+You use this every time you create a new project folder from a user-typed name.
+
+---
+
+**`ensure_directory_exists(path: str) -> None`**
+
+Problem: Before you can save a file to a folder, that folder must exist.
+If it does not exist, your save will crash.
+
+This function checks if a folder exists. If it does not exist, it creates it.
+If it already exists, it does nothing.
+
+You use this before creating any project folder, any `output/` folder, any `cache/` folder.
+
+---
+
+**`get_file_extension(file_path: str) -> str`**
+
+Problem: You have a file path like `/home/user/audio/narration.mp3`.
+You need to know whether it is an `.mp3`, `.wav`, or `.aac` file.
+
+This function takes any file path and returns just the extension.
+Input: `/home/user/audio/narration.mp3`
+Output: `"mp3"`
+
+---
+
+**`get_filename_without_extension(file_path: str) -> str`**
+
+Similar to above. Returns just the base name without extension.
+Input: `/home/user/audio/narration.mp3`
+Output: `"narration"`
+
+---
+
+**`build_output_path(project_path: str, filename: str) -> str`**
+
+Takes a project path and a filename and correctly builds the full output path.
+Input: `"/projects/MyAnimation"`, `"scene_01.mp4"`
+Output: `"/projects/MyAnimation/output/scene_01.mp4"`
+
+Saves you from writing `os.path.join()` and manually adding `"output"` everywhere.
+
+---
+
+### Group 2 — Time and Duration Helpers
+
+**`seconds_to_hhmmss(seconds: float) -> str`**
+
+Problem: You have a duration of `3723.5` seconds. That is hard to read.
+
+This function converts seconds to a human-readable time string.
+Input: `3723.5`
+Output: `"01:02:03.500"` (1 hour, 2 minutes, 3.5 seconds)
+
+You use this when displaying render times and audio durations to the user.
+
+---
+
+**`hhmmss_to_seconds(time_string: str) -> float`**
+
+The reverse of the function above.
+Input: `"01:02:03.500"`
+Output: `3723.5`
+
+You use this when a user types a time in the CLI and you need to store it as a number.
+
+---
+
+**`round_duration(seconds: float, decimal_places: int = 3) -> float`**
+
+Problem: Floating point math in Python can produce numbers like `12.500000000001`.
+This function rounds them cleanly to 3 decimal places.
+Input: `12.500000000001`
+Output: `12.5`
+
+Very important for audio sync. Even tiny floating point errors in timestamps can
+cause small audio/video misalignments.
+
+---
+
+**`durations_are_close_enough(duration_a: float, duration_b: float, tolerance: float = 0.01) -> bool`**
+
+Problem: A scene is supposed to be exactly `12.5` seconds long, but after rendering
+it comes out as `12.497` seconds. Is that acceptable, or is it a problem?
+
+This function checks whether two durations are "close enough" within a tolerance.
+Input: `12.497`, `12.5`, tolerance `0.01`
+Output: `True` (they are within 0.01 seconds of each other, so it's fine)
+
+You use this to check if rendered scene length matches expected length.
+
+---
+
+### Group 3 — String Formatting Helpers
+
+**`format_scene_display_name(scene_order: int, scene_name: str) -> str`**
+
+Takes a scene number and name and formats it nicely for display.
+Input: `1`, `"Introduction"`
+Output: `"Scene 01 — Introduction"`
+
+Used in CLI output so the user sees consistent, readable scene names.
+
+---
+
+**`truncate_string(text: str, max_length: int, suffix: str = "...") -> str`**
+
+Problem: A file path might be very long. When printing it in the terminal,
+it goes off the screen and looks ugly.
+
+This function cuts a string at a maximum length and adds `"..."` at the end.
+Input: `"/very/long/path/to/project/MyAnimation/scenes/scene_01.py"`, max `40`
+Output: `"/very/long/path/to/project/MyAnimat..."`
+
+---
+
+**`pluralize(count: int, singular: str, plural: str) -> str`**
+
+Problem: You want to print `"1 scene"` but also `"3 scenes"` correctly.
+
+This function picks the right word automatically.
+Input: `1`, `"scene"`, `"scenes"` → Output: `"1 scene"`
+Input: `3`, `"scene"`, `"scenes"` → Output: `"3 scenes"`
+
+---
+
+### Group 4 — Validation Helpers
+
+**`is_valid_project_name(name: str) -> bool`**
+
+Checks if a project name is valid (not empty, not too long, no illegal characters).
+Returns True or False.
+
+Used by `project_service.py` before creating a project.
+
+---
+
+**`is_supported_audio_format(file_path: str) -> bool`**
+
+Checks if the file extension is one of the supported audio formats (mp3, wav, aac, flac).
+Returns True or False.
+
+Used by `audio_service.py` before accepting an audio file from the user.
+
+---
+
+**`is_supported_video_format(file_path: str) -> bool`**
+
+Same idea, but for video formats (mp4, avi, mov, mkv).
+
+---
+
+**`is_file_readable(file_path: str) -> bool`**
+
+Checks if a file exists AND can be read (not corrupted, not permission-blocked).
+Returns True or False.
+
+Used before passing any file to FFmpeg or Manim. If you pass an unreadable file
+to FFmpeg it crashes with a confusing error. This check gives a clear message instead.
+
+---
+
+### Group 5 — List and Data Helpers
+
+**`chunk_list(items: list, chunk_size: int) -> list`**
+
+Problem: You have 20 scenes and you want to process them in batches of 5.
+
+This function splits any list into smaller groups.
+Input: `[1,2,3,4,5,6,7]`, chunk_size `3`
+Output: `[[1,2,3], [4,5,6], [7]]`
+
+Useful if you ever want to render multiple scenes in parallel batches.
+
+---
+
+**`find_duplicates(items: list) -> list`**
+
+Takes a list and returns any values that appear more than once.
+Input: `["scene_01", "scene_02", "scene_01", "scene_03"]`
+Output: `["scene_01"]`
+
+Useful for catching duplicate scene names before adding them to the project.
+
+---
+
+**`flatten_list(nested_list: list) -> list`**
+
+Takes a list of lists and returns a single flat list.
+Input: `[[1,2,3], [4,5], [6]]`
+Output: `[1, 2, 3, 4, 5, 6]`
+
+---
+
+### Group 6 — Date and Time Stamp Helpers
+
+**`get_current_timestamp() -> str`**
+
+Returns the current date and time as a string in a standard format.
+Output: `"2024-11-15 14:32:07"`
+
+Used when recording when a project was created, when a scene was last rendered, etc.
+
+---
+
+**`timestamp_to_display_string(timestamp: str) -> str`**
+
+Takes a stored timestamp and converts it to a friendly readable format.
+Input: `"2024-11-15 14:32:07"`
+Output: `"November 15, 2024 at 2:32 PM"`
+
+Used when showing project history or render history to the user.
+
+---
+
+### Summary Table
+
+```
+FUNCTION                          | WHERE YOU USE IT
+──────────────────────────────────|───────────────────────────────────────
+sanitize_filename()               | project_service — creating project folders
+ensure_directory_exists()         | project_service — project folder setup
+get_file_extension()              | audio_service, export_service
+get_filename_without_extension()  | render_service, export_service
+build_output_path()               | render_service, export_service
+seconds_to_hhmmss()               | output_formatter — displaying durations
+hhmmss_to_seconds()               | cli_scene_command — reading user input
+round_duration()                  | sync_service, timeline_service
+durations_are_close_enough()      | sync_service — validating render output
+format_scene_display_name()       | output_formatter — CLI display
+truncate_string()                 | output_formatter — fitting text in terminal
+pluralize()                       | output_formatter — grammar in messages
+is_valid_project_name()           | project_service — input validation
+is_supported_audio_format()       | audio_service — input validation
+is_supported_video_format()       | export_service — input validation
+is_file_readable()                | render_service, audio_service — safety check
+chunk_list()                      | render_service — batch processing
+find_duplicates()                 | scene_service — catching duplicate names
+flatten_list()                    | export_service — assembling clip lists
+get_current_timestamp()           | project_service, render_service — records
+timestamp_to_display_string()     | output_formatter — history display
+```
+
+---
+---
+
+# PART FOUR — ANSWER TO QUESTION FOUR
+## "Should I make one `database_connection_service` as an application service to manage both
+`session.db` and `project_data.db`? Or should I make two separate files?"
+
+**Short answer: Make ONE connection manager, but keep it in the `database/` folder as a
+plain helper class — NOT as an application service.**
+
+Here is the full explanation.
+
+---
+
+### First: Why You Should NOT Make Two Separate Files
+
+If you make two completely separate files like `session_connection.py` and
+`project_connection.py`, you have this problem: every time you need to fix
+a bug in the connection logic (for example, enabling WAL mode in SQLite for
+better performance), you must fix it in two places. Then later you might fix
+it in one file and forget the other. This is a well-known programming trap.
+
+The rule is: **do not repeat the same logic in two places.**
+
+---
+
+### Second: Why You Should NOT Make It an Application Service
+
+An **Application Service** (in `application/use_case/`) is for **workflows**.
+It coordinates steps. It uses ports. It calls domain services.
+
+A **database connection** is not a workflow. It is a simple technical tool.
+It is infrastructure. It has no business logic. It does not call domain services.
+It does not validate data. It just opens and returns a SQLite connection.
+
+Putting it in `application/use_case/` would be like putting a screwdriver
+inside a recipe book. It does not belong there.
+
+---
+
+### The Correct Solution: One Manager in the `database/` Folder
+
+You already have a `database/` folder with `connection.py` inside.
+This is exactly the right place. Here is how to design it well.
+
+**File: `database/connection.py`**
+
+This file should contain ONE class called `DatabaseConnectionManager`.
+
+Here is what it does, step by step:
+
+**Step 1 — It knows about both databases:**
+```
+session_db_path    = ~/.supermanim/session.db
+project_db_path    = <current_project_folder>/project_data.db
+```
+
+**Step 2 — It gives you a connection when you ask for it:**
+```python
+manager = DatabaseConnectionManager()
+
+# To get a session connection:
+conn = manager.get_session_connection()
+
+# To get a project connection:
+conn = manager.get_project_connection("/projects/MyAnimation")
+```
+
+**Step 3 — It applies the same settings to every connection it creates:**
+- Enables WAL (Write-Ahead Logging) mode — makes SQLite faster and safer
+- Sets a timeout — so if two things try to write at the same time, it waits instead of crashing
+- Enables foreign key enforcement — so your data stays consistent
+- Returns rows as dictionaries instead of plain tuples — so you can use `row["scene_name"]`
+  instead of `row[0]`, which is much easier to read
+
+**Step 4 — It handles errors in one place:**
+If the database file cannot be opened (file is corrupted, path is wrong),
+it raises a clear error message from one place. You do not repeat error
+handling in every repository file.
+
+---
+
+### How the Repositories Use This Manager
+
+Each SQLite repository adapter imports and uses the manager:
+
+```
+sqlite_scene_repository.py
+    → asks manager: "give me a connection to project_data.db"
+    → manager returns a connection
+    → repository uses it to run SQL
+    → repository closes the connection when done
+
+sqlite_session_repository.py
+    → asks manager: "give me a connection to session.db"
+    → manager returns a connection
+    → repository uses it
+    → repository closes when done
+```
+
+The repositories do NOT contain any connection settings.
+They just ask the manager for a connection and use it.
+All connection settings live in ONE place only: `connection.py`.
+
+---
+
+### Final Design of `database/connection.py`
+
+```
+DatabaseConnectionManager
+│
+├── get_session_connection() -> sqlite3.Connection
+│     Opens (or creates) session.db
+│     Applies standard settings (WAL, timeout, row_factory, foreign_keys)
+│     Returns the ready connection
+│
+├── get_project_connection(project_path: str) -> sqlite3.Connection
+│     Opens (or creates) project_data.db inside the given project folder
+│     Applies the same standard settings
+│     Returns the ready connection
+│
+└── _apply_standard_settings(connection) -> None
+      Private helper called by both methods above
+      Sets WAL mode, timeout, row_factory, foreign_keys
+      Lives in one place only
+      Changes here automatically apply to both databases
+```
+
+---
+
+### Why This Is Better Than the Alternatives
+
+```
+OPTION A: Two separate files (session_connection.py + project_connection.py)
+─────────────────────────────────────────────────────────────────────────────
+PRO:  Simple to understand.
+CON:  Duplicate logic in two places.
+CON:  When you fix a bug, you must remember to fix it twice.
+CON:  As the project grows, the two files drift apart.
+VERDICT: NOT recommended.
+
+
+OPTION B: DatabaseConnectionService as an Application Service
+─────────────────────────────────────────────────────────────────────────────
+PRO:  Everything in one place.
+CON:  Wrong layer. Application services are for workflows, not infrastructure.
+CON:  Confuses the architecture. Future developers will be confused by it.
+CON:  Violates Hexagonal Architecture principles.
+VERDICT: NOT recommended.
+
+
+OPTION C: DatabaseConnectionManager in database/connection.py (RECOMMENDED)
+─────────────────────────────────────────────────────────────────────────────
+PRO:  One place for all connection logic.
+PRO:  Correct layer — infrastructure belongs in its own folder.
+PRO:  Easy to extend — add a third database later by adding one method.
+PRO:  All repositories get the same consistent settings.
+PRO:  Clean architecture — each layer has the right things in it.
+VERDICT: BEST choice. This is what you already started with in database/connection.py.
+         Just design it as shown above.
+```
+
+---
+---
+
+# PART FIVE — COMPLETE PROJECT FOLDER AND FILE STRUCTURE
+
+Below is the complete structure with every file explained.
+Files marked with `[EXISTS]` are already in your project.
+Files marked with `[ADD]` are new files you should add based on the analysis above.
+Files marked with `[FILL IN]` exist but need their content completed.
+
+```
+supermanim/
+│
+├── main.py                          [EXISTS] Entry point. Starts the CLI shell.
+├── bootstrap.py                     [EXISTS] Wires all dependencies together (dependency injection).
+├── requirements.txt                 [EXISTS] Lists all Python packages needed.
+├── README.md                        [ADD]    Project overview and usage instructions.
+│
+│
+├── config/
+│   ├── __init__.py                  [EXISTS]
+│   └── constants.py                 [EXISTS] All magic numbers and strings in one place.
+│                                             Examples: SUPPORTED_AUDIO_FORMATS, MAX_PROJECT_NAME_LENGTH,
+│                                             DEFAULT_RENDER_RESOLUTION, HASH_ALGORITHM = "sha256"
+│
+│
+├── database/
+│   ├── __init__.py                  [ADD]    Empty init file.
+│   └── connection.py                [EXISTS] DatabaseConnectionManager class.
+│                                             get_session_connection() → opens session.db
+│                                             get_project_connection(path) → opens project_data.db
+│                                             _apply_standard_settings(conn) → WAL, timeout, row_factory
+│
+│
+├── utilis/
+│   ├── __init__.py                  [EXISTS]
+│   └── utilities.py                 [EXISTS] All general helper functions.
+│                                             sanitize_filename()
+│                                             ensure_directory_exists()
+│                                             get_file_extension()
+│                                             get_filename_without_extension()
+│                                             build_output_path()
+│                                             seconds_to_hhmmss()
+│                                             hhmmss_to_seconds()
+│                                             round_duration()
+│                                             durations_are_close_enough()
+│                                             format_scene_display_name()
+│                                             truncate_string()
+│                                             pluralize()
+│                                             is_valid_project_name()
+│                                             is_supported_audio_format()
+│                                             is_supported_video_format()
+│                                             is_file_readable()
+│                                             chunk_list()
+│                                             find_duplicates()
+│                                             flatten_list()
+│                                             get_current_timestamp()
+│                                             timestamp_to_display_string()
+│
+│
+├── core/
+│   ├── __init__.py                  [EXISTS]
+│   ├── domain_exception.py          [EXISTS] Base class for all domain-specific errors.
+│   │                                         DomainException (base)
+│   │                                         [ADD] TimelineValidationError (e.g. gap found)
+│   │                                         [ADD] SceneValidationError
+│   │                                         [ADD] AudioValidationError
+│   │                                         [ADD] ProjectValidationError
+│   │                                         [ADD] HashComputationError
+│   │
+│   ├── entities/
+│   │   ├── __init__.py              [EXISTS]
+│   │   ├── project.py               [EXISTS] Project entity. Fields: id, name, mode, path,
+│   │   │                                     created_at, is_active. Pure data + simple rules.
+│   │   ├── project_settings.py      [EXISTS] ProjectSettings entity. Fields: render_resolution,
+│   │   │                                     export_format, export_quality. Locked vs mutable fields.
+│   │   ├── scene.py                 [EXISTS] Scene entity. Fields: id, project_id, name, order,
+│   │   │                                     file_path, start_time, end_time, status, last_rendered_at.
+│   │   ├── subscene.py              [EXISTS] Subscene entity. A named segment within a scene.
+│   │   │                                     Fields: id, scene_id, name, start_time, end_time.
+│   │   ├── audio_clip.py            [EXISTS] AudioClip entity. Fields: id, project_id, scene_id,
+│   │   │                                     file_path, start_time, end_time, duration.
+│   │   ├── audio_file.py            [EXISTS] AudioFile entity. The raw audio file before it is
+│   │   │                                     split into clips. Fields: id, path, duration, format.
+│   │   ├── video_clip.py            [EXISTS] VideoClip entity. A rendered video segment for one scene.
+│   │   │                                     Fields: id, scene_id, file_path, duration, created_at.
+│   │   ├── video_file.py            [EXISTS] VideoFile entity. The final assembled video.
+│   │   │                                     Fields: id, project_id, file_path, total_duration.
+│   │   ├── asset.py                 [EXISTS] Asset entity. Any external file used in a scene
+│   │   │                                     (an image, a font, a data file).
+│   │   │                                     Fields: id, project_id, name, file_path, asset_type.
+│   │   ├── timeline.py              [EXISTS] Timeline entity. Represents the ordered sequence of
+│   │   │                                     all scenes with their time ranges.
+│   │   │                                     Fields: total_duration, ordered_scene_slots list.
+│   │   ├── cache_record.py          [ADD]    CacheRecord entity. Stores the hash fingerprint of a
+│   │   │                                     scene file. Fields: id, scene_id, file_hash,
+│   │   │                                     computed_at, is_valid. This is what makes incremental
+│   │   │                                     rendering possible. You check this before every render.
+│   │   └── render_job.py            [ADD]    RenderJob entity. Tracks one render attempt.
+│   │                                         Fields: id, scene_id, status (pending/running/done/failed),
+│   │                                         started_at, finished_at, error_message.
+│   │                                         Useful for showing render history to the user.
+│   │
+│   └── services/
+│       ├── __init__.py              [EXISTS]
+│       ├── timeline_service.py      [EXISTS] DOMAIN SERVICE — pure time logic only.
+│       │                                     calculate_scene_duration(start, end)
+│       │                                     validate_timeline_has_no_gaps(scenes)
+│       │                                     validate_timeline_has_no_overlaps(scenes)
+│       │                                     build_timeline_from_scenes(scenes)
+│       │                                     reorder_scenes_by_start_time(scenes)
+│       │                                     split_timeline_at_position(timeline, position)
+│       │                                     get_total_duration(scenes)
+│       ├── hash_service.py          [EXISTS] DOMAIN SERVICE — pure fingerprinting logic only.
+│       │                                     compute_file_hash(file_path) -> str
+│       │                                     compute_string_hash(text) -> str
+│       │                                     hashes_are_equal(hash_one, hash_two) -> bool
+│       │                                     scene_has_changed(old_hash, new_hash) -> bool
+│       ├── audio_validation_service.py [EXISTS] Validates audio clip data (no overlap, valid format).
+│       ├── scene_validation_service.py [EXISTS] Validates scene data (valid times, valid file path).
+│       ├── project_validation_service.py [EXISTS] Validates project data (valid name, valid mode).
+│       └── timeline_service.py      [EXISTS] (described above)
+│
+│
+├── ports/
+│   ├── __init__.py                  [EXISTS]
+│   │
+│   ├── driving_ports/               These are the LEFT SIDE ports. They define what the
+│   │   ├── __init__.py              [EXISTS] CLI can call into the application layer.
+│   │   ├── project_command_port.py  [EXISTS] create_project(), open_project(), close_project()
+│   │   ├── scene_command_port.py    [EXISTS] add_scene(), remove_scene(), list_scenes()
+│   │   ├── audio_command_port.py    [EXISTS] add_audio(), split_audio(), list_audio_clips()
+│   │   ├── render_command_port.py   [EXISTS] render_scene(), render_all(), render_pending()
+│   │   └── export_command_port.py   [EXISTS] export_project(), get_export_status()
+│   │
+│   ├── repository_ports/            These define how to talk to databases. Each port is an
+│   │   ├── __init__.py              [EXISTS] abstract interface. The SQLite adapters implement them.
+│   │   ├── project_repository_port.py      [EXISTS] save_project(), load_project(), delete_project()
+│   │   ├── project_settings_repository_port.py [EXISTS] save_settings(), load_settings()
+│   │   ├── scene_repository_port.py        [EXISTS] save_scene(), load_scene(), list_scenes()
+│   │   ├── audio_repository_port.py        [EXISTS] save_audio_clip(), list_audio_clips()
+│   │   ├── cache_repository_port.py        [EXISTS] save_hash(), load_hash(), invalidate_hash()
+│   │   ├── render_history_repository_port.py [EXISTS] save_render_job(), list_render_jobs()
+│   │   └── session_repository_port.py      [EXISTS] save_session(), load_session()
+│   │
+│   ├── media_processing_ports/      These define how to talk to media tools (FFmpeg, Manim, etc.)
+│   │   ├── __init__.py              [EXISTS]
+│   │   ├── render_runner_port.py    [EXISTS] render_scene(scene_file, output_path, duration)
+│   │   ├── audio_processor_port.py  [EXISTS] split_audio(), convert_audio(), get_duration()
+│   │   ├── video_assembler_port.py  [EXISTS] assemble_clips(), merge_audio_video()
+│   │   ├── audio_analyzer_port.py   [EXISTS] analyze_silence(), get_waveform_data()
+│   │   └── preview_generator_port.py [EXISTS] generate_preview_frame(), generate_preview_video()
+│   │
+│   ├── infrastructure_ports/        These define how to talk to the file system.
+│   │   ├── __init__.py              [EXISTS]
+│   │   ├── file_storage_port.py     [EXISTS] save_file(), load_file(), delete_file(), file_exists()
+│   │   ├── hash_computer_port.py    [EXISTS] compute_hash(file_path)
+│   │   │                                     NOTE: This is the PORT (interface). The actual
+│   │   │                                     computation logic is in core/services/hash_service.py.
+│   │   │                                     The adapter in infrastructure calls the domain service.
+│   │   ├── asset_manager_port.py    [EXISTS] store_asset(), retrieve_asset(), list_assets()
+│   │   └── temp_file_manager_port.py [EXISTS] create_temp_file(), cleanup_temp_files()
+│   │
+│   └── notification_ports/          These define how to report progress and send notifications.
+│       ├── __init__.py              [EXISTS]
+│       ├── logger_port.py           [EXISTS] log_info(), log_warning(), log_error(), log_debug()
+│       ├── notification_port.py     [EXISTS] notify_success(), notify_error(), notify_warning()
+│       └── progress_reporter_port.py [EXISTS] start_progress(), update_progress(), finish_progress()
+│
+│
+├── application/
+│   ├── __init__.py                  [EXISTS]
+│   └── use_case/
+│       ├── __init__.py              [EXISTS]
+│       ├── app_state_service.py     [EXISTS] Manages is_project_open state. Reads/writes session.db.
+│       │                                     load_session(), save_session(), get_current_state(),
+│       │                                     get_recent_projects(), mark_project_opened()
+│       ├── project_service.py       [EXISTS] Handles project lifecycle.
+│       │                                     create_project(), open_project(), close_project(),
+│       │                                     delete_project(), get_project_info()
+│       │                                     Uses: project_repository, project_settings_repository,
+│       │                                           file_storage, project_validation_service
+│       ├── scene_service.py         [EXISTS] Handles scene management.
+│       │                                     add_scene(), remove_scene(), update_scene(),
+│       │                                     list_scenes(), reorder_scenes()
+│       │                                     Uses: scene_repository, timeline_service (domain),
+│       │                                           hash_service (domain), scene_validation_service
+│       ├── audio_service.py         [EXISTS] Handles audio operations.
+│       │                                     add_audio_file(), split_audio_into_clips(),
+│       │                                     list_audio_clips(), remove_audio_clip()
+│       │                                     Uses: audio_repository, audio_processor, audio_analyzer,
+│       │                                           audio_validation_service
+│       ├── render_service.py        [EXISTS] Handles rendering decisions.
+│       │                                     render_all(), render_scene(), render_pending_only()
+│       │                                     check_which_scenes_need_render()
+│       │                                     Uses: scene_repository, cache_repository,
+│       │                                           hash_service (domain), render_runner,
+│       │                                           render_history_repository, progress_reporter
+│       ├── sync_service.py          [EXISTS] Handles audio-video time alignment.
+│       │                                     sync_scenes_to_audio(), validate_sync(),
+│       │                                     detect_sync_problems(), report_sync_status()
+│       │                                     Uses: scene_repository, audio_repository,
+│       │                                           timeline_service (domain)
+│       ├── export_service.py        [EXISTS] Handles final video assembly.
+│       │                                     export_project(), get_export_formats(),
+│       │                                     assemble_final_video()
+│       │                                     Uses: scene_repository, audio_repository,
+│       │                                           video_assembler, file_storage,
+│       │                                           timeline_service (domain)
+│       ├── preview_service.py       [EXISTS] Handles fast preview generation.
+│       │                                     generate_scene_preview(), generate_project_preview()
+│       │                                     Uses: scene_repository, preview_generator
+│       └── session_service.py       [EXISTS] Handles session reading and writing.
+│                                             load_current_session(), update_session(),
+│                                             add_to_recent_projects(), clear_recent_projects()
+│                                             Uses: session_repository
+│
+│
+├── adapters/
+│   ├── __init__.py                  [EXISTS]
+│   │
+│   ├── cli/                         The user-facing command-line interface.
+│   │   ├── __init__.py              [EXISTS]
+│   │   ├── shell.py                 [EXISTS] The main REPL loop. Reads user input, dispatches commands.
+│   │   ├── command_parser.py        [EXISTS] Parses raw text commands into structured command objects.
+│   │   ├── output_formatter.py      [EXISTS] Formats data into readable CLI text output.
+│   │   │                                     Uses utilities.py functions like seconds_to_hhmmss(),
+│   │   │                                     format_scene_display_name(), truncate_string()
+│   │   ├── cli_project_command.py   [EXISTS] Handles: create project, open project, close project
+│   │   ├── cli_scene_command.py     [EXISTS] Handles: add scene, list scenes, remove scene
+│   │   ├── cli_audio_command.py     [EXISTS] Handles: add audio, split audio, list clips
+│   │   ├── cli_render_command.py    [EXISTS] Handles: render, render-all, render-pending
+│   │   └── cli_export_command.py    [EXISTS] Handles: export, export --format mp4
+│   │
+│   ├── gui/
+│   │   └── __init__.py              [EXISTS] Placeholder. GUI not built yet.
+│   │
+│   ├── repositories/                SQLite implementations of the repository ports.
+│   │   ├── __init__.py              [EXISTS]
+│   │   ├── sqlite/
+│   │   │   ├── __init__.py          [EXISTS]
+│   │   │   ├── sqlite_project_repository.py         [EXISTS] Reads/writes projects table.
+│   │   │   ├── sqlite_project_settings_repository.py [EXISTS] Reads/writes project_settings table.
+│   │   │   ├── sqlite_scene_repository.py           [EXISTS] Reads/writes scenes table.
+│   │   │   ├── sqlite_audio_repository.py           [EXISTS] Reads/writes audio_clips table.
+│   │   │   ├── sqlite_cache_repository.py           [EXISTS] Reads/writes cache_records table.
+│   │   │   ├── sqlite_render_history_repository.py  [EXISTS] Reads/writes render_jobs table.
+│   │   │   └── sqlite_session_repository.py         [EXISTS] Reads/writes app_session + recent_projects.
+│   │   ├── in_memory/               Fast fake repositories used during testing only.
+│   │   │   └── __init__.py          [EXISTS]
+│   │   │   └── [ADD] in_memory_scene_repository.py  Stores scenes in a Python dict. No SQLite needed.
+│   │   │                                            Used in unit tests to test SceneService without
+│   │   │                                            needing a real database file.
+│   │   └── json/                    Optional JSON-based repositories (for debugging or export).
+│   │       └── __init__.py          [EXISTS]
+│   │
+│   ├── media/                       Implementations that wrap external tools.
+│   │   ├── __init__.py              [EXISTS]
+│   │   ├── manim/
+│   │   │   ├── __init__.py          [EXISTS]
+│   │   │   └── manim_render_runner.py [EXISTS] Calls the Manim CLI as a subprocess.
+│   │   │                                       render_scene(scene_file, output_path, quality, fps)
+│   │   ├── ffmpeg/
+│   │   │   ├── __init__.py          [EXISTS]
+│   │   │   ├── ffmpeg_audio_processor.py [EXISTS] Calls FFmpeg to split/convert/trim audio.
+│   │   │   └── ffmpeg_video_assembler.py [EXISTS] Calls FFmpeg to join video clips and add audio.
+│   │   ├── librosa/
+│   │   │   ├── __init__.py          [EXISTS]
+│   │   │   └── librosa_audio_analyzer.py [EXISTS] Uses librosa to analyze audio waveforms and silence.
+│   │   └── preview/
+│   │       ├── __init__.py          [EXISTS]
+│   │       └── fast_preview_generator.py [EXISTS] Generates low-quality fast preview videos/frames.
+│   │
+│   ├── infrastructure/              Implementations for file system operations.
+│   │   ├── __init__.py              [EXISTS]
+│   │   ├── file/
+│   │   │   ├── __init__.py          [EXISTS]
+│   │   │   ├── local_file_storage.py [EXISTS] Implements file_storage_port using os and shutil.
+│   │   │   └── sha256_hash_computer.py [EXISTS] Implements hash_computer_port using hashlib.
+│   │   │                                        Calls core/services/hash_service.py internally.
+│   │   └── system/
+│   │       ├── __init__.py          [EXISTS]
+│   │       ├── asset_manager.py     [EXISTS] Manages copying and tracking project asset files.
+│   │       └── temp_file_manager.py [EXISTS] Creates temp files, cleans them up after use.
+│   │
+│   └── notification/                Implementations for logging and progress reporting.
+│       ├── __init__.py              [EXISTS]
+│       ├── cli/
+│       │   ├── __init__.py          [EXISTS]
+│       │   ├── cli_logger.py        [EXISTS] Prints log messages to the terminal with color.
+│       │   ├── cli_notification.py  [EXISTS] Prints success/error notifications to the terminal.
+│       │   └── cli_progress_reporter.py [EXISTS] Prints a progress bar or counter in the terminal.
+│       ├── gui/
+│       │   ├── __init__.py          [EXISTS]
+│       │   ├── gui_logger.py        [EXISTS] Placeholder for GUI log display.
+│       │   ├── gui_notification.py  [EXISTS] Placeholder for GUI popup notifications.
+│       │   └── gui_progress_reporter.py [EXISTS] Placeholder for GUI progress bar widget.
+│       └── web/
+│           ├── __init__.py          [EXISTS]
+│           ├── web_logger.py        [EXISTS] Placeholder for web/API log output.
+│           ├── web_notification.py  [EXISTS] Placeholder for web/API notifications.
+│           └── web_progress_reporter.py [EXISTS] Placeholder for web/API progress streaming.
+│
+│
+└── tests/
+    ├── __init__.py                  [EXISTS]
+    ├── unit/                        [ADD] Tests for individual functions with no external tools.
+    │   ├── __init__.py              [ADD]
+    │   ├── test_timeline_service.py [ADD] Tests for all timeline_service functions.
+    │   ├── test_hash_service.py     [ADD] Tests for all hash_service functions.
+    │   ├── test_utilities.py        [ADD] Tests for all utilities.py functions.
+    │   ├── test_project_entity.py   [ADD] Tests that Project entity rules work correctly.
+    │   └── test_scene_entity.py     [ADD] Tests that Scene entity rules work correctly.
+    └── integration/                 [ADD] Tests that combine multiple layers together.
+        ├── __init__.py              [ADD]
+        ├── test_render_service.py   [ADD] Tests RenderService using in-memory repositories.
+        └── test_sync_service.py     [ADD] Tests SyncService using in-memory repositories.
+```
+
+---
+
+# FINAL SUMMARY — THE FOUR ANSWERS IN ONE PARAGRAPH EACH
+
+**Question 1:** Keep `timeline_service.py` and `hash_service.py` each as one single file.
+Each file has one clearly focused topic (time logic / fingerprinting logic).
+Only split a file when two completely unrelated topics accidentally ended up in the same file.
+
+**Question 2:** The application services that use the domain services are:
+`render_service.py` uses `hash_service`, and `sync_service.py` + `export_service.py`
+use `timeline_service`. `scene_service.py` uses both. You do not need to create
+any new application services. Just make sure the existing ones import and call
+the domain services when they need them.
+
+**Question 3:** The `utils/utilities.py` file should contain 22 helper functions organized
+into 6 groups: Path/File helpers, Time/Duration helpers, String formatting helpers,
+Validation helpers, List/Data helpers, and Timestamp helpers. None of these functions
+contain business logic. They are all reusable tools that many parts of the project need.
+
+**Question 4:** Use ONE class called `DatabaseConnectionManager` inside `database/connection.py`.
+It handles both `session.db` and `project_data.db`. It applies the same settings to both.
+Do not make it an Application Service — it is infrastructure, not a workflow.
+All repository adapters ask this manager for a connection instead of each one
+building its own connection from scratch.
