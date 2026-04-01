@@ -1,4 +1,5 @@
 
+
 # Module 0 — An Overview of SuperManim
 
 **Project:** SuperManim CLI Tool
@@ -3350,6 +3351,7 @@ They describe the same design from two different angles.
 ```
 
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
 
 # Module 1 Global Constants:
 **File location:** `/SuperManim/config/constants.py`
@@ -9498,19 +9500,20 @@ reference.
 
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-# Module 3 The core of SuperManim tool (Entities):
+# Module_03_Entities
 
+---
 
+# Section 3.1: Introduction to the Core
 
-## Section 3.1 Introduction to the Core
+## Subsection 3.1.1: What Is "The Core"?
 
-### Subsection 3.1.1 What is "The Core"?
 Before we talk about what is inside the Core, we need to deeply understand
 what the Core actually IS as a concept. Most people hear the word "Core"
 and think it just means "the important code." That is not precise enough.
-Let's build the understanding from the ground up.
+Let us build the understanding from the ground up.
 
-The World Is Full of External Things
+### Subsubsection 3.1.1.1: The External World Around SuperManim
 
 When SuperManim runs on your computer, it has to deal with many things
 that exist OUTSIDE of SuperManim itself. These things were built by other
@@ -9565,13 +9568,16 @@ But here is the critical question that the entire architecture is built around:
 +---------------------------------------------------------------------+
 ```
 
-The Core is the answer to this question.The Core Is a Protected Island
+The Core is the answer to this question.
+
+### Subsubsection 3.1.1.2: The Core Is a Protected Island
 
 Imagine the external world as an ocean. The ocean is noisy, unpredictable,
 and full of things that can change at any time. SQLite might be upgraded.
 Manim might change its command-line arguments. FFmpeg might change its flags.
 
-The Core is an island in the middle of that ocean.
+The Core is an island in the middle of that ocean. It sits protected,
+completely unaware that the ocean even exists.
 
 ```
 +=====================================================================+
@@ -9600,8 +9606,8 @@ The Core is an island in the middle of that ocean.
 ```
 
 The Core is completely isolated. It does not import SQLite. It does not
-import subprocess to run Manim. It does not call print() to talk to the
-terminal. It does not use os.path to touch the file system.
+import subprocess to run Manim. It does not call `print()` to talk to the
+terminal. It does not use `os.path` to touch the file system.
 
 If you open any Python file inside the Core folder and see any of these:
 
@@ -9615,8 +9621,8 @@ print("something")      # NO. This belongs in an Adapter.
 
 Something is wrong. That code does not belong in the Core.
 
+## Subsection 3.1.2: What Does the Core Know About?
 
-### Subsection 3.1.2 What Does the Core Know About?
 The Core only knows about three things:
 
 ```
@@ -9629,7 +9635,7 @@ The Core only knows about three things:
 |      What is a Project? What does it contain?                       |
 |      What is an AudioClip? What are its properties?                 |
 |                                                                     |
-|   2. ITS OWN RULES (Business Rules)                                 |
+|   2. ITS OWN RULES (Business Rules / Validators)                    |
 |      What makes a Scene valid?                                      |
 |      When can a project be exported?                                |
 |      When do two durations "match"?                                 |
@@ -9644,106 +9650,243 @@ The Core only knows about three things:
 ```
 
 These three things — Entities, Business Rules, and Business Logic —
-are the three components of the Core. They are what this document
-is going to explain in complete depth.
+are the three components of the Core. This document focuses entirely
+on the first component: **Entities**.
 
 ---
 
-## Section 3.2 Component 1: Entities
+# Section 3.2: Component 1 — What Is an Entity?
 
+## Subsection 3.2.1: The Definition of an Entity
 
-### Subsection 3.2.1 What Is an Entity?
 An Entity is a data object. It is a Python class that represents one
-real "thing" that SuperManim works with. Think of it as a container
-that holds all the information about that thing.
+real "thing" that SuperManim works with. Think of it as a structured
+container that holds all the information about that one thing and nothing
+more.
 
-An Entity does not DO anything complex. It does not talk to databases.
-It does not run Manim. It does not print anything. It is just a
-structured collection of related data fields, grouped together
-under a meaningful name.
+An Entity does **not DO** anything complex. It does not talk to databases.
+It does not run Manim. It does not print anything to the screen. It is just
+a clean collection of related data fields, grouped together under a
+meaningful name.
 
 The word "Entity" comes from the word "thing that exists."
 A Scene exists. A Project exists. An AudioClip exists.
 These are real things in the world of SuperManim, and each one
 is represented in code as an Entity.
 
+### Subsubsection 3.2.1.1: What an Entity IS and What It Is NOT
 
-### Subsection 3.2.2 Why Do We Need Entities?
-Without Entities, data floats around as loose variables everywhere.
-You would have `scene_id`, `scene_duration`, `scene_code_path`,
-`scene_status`, `scene_hash` all scattered throughout the code.
-When you need to pass a scene to a function, you would have to pass
-five separate arguments. When you want to check something about a scene,
-you have to remember what the variable was called.
-
-With Entities, all of that information lives together in one object.
-You pass ONE Scene object to a function. Inside that function,
-you access `scene.duration`, `scene.code_path`, `scene.status`.
-Everything about a scene is in one place, under one name.
-
-
-### Subsection 3.2.3 The Entities in SuperManim
-SuperManim has four main Entities. Let us go through each one completely.
-
----
-
-
-## Section 3.3 Entity 1 — Scene
-
-### Subsection 3.3.1 What is a Scene, Really?
-
-Before we look at any code or any property names, let us build a completely
-clear picture of what a Scene actually IS inside SuperManim.
-
-A Scene is one section of your video. Think of your final video like a book.
-Your book has chapters. Each chapter is one Scene. Chapter 1 plays first,
-Chapter 2 plays after it, Chapter 3 plays after that, all the way to the end.
-
-If your video is 60 seconds long and has 5 sections, you have 5 Scenes.
+It is very important to understand both sides clearly.
 
 ```
 +=====================================================================+
-|                 YOUR 60-SECOND VIDEO — 5 SCENES                     |
+|                  WHAT AN ENTITY IS — AND IS NOT                     |
 +=====================================================================+
 |                                                                     |
-|  0s ─────────── 12.5s ─────────── 31.0s ─────── 47.8s ──── 60.0s  |
+|   AN ENTITY IS:                                                     |
+|   ─────────────────────────────────────────────────────────────    |
+|   - A Python @dataclass with named fields and type annotations      |
+|   - A container for related data about one real "thing"             |
+|   - A pure data object — no side effects, no external calls         |
+|   - Something that can be created in memory with zero external deps |
+|   - The single source of truth about one specific domain object     |
+|                                                                     |
+|   AN ENTITY IS NOT:                                                 |
+|   ─────────────────────────────────────────────────────────────    |
+|   - A function that runs Manim or calls FFmpeg                      |
+|   - A class that reads or writes to a database (SQLite)             |
+|   - A class that calls print() to show things on screen             |
+|   - A class that reads or writes files from disk using os.path      |
+|   - A class that validates itself (validation lives in Validators)  |
+|   - A class that runs business logic (that lives in Services)       |
+|                                                                     |
++=====================================================================+
+```
+
+### Subsubsection 3.2.1.2: The Python @dataclass Decorator
+
+All Entities in SuperManim are written using Python's `@dataclass`
+decorator. This is a standard Python feature that automatically generates
+some boilerplate code for you — like `__init__` and `__repr__` — based
+on the fields you declare.
+
+```python
+# WITHOUT @dataclass (messy — you have to write __init__ manually):
+class Scene:
+    def __init__(self, scene_id, scene_name=None, scene_duration=None):
+        self.scene_id       = scene_id
+        self.scene_name     = scene_name
+        self.scene_duration = scene_duration
+    # ... and you'd have to write __repr__ too, and __eq__, and more
+
+# WITH @dataclass (clean — Python generates everything from declarations):
+from dataclasses import dataclass
+from typing import Optional
+
+@dataclass
+class Scene:
+    scene_id:       int
+    scene_name:     Optional[str] = None
+    scene_duration: Optional[int] = None
+    # Done. Python generates __init__, __repr__, __eq__ automatically.
+```
+
+Using `@dataclass` keeps our Entities short, readable, and consistent.
+
+## Subsection 3.2.2: Why Do We Need Entities?
+
+Without Entities, data floats around as loose variables scattered all over
+the code. You would have `scene_id`, `scene_duration`, `scene_code_path`,
+`scene_status`, `scene_hash` all as separate variables in different places.
+When you need to pass a scene to a function, you would have to pass five,
+ten, or even fifteen separate arguments. When you want to check something
+about a scene, you have to remember every variable name exactly.
+
+With Entities, all of that information lives together in one object.
+You pass ONE Scene object to a function. Inside that function you access
+`scene.duration`, `scene.code_path`, `scene.status`. Everything about a
+scene is in one place, under one name.
+
+```
++=====================================================================+
+|              WITHOUT ENTITIES vs WITH ENTITIES                      |
++=====================================================================+
+|                                                                     |
+|   WITHOUT ENTITIES (messy, fragile):                                |
+|   ─────────────────────────────────────────────────────────────    |
+|   def render_scene(scene_id, duration, code_path, status, hash,    |
+|                    output_path, fps, resolution, bg_color,          |
+|                    audio_clip_path, synced_with_audio, ...):        |
+|       # 10+ arguments. Miss one and the program crashes.            |
+|       # Add a new field and you must update EVERY call site.        |
+|       pass                                                          |
+|                                                                     |
+|   WITH ENTITIES (clean, robust):                                    |
+|   ─────────────────────────────────────────────────────────────    |
+|   def render_scene(scene: Scene):                                   |
+|       # One object carries everything.                              |
+|       # Adding a new field to Scene does not break any call.        |
+|       pass                                                          |
+|                                                                     |
++=====================================================================+
+```
+
+## Subsection 3.2.3: The Complete List of Entities in SuperManim
+
+SuperManim has the following Entities, each stored in its own Python file
+inside the `core/entities/` directory:
+
+```
++=====================================================================+
+|               ALL ENTITIES IN SUPERMANIM                            |
++=====================================================================+
+|                                                                     |
+|   Entity        File                      Purpose                   |
+|   ──────────────────────────────────────────────────────────────   |
+|   Scene         core/entities/scenes.py   One video section         |
+|   SubScene      core/entities/scenes.py   One block inside a Scene  |
+|   Project       core/entities/project.py  One full production       |
+|   MediaUnit     core/entities/media_unit.py Abstract base class     |
+|   AudioClip     core/entities/audio_clip.py One cut audio piece     |
+|   VideoClip     core/entities/video_clip.py One cut video piece     |
+|   AudioFile     core/entities/audio_file.py One full audio file     |
+|   VideoFile     core/entities/video_file.py One full video file     |
+|   AssetFile     core/entities/asset_file.py One image/font/asset    |
+|   Timeline      core/entities/timeline.py  The ordered sequence     |
+|                                                                     |
++=====================================================================+
+```
+
+The folder structure on disk looks like this:
+
+```
+[mina@mina ~]$ pwd
+/home/mina/SuperManim/core/entities
+
+[mina@mina entities]$ tree .
+.
+├── __init__.py
+├── asset_file.py
+├── audio_clip.py
+├── audio_file.py
+├── media_unit.py
+├── project.py
+├── scenes.py
+├── timeline.py
+├── video_clip.py
+└── video_file.py
+
+1 directory, 10 files
+```
+
+---
+
+# Section 3.3: Entity 1 — Scene
+
+## Subsection 3.3.1: What Is a Scene?
+
+Before we look at any code, let us build a completely clear picture of
+what a Scene actually IS inside SuperManim.
+
+A Scene is one section of your video. Think of your final video like a
+book. Your book has chapters. Each chapter is one Scene. Chapter 1 plays
+first, Chapter 2 plays after it, Chapter 3 plays after that, all the way
+to the end of the video.
+
+If your video is 60 seconds long and has 4 sections, you have 4 Scenes.
+
+```
++=====================================================================+
+|                 YOUR 60-SECOND VIDEO — 4 SCENES                     |
++=====================================================================+
+|                                                                     |
+|  0ms ─────── 12500ms ─────── 31000ms ──── 47800ms ───── 60000ms   |
 |  |              |                 |              |          |       |
 |  |  SCENE 1     |    SCENE 2      |   SCENE 3    | SCENE 4  |       |
 |  | Introduction | Main Concept    |   Example    |Conclusion|       |
-|  |  12.5 sec    |   18.5 sec      |  16.8 sec    |  5.5 sec |       |
+|  |  12500ms     |   18500ms       |  16800ms     |  12200ms |       |
 |  |              |                 |              |          |       |
-|                                                                     |
 +=====================================================================+
 ```
 
-Now here is the important thing to understand: a Scene is NOT the video file.
-A Scene is NOT the Python animation code.
-A Scene is the RECORD that SuperManim keeps about all the information
+Now here is the important thing to understand: a Scene is **NOT** the
+video file on disk. A Scene is **NOT** the Python animation code.
+A Scene is the **RECORD** that SuperManim keeps about all the information
 surrounding one section of the video.
 
 Think of a Scene like a filing card in a cabinet. The filing card says:
-"Scene 3. Duration: 16.8 seconds. Code file: example.py.
-Status: rendered. Audio: clip_003.mp3. Synced: yes.
-Video at: output/scene_03/scene_03.mp4."
+"Scene 3. Duration: 16800 ms. Code file: example.py. Status: rendered.
+Audio: clip_003.mp3. Synced: yes. Video at: output/scene_03/scene_03.mp4."
 
-The filing card itself is just information. The actual video, audio,
-and code files are stored separately on disk. The Scene Entity is that
-filing card — the central record that knows where everything is and
+The filing card itself is just information. The actual video file, audio
+file, and code file are stored separately on disk. The Scene Entity is
+that filing card — the central record that knows where everything is and
 what state everything is in.
 
----
+### Subsubsection 3.3.1.1: Where Is the Scene Class Defined on Disk?
 
+The `Scene` class is defined in this file:
 
-### Subsection 3.3.2 The Two Levels of a Scene
+```
+/home/mina/SuperManim/core/entities/scenes.py
+```
+
+Both the `Scene` class and the `SubScene` class live in this same file.
+`SubScene` is defined below `Scene` in the file because `Scene` references
+`SubScene` in its `scene_map` property.
+
+## Subsection 3.3.2: The Two Levels of a Scene
 
 A Scene in SuperManim has two levels inside it.
 
-**Level 1** is the Scene itself — one section of the video.
+**Level 1** is the Scene itself — one complete section of the video.
 
-**Level 2** is the SubScene — one block or moment inside that section.
+**Level 2** is the SubScene — one smaller animation block or moment
+inside that section.
 
-A single Scene can be divided into multiple SubScenes. Each SubScene
-is a mini-scene — a smaller piece of animation within the bigger Scene.
+A single Scene can be divided into multiple SubScenes. Each SubScene is
+a mini-scene — a smaller, more granular piece of animation within the
+bigger Scene.
 
 Think of it like this:
 
@@ -9752,53 +9895,52 @@ Think of it like this:
 |                      SCENE  AND  SUBSCENES                          |
 +=====================================================================+
 |                                                                     |
-|   SCENE 3 (16.8 seconds total)                                      |
+|   SCENE 3 (16800 ms total)                                          |
 |   ─────────────────────────────────────────────────────────────    |
 |   |                                                               | |
-|   |  SubScene A       SubScene B        SubScene C                | |
-|   |  (0.0 → 5.5s)     (5.5 → 11.2s)    (11.2 → 16.8s)           | |
-|   |  "Title appears"  "Graph draws"     "Conclusion fades in"     | |
+|   |  SubScene A          SubScene B         SubScene C            | |
+|   |  (0 → 5500ms)        (5500 → 11200ms)   (11200 → 16800ms)    | |
+|   |  "Title appears"     "Graph draws"      "Conclusion fades in" | |
+|   |  5500ms              5700ms             5600ms                | |
 |   |                                                               | |
 |   ─────────────────────────────────────────────────────────────    |
 |                                                                     |
-|   The Scene is the container.                                       |
-|   The SubScenes are the blocks inside that container.               |
+|   The Scene is the big container.                                   |
+|   The SubScenes are the smaller blocks inside that container.       |
+|                                                                     |
+|   5500 + 5700 + 5600 = 16800 ms  ← SubScenes must add up exactly   |
 |                                                                     |
 +=====================================================================+
 ```
 
 When you write Manim code for Scene 3, you might have multiple animation
-blocks: first a title animates in, then a graph draws itself, then a
-text conclusion fades in. Each of those blocks is a SubScene.
+phases: first a title animates in, then a graph draws itself, then a
+conclusion text fades in. Each of those phases is a SubScene.
 
 The SubScene allows SuperManim to track these individual animation blocks
 separately — their timing, their content, their order within the Scene.
 
-We will define the SubScene fully after we finish the main Scene properties.
+We will define the SubScene entity fully in Section 3.4.
 
----
+## Subsection 3.3.3: The Full Python Class of the Scene Entity
 
-### Subsection 3.3.3 The Full Python Class of Scene Entity
-An Entity is a Python data class. It is a container that holds
-all the information about one thing. It does not run Manim.
-It does not talk to SQLite. It does not call print().
-It is pure data — fields with types and default values.
-That is all. That is exactly what makes it clean and safe.
+An Entity is a Python dataclass. It is a pure data container. It does not
+run Manim, does not talk to SQLite, does not call `print()`. It is just
+fields with types and default values. That is all. That is exactly what
+makes it clean and safe.
 
-The Scene Entity is the most important Entity in all of SuperManim
-because almost every command, every service, every rule, and every
-workflow in the entire system reads or updates a Scene object.
+The Scene Entity is the most important Entity in all of SuperManim because
+almost every command, every service, every business rule, and every workflow
+reads or updates a Scene object.
 
-
-
-Here is the complete Scene Entity with every property:
+### Subsubsection 3.3.3.1: The Complete Scene Class Code
 
 ```python
-# core/entities/scene.py
+# File location: /home/mina/SuperManim/core/entities/scenes.py
 
 from __future__ import annotations
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Optional, List
 
 
 @dataclass
@@ -9806,72 +9948,83 @@ class Scene:
     """
     The Scene Entity represents one section of the animation video.
 
-    This is a pure data container — a filing card that holds
-    all information about one scene. It does not call any
-    external tools, does not open databases, does not run Manim.
+    This is a pure data container — a filing card that holds all the
+    information about one scene. It does not call any external tools,
+    does not open databases, does not run Manim, does not call print().
     It is just structured data.
 
-    A Scene can contain zero or more SubScene objects inside
-    its scene_map list. SubScenes are the individual animation
+    A Scene can contain zero or more SubScene objects inside its
+    scene_map list. SubScenes represent the individual animation
     blocks that make up this scene.
+
+    TIMING CONVENTION:
+    All timing fields (scene_duration, scene_start_time, scene_end_time)
+    are stored as integers in MILLISECONDS.
+    Example: 16.8 seconds is stored as 16800.
+    This avoids floating-point rounding errors in arithmetic.
     """
 
-    # ── IDENTITY ──────────────────────────────────────────────────────
-    scene_id:               int
-    scene_name:             Optional[str]   = None
-    scene_index:            int             = 0
-    previous_scene_id:      Optional[int]   = None
-    next_scene_id:          Optional[int]   = None
+    # ── GROUP 1 — IDENTITY ────────────────────────────────────────────
+    scene_id:                       int
+    scene_name:                     Optional[str]   = None
+    scene_index:                    int             = 0
+    previous_scene_id:              Optional[int]   = None
+    next_scene_id:                  Optional[int]   = None
 
-    # ── TIMING ────────────────────────────────────────────────────────
-    scene_duration:         Optional[float] = None
-    scene_start_time:       Optional[float] = None
-    scene_end_time:         Optional[float] = None
-    scene_start_marker:     Optional[str]   = None
-    scene_end_marker:       Optional[str]   = None
+    # ── GROUP 2 — TIMING (stored in milliseconds as integers) ─────────
+    scene_duration:                 Optional[int]   = None
+    scene_start_time:               Optional[int]   = None
+    scene_end_time:                 Optional[int]   = None
+    scene_start_marker:             Optional[str]   = None
+    scene_end_marker:               Optional[str]   = None
 
-    # ── CODE ──────────────────────────────────────────────────────────
-    scene_code_path:        Optional[str]   = None
-    scene_code_content:     Optional[str]   = None
-    scene_hash:             Optional[str]   = None
+    # ── GROUP 3 — CODE ────────────────────────────────────────────────
+    scene_code_path:                Optional[str]   = None
+    scene_code_content:             Optional[str]   = None
 
-    # ── CONTENT AND METADATA ──────────────────────────────────────────
-    scene_content:          Optional[str]   = None
-    scene_background_color: str             = "#000000"
-    scene_resolution:       str             = "1920x1080"
-    scene_fps:              int             = 60
+    # ── GROUP 4 — HASH FINGERPRINTS ───────────────────────────────────
+    scene_code_hash:                Optional[str]   = None
+    scene_assets_hash:              Optional[str]   = None
+    scene_audio_hash:               Optional[str]   = None
+    final_scene_hash:               Optional[str]   = None
 
-    # ── STATUS AND OUTPUT ─────────────────────────────────────────────
-    scene_status:           str             = "pending"
-    scene_output_path:      Optional[str]   = None
-    scene_preview_path:     Optional[str]   = None
-    scene_error_message:    Optional[str]   = None
-    scene_rendered_at:      Optional[str]   = None
-    scene_render_duration:  Optional[float] = None
+    # ── GROUP 5 — CONTENT AND VISUAL SETTINGS ─────────────────────────
+    scene_content:                  Optional[str]   = None
+    scene_background_color:         str             = "#000000"
+    scene_resolution:               str             = "1920x1080"
+    scene_fps:                      int             = 60
 
-    # ── AUDIO ─────────────────────────────────────────────────────────
-    audio_clip_path:        Optional[str]   = None
-    synced_with_audio:      bool            = False
+    # ── GROUP 6 — STATUS AND OUTPUT ───────────────────────────────────
+    scene_status:                   str             = "pending"
+    scene_output_path:              Optional[str]   = None
+    scene_preview_path:             Optional[str]   = None
+    scene_error_message:            Optional[str]   = None
+    scene_rendered_at:              Optional[str]   = None
+    scene_render_duration:          Optional[float] = None
 
-    # ── SUBSCENES ─────────────────────────────────────────────────────
-    scene_map:              list[SubScene]  = field(default_factory=list)
+    # ── GROUP 7 — AUDIO ───────────────────────────────────────────────
+    related_audio_clip_path:        Optional[str]   = None
+    synced_with_audio:              bool            = False
 
-    # ── ALLOWED STATUS VALUES ─────────────────────────────────────────
+    # ── GROUP 8 — SUBSCENES ───────────────────────────────────────────
+    # field(default_factory=list) is used instead of [] because in Python
+    # mutable default arguments are shared between instances. Using
+    # default_factory=list gives each Scene its own fresh empty list.
+    scene_map:                      List["SubScene"] = field(default_factory=list)
+
+    # ── ALLOWED VALUES FOR scene_status ───────────────────────────────
     # "pending"   → scene exists but has never been rendered
     # "rendered"  → scene was rendered successfully
     # "failed"    → render was attempted but failed with an error
-    # "skipped"   → render was skipped because code did not change
+    # "skipped"   → render was skipped because nothing changed (hash match)
 ```
 
----
+## Subsection 3.3.4: Every Property of the Scene Entity Explained in Depth
 
+The properties are grouped into 8 groups. Each group handles one aspect
+of what the Scene needs to know about itself.
 
-### Subsection 3.3.4 Every Property Explained in Depth
-
-The properties are grouped into 7 groups. Each group handles one
-aspect of what the Scene needs to know about itself.
-
-A quick reference table for every property in the Scene Entity.
+Here is a quick reference table before we dive into the details:
 
 ```
 +================================================================+
@@ -9880,102 +10033,99 @@ A quick reference table for every property in the Scene Entity.
 |                                                                |
 |  GROUP 1 — IDENTITY                                            |
 |  ──────────────────────────────────────────────────────────── |
-|  scene_id            int           Required. The unique ID.   |
-|  scene_name          str | None    Human label. Optional.     |
-|  scene_index         int           Position in sequence.      |
-|  previous_scene_id   int | None    ID of preceding scene.     |
-|  next_scene_id       int | None    ID of following scene.     |
+|  scene_id            int           Required. Unique ID.        |
+|  scene_name          str | None    Human label. Optional.      |
+|  scene_index         int           Position in sequence. 0-based|
+|  previous_scene_id   int | None    ID of the scene before this. |
+|  next_scene_id       int | None    ID of the scene after this.  |
 |                                                                |
-|  GROUP 2 — TIMING                                              |
+|  GROUP 2 — TIMING  (all values are milliseconds)               |
 |  ──────────────────────────────────────────────────────────── |
-|  scene_duration      float | None  Length in seconds.         |
-|  scene_start_time    float | None  Computed: when it starts.  |
-|  scene_end_time      float | None  Computed: when it ends.    |
-|  scene_start_marker  str | None    Audio label at start.      |
-|  scene_end_marker    str | None    Audio label at end.        |
+|  scene_duration      int | None    Length in ms.               |
+|  scene_start_time    int | None    Where this scene starts.    |
+|  scene_end_time      int | None    Where this scene ends.      |
+|  scene_start_marker  str | None    Audio cue label at start.   |
+|  scene_end_marker    str | None    Audio cue label at end.     |
 |                                                                |
 |  GROUP 3 — CODE                                                |
 |  ──────────────────────────────────────────────────────────── |
-|  scene_code_path     str | None    Path to the .py file.      |
-|  scene_code_content  str | None    Full text of the file.     |
-|  scene_hash          str | None    SHA-256 of code file.      |
+|  scene_code_path     str | None    Path to the .py file.       |
+|  scene_code_content  str | None    Full text of the .py file.  |
 |                                                                |
-|  GROUP 4 — CONTENT AND VISUAL                                  |
+|  GROUP 4 — HASH FINGERPRINTS                                   |
 |  ──────────────────────────────────────────────────────────── |
-|  scene_content       str | None    Description of scene.      |
-|  scene_background_color  str       Hex color. Default black.  |
-|  scene_resolution    str           e.g. "1920x1080".          |
-|  scene_fps           int           Frames per second. Def 60. |
+|  scene_code_hash     str | None    SHA-256 of code file.       |
+|  scene_assets_hash   str | None    SHA-256 of all asset files. |
+|  scene_audio_hash    str | None    SHA-256 of audio clip.      |
+|  final_scene_hash    str | None    Master combined hash.        |
 |                                                                |
-|  GROUP 5 — STATUS AND OUTPUT                                   |
+|  GROUP 5 — CONTENT AND VISUAL                                  |
 |  ──────────────────────────────────────────────────────────── |
-|  scene_status        str           pending/rendered/failed/   |
-|                                    skipped                     |
-|  scene_output_path   str | None    Path to final .mp4.        |
-|  scene_preview_path  str | None    Path to preview .mp4.      |
-|  scene_error_message str | None    Error text if failed.      |
-|  scene_rendered_at   str | None    Timestamp of last render.  |
-|  scene_render_duration float|None  How long render took (s).  |
+|  scene_content           str | None    Description of scene.   |
+|  scene_background_color  str           Hex color. Default black.|
+|  scene_resolution        str           e.g. "1920x1080".       |
+|  scene_fps               int           Frames per second.      |
 |                                                                |
-|  GROUP 6 — AUDIO                                               |
+|  GROUP 6 — STATUS AND OUTPUT                                   |
 |  ──────────────────────────────────────────────────────────── |
-|  audio_clip_path     str | None    Path to audio clip file.   |
-|  synced_with_audio   bool          True = render with audio.  |
-|                                    Default: False.             |
+|  scene_status            str           pending/rendered/...    |
+|  scene_output_path       str | None    Path to final .mp4.     |
+|  scene_preview_path      str | None    Path to preview .mp4.   |
+|  scene_error_message     str | None    Error text if failed.   |
+|  scene_rendered_at       str | None    Timestamp of render.    |
+|  scene_render_duration   float | None  How long render took.   |
 |                                                                |
-|  GROUP 7 — SUBSCENES                                           |
+|  GROUP 7 — AUDIO                                               |
 |  ──────────────────────────────────────────────────────────── |
-|  scene_map           list[SubScene] Animation blocks inside.  |
-|                                     Default: empty list.       |
+|  related_audio_clip_path str | None    Path to audio clip.     |
+|  synced_with_audio       bool          True = render w/ audio. |
+|                                                                |
+|  GROUP 8 — SUBSCENES                                           |
+|  ──────────────────────────────────────────────────────────── |
+|  scene_map               List[SubScene] Blocks inside scene.   |
 |                                                                |
 +================================================================+
 ```
 
+### Subsubsection 3.3.4.1: GROUP 1 — Identity Properties
 
-#### Subsubsection 3.3.4.1 GROUP 1 — Identity Properties
+These properties answer the question: "Which Scene is this, and how does
+it connect to the other Scenes in the project?"
 
-These properties answer the question: "Which Scene is this and how
-does it sit among the other Scenes in the project?"
-
----
-
-**scene_id**
+#### Subsubsubsection 3.3.4.1.1: scene_id
 
 **Type:** `int`
-**Default:** Required (no default — you must provide it)
+**Default:** Required — you must always provide it. There is no default.
 **Example value:** `3`
 
-The `scene_id` is the unique number that identifies this specific Scene
-within the project. No two Scenes in the same project can share the same `scene_id`.
-This number is used everywhere in the system — when you type `render scene 3`,
-the system loads the Scene whose `scene_id` is 3. When the database stores a Scene,
-it uses `scene_id` as the primary key. When the audio clip is named `clip_003.mp3`,
-the `003` comes from the `scene_id`.
+The `scene_id` is the unique number that permanently identifies this
+specific Scene within the project. No two Scenes in the same project can
+share the same `scene_id`. This number is used everywhere in the system.
+
+When you type `render scene 3`, the system loads the Scene whose
+`scene_id` is `3`. When the database stores a Scene, it uses `scene_id`
+as the primary key. When the audio clip is named `clip_003.mp3`, the `003`
+comes directly from the `scene_id`.
 
 ```
-scene_id is the fingerprint of identity.
+scene_id is the permanent fingerprint of identity.
 Everything that references a scene uses scene_id.
 
 render scene 3          → loads scene where scene_id = 3
 clip_003.mp3            → audio for scene where scene_id = 3
-output/scene_03/...     → video for scene where scene_id = 3
+output/scene_03/...     → video folder for scene where scene_id = 3
 ```
 
----
-
-**scene_name**
+#### Subsubsubsection 3.3.4.1.2: scene_name
 
 **Type:** `Optional[str]`
 **Default:** `None`
-**Example value:** `"Introduction"` or `"Main Concept"` or `"Conclusion"`
+**Example value:** `"Introduction"`, `"Main Concept"`, `"Conclusion"`
 
-The `scene_name` is a human-readable label for the scene. While `scene_id` is
-a number used by the computer, `scene_name` is a word used by the human.
-
-The `scene_name` is optional. The system works perfectly without it.
-But it makes your project much easier to understand. Instead of looking
-at a table and seeing "Scene 3 | rendered", you see
-"Scene 3 (Example) | rendered". That immediately tells you what the scene is about.
+The `scene_name` is a human-readable label for the scene. While `scene_id`
+is a number used by the computer, `scene_name` is a word used by the human
+developer. The `scene_name` is completely optional. The system works
+perfectly without it. But it makes your project much easier to navigate.
 
 ```
 WITHOUT scene_name:               WITH scene_name:
@@ -9983,974 +10133,782 @@ WITHOUT scene_name:               WITH scene_name:
   Scene 2 | rendered                Scene 2 (Main Concept)    | rendered
   Scene 3 | rendered                Scene 3 (Example)         | rendered
   Scene 4 | pending                 Scene 4 (Practice)        | pending
-  Scene 5 | failed                  Scene 5 (Conclusion)      | FAILED
+  Scene 5 | FAILED                  Scene 5 (Conclusion)      | FAILED
 ```
 
----
+The version with names tells you immediately what each scene is about
+without having to remember which number corresponds to which topic.
 
-**scene_index**
+#### Subsubsubsection 3.3.4.1.3: scene_index
 
 **Type:** `int`
 **Default:** `0`
-**Example value:** `2` (meaning this is the third scene, 0-indexed)
+**Example value:** `2` (meaning this is the third scene; counting starts at 0)
 
-The `scene_index` is the position of the Scene in the project's sequence.
-It uses zero-based counting: the first scene has index 0, the second has index 1,
-the third has index 2, and so on.
+The `scene_index` is the current position of the Scene in the video's
+playback sequence. It uses zero-based counting: the first scene has
+`scene_index = 0`, the second has `scene_index = 1`, the third has
+`scene_index = 2`, and so on.
 
-You might wonder: if we already have `scene_id`, why do we also need `scene_index`?
-The reason is that `scene_id` is a permanent identity — it never changes.
-Scene 3 always has `scene_id = 3` for the life of the project.
-But `scene_index` is the current ORDER position, and that CAN change.
-
-When you run `move scene 5 to 2`, the scene that was Scene 5 keeps its `scene_id`
-but its `scene_index` changes from 4 to 1. The order in the video changed,
-but the identity of the scene is still the same.
+You might wonder: if we already have `scene_id`, why do we also need
+`scene_index`? The reason is that `scene_id` is a **permanent identity**
+that never changes for the entire life of the project. Scene 3 always has
+`scene_id = 3`. But `scene_index` is the **current playback order**, and
+that CAN change when you reorder scenes.
 
 ```
 +-------------------------------------------------------------+
-|   scene_id  vs  scene_index                                 |
+|   scene_id  vs  scene_index — the key difference           |
 +-------------------------------------------------------------+
 |                                                             |
-|   scene_id     = permanent identity. Never changes.        |
+|   scene_id    = permanent identity. Never changes.         |
 |                  Used for: database lookup, file naming     |
 |                                                             |
-|   scene_index  = current position in the video sequence.   |
+|   scene_index = current position in the playback sequence. |
 |                  Changes when you move scenes around.       |
 |                  Used for: ordering, timeline calculation   |
 |                                                             |
-|   Example after "move scene 5 to 2":                        |
+|   Example: user runs "move scene 5 to position 2"          |
 |                                                             |
-|   scene_index 0  →  scene_id=1  (Scene 1, unchanged)       |
-|   scene_index 1  →  scene_id=5  (was last, now second)     |
+|   BEFORE:                                                   |
+|   scene_index 0  →  scene_id=1                             |
+|   scene_index 1  →  scene_id=2                             |
+|   scene_index 2  →  scene_id=3                             |
+|   scene_index 3  →  scene_id=4                             |
+|   scene_index 4  →  scene_id=5                             |
+|                                                             |
+|   AFTER:                                                    |
+|   scene_index 0  →  scene_id=1  (unchanged)                |
+|   scene_index 1  →  scene_id=5  (was last, now second!)    |
 |   scene_index 2  →  scene_id=2  (shifted right)            |
 |   scene_index 3  →  scene_id=3  (shifted right)            |
 |   scene_index 4  →  scene_id=4  (shifted right)            |
 |                                                             |
+|   scene_id=5 kept its identity. Only its position changed. |
 +-------------------------------------------------------------+
 ```
 
----
-
-**previous_scene_id**
+#### Subsubsubsection 3.3.4.1.4: previous_scene_id
 
 **Type:** `Optional[int]`
 **Default:** `None`
-**Example value:** `2` (the scene that plays before this one)
+**Example value:** `2` (the scene that plays immediately before this one)
 
 The `previous_scene_id` stores the `scene_id` of the Scene that comes
-just before this Scene in the video. For Scene 3, `previous_scene_id` is `2`.
-For Scene 1 (the very first scene), `previous_scene_id` is `None` because
-there is no scene before it.
-
-This property makes it easy to navigate backward through the sequence.
-If you have a Scene object and you want to know what came before it,
-you do not have to calculate or search — you just read `scene.previous_scene_id`.
+just before this Scene in the playback order. For Scene 3,
+`previous_scene_id = 2`. For Scene 1 (the very first scene),
+`previous_scene_id = None` because there is nothing before it.
 
 ```
-Scene 1  →  previous_scene_id = None   (nothing before it)
+Scene 1  →  previous_scene_id = None   (nothing before Scene 1)
 Scene 2  →  previous_scene_id = 1
 Scene 3  →  previous_scene_id = 2
 Scene 4  →  previous_scene_id = 3
 Scene 5  →  previous_scene_id = 4
 ```
 
----
-
-**next_scene_id**
+#### Subsubsubsection 3.3.4.1.5: next_scene_id
 
 **Type:** `Optional[int]`
 **Default:** `None`
-**Example value:** `4` (the scene that plays after this one)
+**Example value:** `4` (the scene that plays immediately after this one)
 
 The `next_scene_id` stores the `scene_id` of the Scene that comes just
-after this Scene. For Scene 3, `next_scene_id` is `4`. For Scene 5
-(the very last scene), `next_scene_id` is `None` because there is
-nothing after it.
+after this Scene. For Scene 3, `next_scene_id = 4`. For the last Scene,
+`next_scene_id = None`.
 
-Together, `previous_scene_id` and `next_scene_id` form a doubly-linked list
-structure. You can start at any scene and navigate in either direction.
-
-```
-Scene 1  →  next_scene_id = 2
-Scene 2  →  next_scene_id = 3
-Scene 3  →  next_scene_id = 4
-Scene 4  →  next_scene_id = 5
-Scene 5  →  next_scene_id = None   (nothing after it)
-```
-
----
-
-
-#### Subsubsection 3.3.4.2 GROUP 2 — Timing Properties
-
-These properties answer the question: "When does this Scene happen
-in the video timeline and exactly how long does it last?"
-
-This group is critically important in SuperManim because audio sync
-depends entirely on getting the timing exactly right.
-
----
-
-**scene_duration**
-
-**Type:** `Optional[int]`
-**Default:** `None`
-**Example value:** `16000`
-
-The `scene_duration` is the length of this Scene in milile seconds. It is the most
-important timing property. It tells the animation engine exactly how long to
-run the animation for this scene. It tells the audio system exactly how long
-the audio clip for this scene must be. It tells the timeline engine how much
-space this scene occupies in the full video.
-
-When you type `set scene 3 duration 16.8`, you are setting `scene_duration = 16.8`
-for Scene 3. Everything else — audio sync validation, timeline calculation,
-assembly — is built on top of this value.
-
-Why `None` by default? Because when a scene is first created (when you type
-`set scenes_number 5`), the system creates the Scene object but you have not
-told it the duration yet. The `None` value signals "duration not set yet."
-The system will refuse to render a scene whose `scene_duration` is `None`.
+Together, `previous_scene_id` and `next_scene_id` form a doubly-linked
+list. You can navigate in both directions without doing any searches.
 
 ```
 +-------------------------------------------------------------+
-|   scene_duration drives everything timing-related           |
+|   THE DOUBLY-LINKED SCENE CHAIN                             |
 +-------------------------------------------------------------+
 |                                                             |
-|   The animation engine uses it:                             |
-|   → "Run Manim for exactly 16.8 seconds"                   |
+|   None ← [Scene 1] ←→ [Scene 2] ←→ [Scene 3] ←→ [Scene 4] → None  |
 |                                                             |
-|   The audio system uses it:                                 |
-|   → "The audio clip must also be 16.8 seconds"             |
-|     (Rule 4.1: duration mismatch = sync refused)            |
+|   Scene 3:                                                  |
+|     previous_scene_id = 2   ← points backward to Scene 2  |
+|     next_scene_id     = 4   → points forward to Scene 4   |
 |                                                             |
-|   The timeline uses it:                                     |
-|   → scene_end_time = scene_start_time + scene_duration      |
-|   → total video length = sum of all scene_durations         |
+|   To go backward from Scene 3: load scene_id = 2           |
+|   To go forward  from Scene 3: load scene_id = 4           |
+|   No search needed. Just follow the links.                  |
 |                                                             |
 +-------------------------------------------------------------+
 ```
 
-**scene_start_time**
+### Subsubsection 3.3.4.2: GROUP 2 — Timing Properties
+
+These properties answer the question: "How long is this Scene, and exactly
+where does it sit in the overall video timeline?"
+
+**IMPORTANT RULE:** All timing values in this group are stored as
+**integers in milliseconds (ms)**. For example, 16.8 seconds is stored
+as `16800`. This is a deliberate design choice to avoid floating-point
+rounding errors. When you add up many float values like `12.5 + 18.5 +
+16.8 + 12.2`, tiny rounding errors can accumulate. With integers in
+milliseconds, `12500 + 18500 + 16800 + 12200 = 60000` — always exact.
+
+#### Subsubsubsection 3.3.4.2.1: scene_duration
 
 **Type:** `Optional[int]`
 **Default:** `None`
-**Example value:** `31`
+**Example value:** `16800` (meaning 16.8 seconds)
 
-The `scene_start_time` is the exact second in the full video when this Scene
-begins playing. Scene 1 always starts at `0.0`. Scene 2 starts at the
-moment Scene 1 ends. Scene 3 starts at the moment Scene 2 ends, and so on.
+The `scene_duration` is the total length of this scene in milliseconds.
+It is the most important timing value in the entire Scene entity. Every
+other timing value in this group either comes from this value or is
+compared against it.
 
-This is a computed value — you do not set it manually. The `TimelineService`
-calculates it automatically by adding up all the durations of the scenes
-that come before this one.
+When the user types `set scene 3 duration 16.8`, the system multiplies
+16.8 by 1000 and stores `16800` here.
+
+The `scene_duration` is also the value that gets compared to the
+`audio_clip_duration` during the `sync scene` command. For a scene to
+be synchronized with audio, both must match within 1 millisecond.
 
 ```
-For a project with 5 scenes:
+User types:  set scene 3 duration 16.8
+System stores:  scene_duration = 16800  (16.8 × 1000 = 16800 ms)
 
-  Scene 1: duration=12.5  →  start_time = 0.0
-  Scene 2: duration=18.5  →  start_time = 0.0 + 12.5 = 12.5
-  Scene 3: duration=16.8  →  start_time = 12.5 + 18.5 = 31.0
-  Scene 4: duration= 7.0  →  start_time = 31.0 + 16.8 = 47.8
-  Scene 5: duration= 5.5  →  start_time = 47.8 +  7.0 = 54.8
+Later, the audio clip for Scene 3 is cut to match:
+  audio_clip_duration = 16.8 seconds = 16800 ms
+
+Sync check:
+  scene_duration       = 16800
+  audio_clip_duration  = 16800
+  Difference:          = 0
+  Result:              MATCH → sync is approved
 ```
 
-The `scene_start_time` is important for audio work because if you are
-cutting the audio file manually into clips, you need to know exactly
-at what second each scene starts in the original audio file.
-
----
-
-**scene_end_time**
+#### Subsubsubsection 3.3.4.2.2: scene_start_time
 
 **Type:** `Optional[int]`
 **Default:** `None`
-**Example value:** `47000`
+**Example value:** `31000` (meaning 31.0 seconds into the full video)
 
-The `scene_end_time` is the exact second in the full video when this Scene
-stops playing. It is always computed as:
+The `scene_start_time` is the millisecond mark in the overall video
+where this scene begins playing. This is NOT set by the user directly.
+It is computed automatically by the `TimelineService` by adding up the
+durations of all scenes that come before this one.
+
+```
+Scene 1:  scene_duration = 12500ms  →  scene_start_time = 0
+Scene 2:  scene_duration = 18500ms  →  scene_start_time = 12500
+Scene 3:  scene_duration = 16800ms  →  scene_start_time = 31000
+Scene 4:  scene_duration = 12200ms  →  scene_start_time = 47800
+```
+
+This value tells the audio system exactly where to start playing the
+audio clip for this scene in the final video.
+
+#### Subsubsubsection 3.3.4.2.3: scene_end_time
+
+**Type:** `Optional[int]`
+**Default:** `None`
+**Example value:** `47800` (meaning 47.8 seconds into the full video)
+
+The `scene_end_time` is the millisecond mark in the overall video where
+this scene stops playing. It is always computed as:
 
 ```
 scene_end_time = scene_start_time + scene_duration
+
+For Scene 3:
+scene_end_time = 31000 + 16800 = 47800 ms
 ```
 
-For Scene 3 in the example above: `31.0 + 16.8 = 47.8`.
+This is also auto-computed by the `TimelineService`. You never set it
+manually.
 
-This means Scene 3 occupies the video from 31.0 seconds to 47.8 seconds.
-
-Like `scene_start_time`, this is a computed value. The `TimelineService`
-calculates it. You do not set it manually.
-
----
-
-**scene_start_marker**
+#### Subsubsubsection 3.3.4.2.4: scene_start_marker
 
 **Type:** `Optional[str]`
 **Default:** `None`
-**Example value:** `"[INTRO END]"` or `"[CHAPTER 2 BEGIN]"`
+**Example value:** `"[CHAPTER 3 BEGIN]"`
 
-The `scene_start_marker` is a human-readable label that marks the beginning
-of this scene in the audio file. When you listen to your narration audio,
-you might say at second 31.0: "Alright, now let's look at an example."
-That phrase is the audio marker for Scene 3.
+A text label that marks the beginning of this scene's section in the
+audio file. Some audio editors allow you to place named markers (also
+called cue points or chapter marks) at specific timestamps in an audio
+file. If your audio file has a marker at the 31-second mark with the
+label `"[CHAPTER 3 BEGIN]"`, you can store that label here.
 
-The marker is stored as a text string. It is purely for reference — so
-that when you are working on the project days or weeks later, you can
-look at a scene and immediately understand where it starts in your narration
-without having to re-listen to the audio file.
+This is optional. The system does not require markers to function.
+Markers are purely for human reference and display purposes.
 
----
-
-**scene_end_marker**
+#### Subsubsubsection 3.3.4.2.5: scene_end_marker
 
 **Type:** `Optional[str]`
 **Default:** `None`
-**Example value:** `"[CHAPTER 3 END]"` or `"[PAUSE]"`
+**Example value:** `"[CHAPTER 3 END]"`
 
-The `scene_end_marker` is the same idea as `scene_start_marker` but for
-the point where the scene ends in the audio. Together, `scene_start_marker`
-and `scene_end_marker` give you a human-readable description of the
-audio section that corresponds to this scene.
+A text label that marks the end of this scene's section in the audio
+file. Works exactly the same way as `scene_start_marker`. Optional.
 
----
+### Subsubsection 3.3.4.3: GROUP 3 — Code Properties
 
+These properties answer the question: "What Python file contains the
+Manim animation code for this scene, and what is in that file?"
 
-#### Subsubsection 3.3.4.3 GROUP 3 — Code Properties
-These properties answer the question: "What code file draws this
-Scene's animation, and has that code changed since the last render?"
-
-This group is the foundation of SuperManim's incremental rendering superpower.
-
----
-
-**scene_code_path**
+#### Subsubsubsection 3.3.4.3.1: scene_code_path
 
 **Type:** `Optional[str]`
 **Default:** `None`
 **Example value:** `"my_scenes/example.py"`
 
 The `scene_code_path` is the file path to the Python file that contains
-the Manim animation code for this scene. This is the file that Manim will
-execute to produce the animation video for this scene.
+the Manim animation code for this scene. When the user runs
+`set scene 3 code my_scenes/example.py`, the system stores that path here.
 
-When you type `set scene 3 code my_scenes/example.py`, you are setting
-`scene_code_path = "my_scenes/example.py"` for Scene 3.
-
-The path can be relative (starting from the current directory) or absolute
-(the full path from the root of your file system). SuperManim validates
-that the file actually exists at this path before saving it. If the file
-does not exist, the assignment is refused.
-
-The `scene_code_path` is the first thing the render checklist looks at.
-If it is `None`, the render is immediately refused — you cannot render
-a scene with no code.
-
----
-
-**scene_code_content**
-
-**Type:** `Optional[str]`
-**Default:** `None`
-**Example value:** The full text content of the Python file as a string
-
-The `scene_code_content` stores the actual TEXT of the Python code file
-inside the database. This is optional but very useful for two reasons.
-
-First, it gives you a snapshot of exactly what code was used in the last
-render. Even if you later change or delete the file on disk, the database
-still has a record of what the code looked like when it was rendered.
-
-Second, it can be used for debugging. If a render failed, you can look
-at the code content that was used and understand why it failed.
-
-This field is populated automatically when the code file is assigned
-to the scene, by reading the file and storing its contents.
-
----
-
-**scene_hash**
-
-**Type:** `Optional[str]`
-**Default:** `None`
-**Example value:** `"a3f8c2d1e4b9ff37c128a6d9e0b45721..."`
-
-The `scene_hash` is the SHA-256 fingerprint of the code file at the time
-it was last rendered. This is the most important property for SuperManim's
-incremental rendering feature.
-
-A SHA-256 hash is a 64-character string that is calculated from the contents
-of a file. If you change even ONE character in the file, the hash changes
-completely. If the file stays exactly the same, the hash stays exactly the same.
+When the render command runs, the system reads `scene_code_path` to know
+which Python file to pass to the Manim CLI. If `scene_code_path` is `None`,
+the scene cannot be rendered and the system refuses the command.
 
 ```
-+================================================================+
-|         HOW scene_hash ENABLES SMART RENDERING                 |
-+================================================================+
-|                                                                |
-|   FIRST RENDER:                                                |
-|   You assign example.py to Scene 3.                            |
-|   The system reads the file.                                   |
-|   Computes SHA-256: "a3f8c2d1e4b9..."                          |
-|   Stores it: scene_hash = "a3f8c2d1e4b9..."                   |
-|   Renders Scene 3. Produces scene_03.mp4.                      |
-|                                                                |
-|   SECOND RENDER (you changed nothing):                         |
-|   System reads example.py again.                               |
-|   Computes SHA-256: "a3f8c2d1e4b9..."   ← same!               |
-|   Compares to stored hash: same.                               |
-|   Decision: SKIP. Use the existing scene_03.mp4.              |
-|   Time saved: 4 minutes.                                       |
-|                                                                |
-|   THIRD RENDER (you changed one line):                         |
-|   System reads example.py again.                               |
-|   Computes SHA-256: "f7c3a9e1b2d8..."   ← DIFFERENT!          |
-|   Compares to stored hash: different.                          |
-|   Decision: RENDER. Produce a new scene_03.mp4.                |
-|   Time taken: 4 minutes.                                       |
-|                                                                |
-+================================================================+
+scene_code_path = "my_scenes/example.py"
+
+The Manim CLI command will be approximately:
+  manim my_scenes/example.py ExampleScene --quality high
+
+Without scene_code_path, rendering is impossible:
+  [Error] Scene 3 has no code file assigned.
+  Use:  set scene 3 code path/to/your/animation.py
 ```
 
-When a scene has never been rendered, `scene_hash` is `None`. This `None`
-value is treated as "always changed" — meaning the scene will always be
-rendered if it has no stored hash.
-
----
-
-
-#### Subsubsection 3.3.4.4 GROUP 4 — Content and Visual Properties
-
-These properties answer the question: "What does this Scene look like
-visually? What are its visual settings?"
-
----
-
-**scene_content**
+#### Subsubsubsection 3.3.4.3.2: scene_code_content
 
 **Type:** `Optional[str]`
 **Default:** `None`
-**Example value:** `"Introduction to Python variables with animated text"`
+**Example value:** `"from manim import *\nclass Example(Scene):\n    def construct(self): ..."`
 
-The `scene_content` is a text description of what this scene is about —
-what the animation shows, what the narration covers, what the viewer
-will see and hear. It is a human-written note for documentation purposes.
+The `scene_code_content` stores the complete text content of the Python
+animation file. It is a cached snapshot of the file's code at the moment
+it was last read by the system.
 
-It is purely for reference. The system never reads this field for any
-computation. It is there to help you and other developers understand
-what each scene is meant to contain.
+This field exists as a convenience — instead of reading the file from
+disk every time some part of the system needs its text, the system reads
+it once and caches the full text here inside the Scene object. This is
+especially useful for the `show scene 3 code` display command.
 
----
+### Subsubsection 3.3.4.4: GROUP 4 — Hash Fingerprint Properties
 
-**scene_resolution**
+These properties are the heart of SuperManim's incremental render system.
+They are the "magic" that lets SuperManim skip re-rendering scenes that
+have not changed.
+
+To understand how this works, you first need to understand what a
+**hash fingerprint** is. A hash is a short, fixed-length string (like
+`"a3f8c2d1e4b9ff37..."`) that is computed from the full content of a
+file using a mathematical algorithm. The SHA-256 algorithm is used here.
+
+Two key properties of SHA-256:
+1. If even ONE single character in a file changes, the resulting hash
+   changes completely and unpredictably.
+2. If the file is completely unchanged, the hash is always identical.
+
+```
++=====================================================================+
+|              HOW HASH FINGERPRINTS ENABLE SMART RENDERING           |
++=====================================================================+
+|                                                                     |
+|   BEFORE RENDERING A SCENE:                                         |
+|   ─────────────────────────────────────────────────────────────    |
+|   System computes a FRESH hash from the current code file on disk.  |
+|   System compares it to the STORED hash saved in the Scene entity.  |
+|                                                                     |
+|   New hash == Stored hash?                                          |
+|     YES  → Nothing changed. Skip. Use the existing saved video.    |
+|     NO   → Something changed. Must re-render this scene.           |
+|                                                                     |
+|   RESULT:                                                           |
+|   In a 20-scene project, if you fix one scene, only that one scene  |
+|   has a different hash. The other 19 are skipped instantly.         |
+|   You wait 5 minutes instead of 100 minutes.                        |
+|                                                                     |
++=====================================================================+
+```
+
+SuperManim tracks FOUR separate hashes for each scene. This allows it to
+detect not just THAT something changed, but specifically WHAT changed —
+was it the code? The asset files? The audio clip? Each type of change
+has a different implication for what needs to be re-done.
+
+#### Subsubsubsection 3.3.4.4.1: scene_code_hash
+
+**Type:** `Optional[str]`
+**Default:** `None`
+**Example value:** `"a3f8c2d1e4b9ff37c128a6d9e0b45721c3f4a9b2..."`
+
+The SHA-256 fingerprint of the Python animation code file
+(`scene_code_path`). If this hash changes, the user edited the animation
+code. The scene must be fully re-rendered with Manim.
+
+#### Subsubsubsection 3.3.4.4.2: scene_assets_hash
+
+**Type:** `Optional[str]`
+**Default:** `None`
+**Example value:** `"b7d2e9a1c4f3b8d2e6a1c9f4b3d7e2a1f9c3b8..."`
+
+The SHA-256 fingerprint computed from all the asset files that this scene
+uses — images, fonts, or SVG files stored in the `assets/` folder. If an
+image used in Scene 3 is replaced, `scene_assets_hash` changes and the
+scene must be re-rendered even if the code itself did not change.
+
+#### Subsubsubsection 3.3.4.4.3: scene_audio_hash
+
+**Type:** `Optional[str]`
+**Default:** `None`
+**Example value:** `"c1e4f9b2d7a3c8e1f4b9d2a7c3e8f1b4a2d9c7..."`
+
+The SHA-256 fingerprint of the audio clip file linked to this scene
+(the file stored in `related_audio_clip_path`). If the audio clip is
+re-cut or replaced with a different recording, this hash changes and
+the scene video must be re-assembled with the new audio.
+
+#### Subsubsubsection 3.3.4.4.4: final_scene_hash
+
+**Type:** `Optional[str]`
+**Default:** `None`
+**Example value:** `"f9a3b7e1d4c2f8a3b7e1d4c9f2a3b7e1d8f4c2..."`
+
+The `final_scene_hash` is the single master combined fingerprint. It is
+computed by combining `scene_code_hash`, `scene_assets_hash`, and
+`scene_audio_hash` into one final hash.
+
+This is the ONE hash that the render system checks before deciding
+whether to render or skip a scene. If ANY of the three component hashes
+changed, the `final_scene_hash` will also be different.
+
+```
++-------------------------------------------------------------+
+|   HOW THE FOUR HASHES WORK TOGETHER                         |
++-------------------------------------------------------------+
+|                                                             |
+|   scene_code_hash   ──┐                                     |
+|   scene_assets_hash ──┼──→ combine → final_scene_hash       |
+|   scene_audio_hash  ──┘                                     |
+|                                                             |
+|   BEFORE RENDER: compute new final_scene_hash from disk     |
+|   COMPARE: new hash vs stored final_scene_hash              |
+|                                                             |
+|   Equal?  → Nothing changed. SKIP. Save time.              |
+|   Differ? → Something changed. RENDER. Produce new video.  |
+|                                                             |
+|   The individual hashes (code, assets, audio) help debug:   |
+|   "The final hash changed. But WHY? Was it the code?        |
+|    Was it an image asset? Was it the audio clip?"           |
+|   By checking each hash individually, you know exactly.     |
+|                                                             |
++-------------------------------------------------------------+
+```
+
+### Subsubsection 3.3.4.5: GROUP 5 — Content and Visual Properties
+
+These properties answer the question: "What does this scene show, and
+how should it look visually when rendered?"
+
+#### Subsubsubsection 3.3.4.5.1: scene_content
+
+**Type:** `Optional[str]`
+**Default:** `None`
+**Example value:** `"Shows how Python variables work using a box diagram animation"`
+
+A plain-English description of what this scene teaches or shows. This is
+purely for human documentation. The system does not use this value to make
+any decisions. It is simply a note to yourself about what the scene covers.
+
+#### Subsubsubsection 3.3.4.5.2: scene_background_color
 
 **Type:** `str`
-**Default:** `"1920x1080"` (Full HD, 1080p)
-**Example value:** `"1920x1080"`, `"3840x2160"`, `"1280x720"`, `"854x480"`
+**Default:** `"#000000"` (pure black)
+**Example value:** `"#000000"`, `"#1a1a2e"`, `"#ffffff"`
 
-The `scene_resolution` defines the pixel dimensions of the output video
-for this scene. It is stored as `"widthxheight"`.
+The background color of the animation for this scene, stored as a CSS
+hex color string. This value is passed to Manim as a rendering argument.
+
+The default is black because Manim's standard educational animation style
+uses a black background. You can change it per scene.
 
 ```
-+-------------------------------------------------------------+
-|   COMMON RESOLUTIONS                                        |
-+-------------------------------------------------------------+
-|                                                             |
-|   "854x480"    →  480p   (low quality, fast render)        |
-|   "1280x720"   →  720p   (HD)                              |
-|   "1920x1080"  →  1080p  (Full HD — the default)           |
-|   "3840x2160"  →  4K     (Ultra HD, very slow render)      |
-|                                                             |
-+-------------------------------------------------------------+
+scene_background_color = "#000000"  →  Pure black (classic Manim style)
+scene_background_color = "#ffffff"  →  Pure white background
+scene_background_color = "#1a1a2e"  →  Dark navy (popular modern style)
+scene_background_color = "#2b2b2b"  →  Dark gray
 ```
 
-All scenes in a project should use the same resolution, because when
-FFmpeg stitches them together into the final video, they must all
-have matching dimensions. If Scene 1 is 1080p and Scene 2 is 720p,
-the assembly will fail or produce a broken video.
+#### Subsubsubsection 3.3.4.5.3: scene_resolution
 
-Note that the `scene_resolution` applies to the FINAL render only.
-Preview renders always use `"854x480"` regardless of this setting,
-to keep previews fast and small.
+**Type:** `str`
+**Default:** `"1920x1080"`
+**Example value:** `"1920x1080"`, `"3840x2160"`, `"1280x720"`
 
----
+The pixel dimensions of the rendered video for this scene, stored as
+`"widthxheight"`. This is passed to Manim as a rendering argument and
+tells Manim how many pixels wide and tall each animation frame should be.
 
-**scene_fps**
+Note: This is a per-scene override of the project-level default set in
+`render_resolution`. Most scenes should use the same resolution so that
+FFmpeg can assemble them cleanly.
+
+#### Subsubsubsection 3.3.4.5.4: scene_fps
 
 **Type:** `int`
 **Default:** `60`
 **Example value:** `24`, `30`, `60`
 
-The `scene_fps` is the frame rate — how many individual frames
-(still images) are drawn per second of video.
+The frame rate for this scene's animation — how many frames Manim must
+draw per second of animation. Higher frame rates produce smoother motion
+but take significantly longer to render.
 
 ```
-+-------------------------------------------------------------+
-|   WHAT FRAME RATE MEANS                                     |
-+-------------------------------------------------------------+
-|                                                             |
-|   fps = "frames per second"                                 |
-|                                                             |
-|   24 fps:  cinema standard. Smooth enough for film.         |
-|   30 fps:  TV standard. Good for most educational videos.   |
-|   60 fps:  very smooth. Best for fast animations.           |
-|                                                             |
-|   For a 16.8 second scene:                                  |
-|   At 24 fps → 16.8 × 24 = 403 frames to render             |
-|   At 30 fps → 16.8 × 30 = 504 frames to render             |
-|   At 60 fps → 16.8 × 60 = 1008 frames to render            |
-|                                                             |
-|   Higher fps = smoother video = more frames = slower render |
-|                                                             |
-+-------------------------------------------------------------+
+For a 16800ms (16.8-second) scene:
+  At 24 fps  →  16.8 × 24  =  403 individual frames to draw
+  At 30 fps  →  16.8 × 30  =  504 individual frames to draw
+  At 60 fps  →  16.8 × 60  = 1008 individual frames to draw
+
+More frames per second = smoother motion = slower render = bigger file.
+
+24 fps:  Cinema standard. Used in films. Smooth enough for most content.
+30 fps:  TV standard. Good choice for educational animations.
+60 fps:  Very smooth. Best for fast-moving graphics. Slowest to render.
 ```
 
----
+### Subsubsection 3.3.4.6: GROUP 6 — Status and Output Properties
 
+These properties answer the question: "Has this Scene been rendered?
+Where is the output video? What happened during the last render attempt?"
 
-#### Subsubsection 3.3.4.5 GROUP 5 — Status and Output Properties
-
-These properties answer the question: "What happened when this Scene
-was rendered? Was it successful? Where is the output?"
-
----
-
-**scene_status**
+#### Subsubsubsection 3.3.4.6.1: scene_status
 
 **Type:** `str`
 **Default:** `"pending"`
+**Allowed values:** exactly four specific strings: `"pending"`, `"rendered"`,
+`"failed"`, `"skipped"`
 
-The `scene_status` is the most checked property in the entire Scene Entity.
-Every render checklist, every export check, every status display reads this field.
-
-It tells you the current state of the scene with respect to rendering.
-There are exactly four allowed values:
+The `scene_status` is the most important state flag of a Scene. It tells
+you at a glance exactly where this scene is in its render lifecycle.
 
 ```
 +================================================================+
-|                  THE FOUR STATUS VALUES                        |
+|               THE FOUR POSSIBLE STATUS VALUES                  |
 +================================================================+
 |                                                                |
 |   "pending"                                                    |
-|   ─────────────────────────────────────────────────────────── |
-|   The scene exists but has never been successfully rendered.   |
-|   This is the default for every newly created scene.           |
-|   Also set when you reset a scene to force re-render.          |
+|   ──────────────────────────────────────────────────────────  |
+|   The scene exists in the project.                             |
+|   It has NEVER been successfully rendered.                     |
+|   It is waiting to be rendered.                                |
+|   Every newly created scene starts as "pending".               |
 |                                                                |
 |   "rendered"                                                   |
-|   ─────────────────────────────────────────────────────────── |
+|   ──────────────────────────────────────────────────────────  |
 |   The scene was rendered successfully.                         |
-|   A video file exists at scene_output_path.                    |
-|   The scene_hash is stored and up to date.                     |
-|   This is the status you want all scenes to have               |
-|   before you can export the final video.                       |
+|   The video file exists at scene_output_path.                  |
+|   scene_rendered_at and scene_render_duration are set.         |
+|   The scene is ready to be included in the final export.       |
 |                                                                |
 |   "failed"                                                     |
-|   ─────────────────────────────────────────────────────────── |
+|   ──────────────────────────────────────────────────────────  |
 |   A render was attempted but Manim returned an error.          |
-|   The scene_error_message field contains the error details.    |
-|   The user must fix the code and then retry.                   |
+|   scene_error_message contains the error details.              |
+|   The user must fix the code error and re-run the render.      |
 |                                                                |
 |   "skipped"                                                    |
-|   ─────────────────────────────────────────────────────────── |
-|   The render was not attempted because the scene_hash          |
-|   matches the stored hash — the code did not change.           |
-|   The existing rendered video is still valid and usable.       |
-|   This status is set during a "render all" run for scenes      |
-|   that were unchanged.                                         |
+|   ──────────────────────────────────────────────────────────  |
+|   The render command ran for this scene.                       |
+|   But the final_scene_hash matched the stored hash.            |
+|   Nothing changed since last render. Existing video is valid.  |
+|   Manim was NOT called. The saved render was kept as-is.       |
+|   This is the efficiency mechanism — the core SuperManim idea. |
 |                                                                |
 +================================================================+
 ```
 
-The `scene_status` drives the export readiness check. The project cannot
-be exported until every Scene has `scene_status = "rendered"`. A single
-scene with `"pending"` or `"failed"` status blocks the entire export.
-
----
-
-**scene_output_path**
+#### Subsubsubsection 3.3.4.6.2: scene_output_path
 
 **Type:** `Optional[str]`
 **Default:** `None`
 **Example value:** `"output/scene_03/scene_03.mp4"`
 
-The `scene_output_path` is the file path where the rendered video file
-for this Scene is stored on disk. This is the video clip that will be
-stitched together with the other scenes during export to produce the
-final video.
+The file path to the final rendered video for this scene. Set
+automatically by the render system after Manim finishes successfully.
+Stays `None` until the first successful render.
 
-This field is set automatically by the render system after a successful
-render. You never set it manually.
-
-Before rendering, `scene_output_path` is `None`. After a successful render,
-it holds the path like `"output/scene_03/scene_03.mp4"`.
-
-The export system checks that this file actually exists on disk before
-starting assembly. If the file was accidentally deleted, the export
-will detect this and report the specific scene as missing.
-
----
-
-**scene_preview_path**
+#### Subsubsubsection 3.3.4.6.3: scene_preview_path
 
 **Type:** `Optional[str]`
 **Default:** `None`
 **Example value:** `"previews/scene_03_preview.mp4"`
 
-The `scene_preview_path` is the file path for the low-quality preview
-video of this scene. This is completely separate from `scene_output_path`.
+The file path to the low-quality 480p preview video for this scene.
+Generated by the `preview scene N` command. Used for quick visual
+checking only. Never included in the final export.
 
-Preview videos are:
-- Low resolution (always 480p, regardless of scene_resolution)
-- Generated quickly (seconds instead of minutes)
-- Never used in the final exported video
-- Stored in the `previews/` folder, not `output/`
-- Used only by the user to check their work
-
-When you type `preview scene 3`, the system generates a quick
-480p video and stores its path in `scene_preview_path`.
-When you type `clear preview scene 3`, it deletes the file and
-sets `scene_preview_path = None`.
-
----
-
-**scene_error_message**
+#### Subsubsubsection 3.3.4.6.4: scene_error_message
 
 **Type:** `Optional[str]`
 **Default:** `None`
-**Example value:** `"NameError: name 'Circle' is not defined on line 12"`
+**Example value:** `"NameError: name 'TextMobject' is not defined on line 12"`
 
-The `scene_error_message` stores the error text when a render fails.
-If Manim crashes or returns an error while rendering this scene,
-the error message from Manim is captured and stored here.
+When a render attempt fails, the error message returned by Manim is
+stored here. This helps the user understand exactly what went wrong
+without having to scroll through terminal output. Cleared back to `None`
+when the scene is successfully re-rendered.
 
-When `scene_status = "failed"`, `scene_error_message` will contain
-the reason. When `scene_status = "rendered"`, `scene_error_message`
-will be `None`.
-
-This field is what the tool shows when you type `show scene 5 info`
-and Scene 5 has failed — it displays the exact error so you know
-what to fix in your Manim code.
-
----
-
-**scene_rendered_at**
+#### Subsubsubsection 3.3.4.6.5: scene_rendered_at
 
 **Type:** `Optional[str]`
 **Default:** `None`
 **Example value:** `"2024-11-12 14:22:30"`
 
-The `scene_rendered_at` stores the timestamp of when this scene was
-last successfully rendered. It is stored as a string in ISO format.
+The exact date and time when the last **successful** render finished.
+Stored as an ISO-format string. Only written when `scene_status` becomes
+`"rendered"`. If a render fails, this field is NOT updated — it keeps
+the timestamp of the last successful render, or stays `None` if there
+has never been a successful render.
 
-This is useful for knowing how fresh your renders are. If you look at
-a scene and see it was rendered two weeks ago and you have made many
-changes since then, you know it might be stale.
+The timestamp is obtained by calling Python's `datetime.now()` at the
+exact moment Manim finishes:
 
+```python
+from datetime import datetime
 
-When you type `render scene 3` and Manim finishes successfully, the system does not ask anyone for the time.
-It asks the **operating system** directly. Python has a built-in module called `datetime` that talks
-to the operating system clock and returns the current date and time at that exact moment.
-
-Here is the complete sequence of what happens, from the moment you press Enter to the moment the timestamp
-is stored:
-
-```
-YOU PRESS ENTER after typing: render scene 3
-          |
-          v
-+------------------------------------------------------------------+
-|  STEP 1: The Shell receives the command                          |
-|                                                                  |
-|  SuperManimShell.do_render("scene 3")                            |
-|  It calls: render_service.render_scene(scene_id=3)               |
-+------------------------------------------------------------------+
-          |
-          v
-+------------------------------------------------------------------+
-|  STEP 2: RenderService runs all the checks                       |
-|                                                                  |
-|  - Is project open?          YES                                 |
-|  - Does scene have code?     YES                                 |
-|  - Has code changed?         YES                                 |
-|  - Do durations match?       YES (if synced)                     |
-|                                                                  |
-|  All checks passed. Proceed to render.                           |
-+------------------------------------------------------------------+
-          |
-          v
-+------------------------------------------------------------------+
-|  STEP 3: The system reads the clock BEFORE calling Manim         |
-|                                                                  |
-|  from datetime import datetime                                   |
-|                                                                  |
-|  render_started_at = datetime.now()                              |
-|                                                                  |
-|  At this exact moment the OS clock is read.                      |
-|  render_started_at = datetime(2024, 11, 12, 14, 18, 5)          |
-|  meaning: 12 November 2024, at 14:18:05 (2:18 PM and 5 seconds) |
-+------------------------------------------------------------------+
-          |
-          v
-+------------------------------------------------------------------+
-|  STEP 4: Manim runs (this takes several minutes)                 |
-|                                                                  |
-|  result = RenderRunnerPort.render(scene)                         |
-|                                                                  |
-|  Inside the ManimSubprocessRenderer Adapter:                     |
-|  subprocess.run(["manim", "--quality", "high", "example.py"])   |
-|                                                                  |
-|  The program STOPS HERE and WAITS.                               |
-|  Python is blocked. It does nothing until Manim finishes.        |
-|  Manim draws every frame. This takes 4 minutes 22 seconds.       |
-|                                                                  |
-|  Manim finishes. Returns exit code 0. (0 = success)             |
-+------------------------------------------------------------------+
-          |
-          v
-+------------------------------------------------------------------+
-|  STEP 5: Manim is done. The system reads the clock AGAIN.       |
-|                                                                  |
-|  render_finished_at = datetime.now()                             |
-|                                                                  |
-|  render_finished_at = datetime(2024, 11, 12, 14, 22, 27)        |
-|  meaning: 14:22:27 (2:22 PM and 27 seconds)                     |
-+------------------------------------------------------------------+
-          |
-          v
-+------------------------------------------------------------------+
-|  STEP 6: The system checks if Manim succeeded or failed          |
-|                                                                  |
-|  result.succeeded == True?    YES                                |
-|                                                                  |
-|  The render worked. Now we calculate and store the data.         |
-+------------------------------------------------------------------+
-          |
-          v
-+------------------------------------------------------------------+
-|  STEP 7: Calculate the elapsed time                              |
-|                                                                  |
-|  elapsed = render_finished_at - render_started_at               |
-|                                                                  |
-|  datetime(14, 22, 27) - datetime(14, 18, 5)                     |
-|  = 4 minutes and 22 seconds                                      |
-|  = 262 seconds                                                   |
-|                                                                  |
-|  This becomes: scene.scene_render_duration = 262.0              |
-+------------------------------------------------------------------+
-          |
-          v
-+------------------------------------------------------------------+
-|  STEP 8: Format the timestamp as a string and store it           |
-|                                                                  |
-|  scene.scene_rendered_at = render_finished_at.strftime(         |
-|      "%Y-%m-%d %H:%M:%S"                                        |
-|  )                                                               |
-|                                                                  |
-|  result: scene.scene_rendered_at = "2024-11-12 14:22:27"        |
-|                                                                  |
-|  This is the moment Manim finished successfully.                 |
-+------------------------------------------------------------------+
-          |
-          v
-+------------------------------------------------------------------+
-|  STEP 9: Save everything to the database                         |
-|                                                                  |
-|  scene.scene_status         = "rendered"                         |
-|  scene.scene_rendered_at    = "2024-11-12 14:22:27"             |
-|  scene.scene_render_duration = 262.0                             |
-|  scene.scene_output_path    = "output/scene_03/scene_03.mp4"    |
-|  scene.scene_hash           = current_hash                       |
-|                                                                  |
-|  SceneRepositoryPort.save_scene(scene)                           |
-|  → SqliteSceneRepository writes all fields to the database      |
-+------------------------------------------------------------------+
-          |
-          v
-+------------------------------------------------------------------+
-|  STEP 10: Tell the user                                          |
-|                                                                  |
-|  NotificationPort.send_success(                                  |
-|      "Scene 3 rendered successfully.\n"                          |
-|      "Output:   output/scene_03/scene_03.mp4\n"                  |
-|      "Duration: 16.8 seconds\n"                                  |
-|      "Rendered in: 4m 22s"                                       |
-|  )                                                               |
-+------------------------------------------------------------------+
-```
-The Key Insight — Two Clock Reads, One Subtraction
-
-The whole mechanism rests on one simple idea:
-
-```
-+================================================================+
-|                                                                |
-|   BEFORE Manim starts  →  read the clock  →  time A           |
-|                                                                |
-|   [Manim runs for several minutes]                             |
-|                                                                |
-|   AFTER Manim finishes →  read the clock  →  time B           |
-|                                                                |
-|   scene_rendered_at    =  time B  (when it finished)           |
-|   scene_render_duration = time B - time A  (how long it took)  |
-|                                                                |
-+================================================================+
+render_finished_at = datetime.now()
+scene.scene_rendered_at = render_finished_at.strftime("%Y-%m-%d %H:%M:%S")
+# Stored as: "2024-11-12 14:22:30"
 ```
 
-`datetime.now()` is the Python call that reads the operating system clock.
-It returns the current date and time at that exact nanosecond.
-You call it twice — once before, once after — and the difference is the duration.
-The finish time is the timestamp that gets stored.
-
----
-
-**Why `strftime("%Y-%m-%d %H:%M:%S")` Converts It to a String**
-
-`datetime.now()` returns a Python `datetime` object. SQLite cannot store
-a Python object directly — it stores text, numbers, and blobs.
-So we convert the datetime to a string using `strftime`, which means
-"string format time." The format `"%Y-%m-%d %H:%M:%S"` produces:
-
-```
-%Y   = 4-digit year    → 2024
-%m   = 2-digit month   → 11
-%d   = 2-digit day     → 12
-%H   = 2-digit hour    → 14   (24-hour format)
-%M   = 2-digit minute  → 22
-%S   = 2-digit second  → 27
-
-Result: "2024-11-12 14:22:27"
-```
-
-When you later need to read it back as a real datetime object (to do
-calculations like "how many days ago was this rendered?"), you convert
-it back with `datetime.strptime("2024-11-12 14:22:27", "%Y-%m-%d %H:%M:%S")`.
-
----
-Notice that `scene_rendered_at` is only written when `result.succeeded == True`.
-
-If Manim crashes and returns an error:
-- `scene_status` becomes `"failed"`
-- `scene_error_message` gets the error text
-- `scene_rendered_at` stays `None` — because the scene was NOT successfully rendered
-
-This means `scene_rendered_at` always tells you the last time the scene was **successfully** rendered.
-A `None` value means it has never succeeded.
-
----    
-
-**scene_render_duration**
+#### Subsubsubsection 3.3.4.6.6: scene_render_duration
 
 **Type:** `Optional[float]`
 **Default:** `None`
 **Example value:** `252.7` (meaning 252.7 seconds = about 4 minutes 12 seconds)
 
-The `scene_render_duration` records how long the last successful render
-took, in seconds. This is the elapsed time from when Manim started to
-when it finished.
+Records how many seconds the last successful render took, from the moment
+Manim started to the moment it finished. Computed by reading the clock
+twice and subtracting:
 
-This is purely informational — the system uses it to show you statistics
-like "Rendered in 4m 12s" and to estimate how long a full re-render
-of all scenes would take.
+```python
+render_started_at  = datetime.now()
+# ... Manim runs for several minutes ...
+render_finished_at = datetime.now()
 
----
+elapsed = (render_finished_at - render_started_at).total_seconds()
+scene.scene_render_duration = elapsed  # e.g. 252.7
+```
 
+Used to show the user statistics like "Last render: 4m 12s" and to
+estimate total re-render time for all scenes.
 
-#### Subsubsection 3.3.4.6 GROUP 6 — Audio Properties
+### Subsubsection 3.3.4.7: GROUP 7 — Audio Properties
 
-These properties answer the question: "Is this Scene linked to an audio
-clip, and does it need to play in sync with that audio?"
+These properties answer the question: "Is this Scene connected to an
+audio clip, and is that connection confirmed and ready for rendering?"
 
----
-
-**audio_clip_path**
+#### Subsubsubsection 3.3.4.7.1: related_audio_clip_path
 
 **Type:** `Optional[str]`
 **Default:** `None`
 **Example value:** `"audio_clips/clip_003.mp3"`
 
-The `audio_clip_path` is the file path to the audio clip that belongs
-to this scene. When you split the project's audio file into pieces
-(one piece per scene), each piece gets stored in the `audio_clips/`
-folder and the path to that piece is stored here.
-
-When `audio_clip_path` is `None`, this scene has no audio assigned to it.
-If you render it, the rendered video will be a silent video.
-
-When `audio_clip_path` is set, the scene has an audio clip. But the clip
-is not yet "active" until `synced_with_audio` is also set to `True`.
+The file path to the audio clip that belongs to this scene. When you
+split the project's master audio file into pieces (one per scene), each
+piece is stored in the `audio_clips/` folder and its path is stored here.
 
 ```
 +-------------------------------------------------------------+
-|   THE AUDIO STATES OF A SCENE                               |
+|   THE THREE AUDIO STATES OF A SCENE                         |
 +-------------------------------------------------------------+
 |                                                             |
-|   audio_clip_path = None,  synced_with_audio = False        |
-|   → No audio. Scene renders as silent video.               |
+|   STATE 1: No audio assigned                                |
+|   related_audio_clip_path = None                            |
+|   synced_with_audio       = False                           |
+|   → Scene renders as a silent video. No audio.             |
 |                                                             |
-|   audio_clip_path = "clip_003.mp3",  synced_with_audio = False
+|   STATE 2: Audio assigned but not confirmed                 |
+|   related_audio_clip_path = "audio_clips/clip_003.mp3"     |
+|   synced_with_audio       = False                           |
 |   → Audio clip is assigned but NOT yet activated.          |
-|     Durations may or may not match yet.                     |
-|     Scene still renders as silent video.                    |
+|     Durations have not been verified to match yet.          |
+|     Scene still renders as a silent video.                  |
 |                                                             |
-|   audio_clip_path = "clip_003.mp3",  synced_with_audio = True
-|   → Audio clip is assigned AND activated.                  |
-|     Durations have been verified to match.                  |
-|     Scene renders WITH audio included in the video.         |
+|   STATE 3: Audio assigned and confirmed (SYNCED)            |
+|   related_audio_clip_path = "audio_clips/clip_003.mp3"     |
+|   synced_with_audio       = True                            |
+|   → Audio clip is assigned AND durations are verified.     |
+|     Scene renders WITH audio baked into the video file.     |
 |                                                             |
 +-------------------------------------------------------------+
 ```
 
----
-
-**synced_with_audio**
+#### Subsubsubsection 3.3.4.7.2: synced_with_audio
 
 **Type:** `bool`
 **Default:** `False`
 
-The `synced_with_audio` flag is a deliberate confirmation by the user that:
-1. An audio clip has been assigned to this scene (`audio_clip_path` is set)
-2. The audio clip's duration has been verified to match `scene_duration`
-3. The scene is ready to render with audio included
+The `synced_with_audio` flag is a deliberate, confirmed signal that:
 
-This flag is `False` for every newly created scene. It can only be set
-to `True` by running the `sync scene` command. And that command will only
-set it to `True` if the duration check passes — the scene duration and
-the audio clip duration must be identical (within 1 millisecond).
+1. An audio clip path has been assigned (`related_audio_clip_path` is set)
+2. The audio clip's duration has been verified to exactly match `scene_duration`
+3. The scene is ready and safe to render with audio included
+
+This flag can ONLY be set to `True` by running the `sync scene` command.
+That command performs the duration check first. If the check fails (durations
+do not match), the flag stays `False`.
 
 ```
 +================================================================+
-|   THE SYNC FLOW                                                |
+|   THE COMPLETE SYNC FLOW                                       |
 +================================================================+
 |                                                                |
-|   STEP 1: Assign audio clip                                    |
-|   scene.audio_clip_path   = "audio_clips/clip_003.mp3"        |
-|   scene.synced_with_audio = False   (not yet confirmed)        |
+|   STEP 1: Assign the audio clip path                           |
+|   scene.related_audio_clip_path = "audio_clips/clip_003.mp3"  |
+|   scene.synced_with_audio       = False  (not yet confirmed)   |
 |                                                                |
-|   STEP 2: User runs "sync scene 3 audio_clip 3"               |
-|   System checks: scene_duration == clip_duration?              |
-|   16.8 == 16.8?  YES                                           |
-|   scene.synced_with_audio = True   (confirmed!)                |
+|   STEP 2: User runs "sync scene 3"                             |
+|   System checks:  scene_duration == clip_duration?             |
+|   16800 ms == 16800 ms?    YES → MATCH                         |
+|   scene.synced_with_audio = True  (confirmed!)                 |
 |                                                                |
 |   STEP 3: Render scene 3                                       |
 |   System sees synced_with_audio = True                         |
-|   System includes audio in the rendered video.                 |
+|   System mixes audio into the rendered video.                  |
 |   Output: scene_03.mp4 with voice narration baked in.         |
+|                                                                |
+|   IF durations did NOT match:                                  |
+|   16800 ms != 17200 ms   → MISMATCH                            |
+|   scene.synced_with_audio stays False                          |
+|   Error shown: "Duration mismatch: 400ms difference"          |
 |                                                                |
 +================================================================+
 ```
 
----
+### Subsubsection 3.3.4.8: GROUP 8 — SubScene Map
 
+#### Subsubsubsection 3.3.4.8.1: scene_map
 
-#### Subsubsection 3.3.4.7 GROUP 7 — The SubScene Map
+**Type:** `List[SubScene]`
+**Default:** `[]` (a fresh empty list is created for every new Scene instance)
 
-This is the most advanced property of the Scene Entity.
+The `scene_map` is a list of `SubScene` objects. Each `SubScene`
+represents one animation block inside this Scene. It is the internal
+map of what happens within the Scene — what blocks play, in what order,
+and at what timestamps.
 
----
+When a Scene is first created, `scene_map` is empty. You add SubScenes
+to it as you plan the animation in detail.
 
-**scene_map**
+Not all projects need SubScenes. If your Manim code for Scene 3 is one
+continuous animation with no meaningful internal divisions, you can leave
+`scene_map` empty and everything works perfectly.
 
-**Type:** `list[SubScene]`
-**Default:** `[]` (empty list)
+But if your Scene 3 has distinct phases — a title appears, then a diagram
+draws itself, then a summary fades in — then SubScenes let you model each
+phase as a separate tracked entity with its own timing and status.
 
-The `scene_map` is a list of `SubScene` objects. Each `SubScene` represents
-one animation block inside this Scene. It is the internal structure of the Scene —
-the map of what happens inside the Scene, in what order, and at what times.
-
-When a Scene is first created, `scene_map` is empty. You can add SubScenes
-to it as you design the animation in detail.
-
-Not all projects need SubScenes. If your Manim code for Scene 3 is a single
-animation sequence with no meaningful internal blocks, you can leave
-`scene_map` empty and the system works perfectly.
-
-But if your Scene 3 has distinct phases — a title appears, then a diagram draws,
-then a summary text fades in — then SubScenes let you model each of those
-phases as a separate tracked entity.
-
----
-
-
-
-### Subsection 3.3.5 A Real Scene Object in Full
-
-Here is what a fully populated Scene object looks like for Scene 3
-of a real SuperManim project. Every field is shown with a real value.
+**Why use `field(default_factory=list)` instead of just `= []`?**
 
 ```python
-Scene(
-    # ── IDENTITY ────────────────────────────────────────────────
+# WRONG — this is a Python trap:
+@dataclass
+class Scene:
+    scene_map: list = []
+    # This creates ONE list that is SHARED between ALL Scene instances!
+    # Modifying scene_1.scene_map would also change scene_2.scene_map!
+
+# CORRECT — each instance gets its own fresh list:
+@dataclass
+class Scene:
+    scene_map: list = field(default_factory=list)
+    # Each new Scene() call creates a brand new empty list for that instance.
+```
+
+## Subsection 3.3.5: A Real, Fully Populated Scene Object
+
+Here is what a complete Scene object looks like for Scene 3 of a real
+SuperManim project. Every single field is shown with a real value.
+
+```python
+# This is what Scene 3 looks like in memory after being fully set up.
+
+scene_3 = Scene(
+    # ── GROUP 1 — IDENTITY ──────────────────────────────────────────
     scene_id               = 3,
     scene_name             = "Example: Python Variables",
-    scene_index            = 2,                  # 0-based, so 3rd scene
+    scene_index            = 2,                     # 0-based → 3rd scene
     previous_scene_id      = 2,
     next_scene_id          = 4,
 
-    # ── TIMING ──────────────────────────────────────────────────
-    scene_duration         = 16.8,
-    scene_start_time       = 31.0,               # starts at 31 seconds
-    scene_end_time         = 47.8,               # ends at 47.8 seconds
+    # ── GROUP 2 — TIMING (all in milliseconds) ───────────────────────
+    scene_duration         = 16800,                 # 16.8 seconds
+    scene_start_time       = 31000,                 # starts at second 31.0
+    scene_end_time         = 47800,                 # ends at second 47.8
     scene_start_marker     = "[CHAPTER 3 BEGIN]",
     scene_end_marker       = "[CHAPTER 3 END]",
 
-    # ── CODE ────────────────────────────────────────────────────
+    # ── GROUP 3 — CODE ──────────────────────────────────────────────
     scene_code_path        = "my_scenes/example.py",
-    scene_code_content     = "from manim import *\nclass Example(Scene):\n ...",
-    scene_hash             = "c9a1b3e7f2d4a8b1c3e7f9a2b4d6e8f0...",
+    scene_code_content     = "from manim import *\nclass Example(Scene):\n    ...",
 
-    # ── CONTENT AND VISUAL ──────────────────────────────────────
-    scene_content          = "Shows how Python variables work with animation",
+    # ── GROUP 4 — HASH FINGERPRINTS ──────────────────────────────────
+    scene_code_hash        = "a3f8c2d1e4b9ff37c128a6d9e0b45721...",
+    scene_assets_hash      = "b7d2e9a1c4f3b8d2e6a1c9f4b3d7e2a1...",
+    scene_audio_hash       = "c1e4f9b2d7a3c8e1f4b9d2a7c3e8f1b4...",
+    final_scene_hash       = "f9a3b7e1d4c2f8a3b7e1d4c9f2a3b7e1...",
+
+    # ── GROUP 5 — CONTENT AND VISUAL ─────────────────────────────────
+    scene_content          = "Shows how Python variables work with a box diagram",
     scene_background_color = "#000000",
     scene_resolution       = "1920x1080",
     scene_fps              = 60,
 
-    # ── STATUS AND OUTPUT ───────────────────────────────────────
+    # ── GROUP 6 — STATUS AND OUTPUT ──────────────────────────────────
     scene_status           = "rendered",
     scene_output_path      = "output/scene_03/scene_03.mp4",
     scene_preview_path     = "previews/scene_03_preview.mp4",
     scene_error_message    = None,
     scene_rendered_at      = "2024-11-12 14:22:30",
-    scene_render_duration  = 252.7,              # 4 minutes 12 seconds
+    scene_render_duration  = 252.7,                 # 4 minutes 12 seconds
 
-    # ── AUDIO ───────────────────────────────────────────────────
-    audio_clip_path        = "audio_clips/clip_003.mp3",
-    synced_with_audio      = True,
+    # ── GROUP 7 — AUDIO ─────────────────────────────────────────────
+    related_audio_clip_path = "audio_clips/clip_003.mp3",
+    synced_with_audio       = True,
 
-    # ── SUBSCENES ───────────────────────────────────────────────
+    # ── GROUP 8 — SUBSCENES ──────────────────────────────────────────
     scene_map = [
         SubScene(
-            subscene_id          = 1,
-            subscene_name        = "Title Card",
-            subscene_index       = 0,
-            parent_scene_id      = 3,
-            subscene_duration    = 5.5,
-            subscene_start_time  = 0.0,
-            subscene_end_time    = 5.5,
-            subscene_content     = "Title appears with FadeIn animation",
-            subscene_status      = "rendered",
+            subscene_id         = 1,
+            subscene_name       = "Title Card",
+            subscene_index      = 0,
+            parent_scene_id     = 3,
+            subscene_duration   = 5500,          # 5.5 seconds
+            subscene_start_time = 0,
+            subscene_end_time   = 5500,
+            subscene_content    = "Title 'Python Variables' fades in",
+            subscene_status     = "rendered",
         ),
         SubScene(
-            subscene_id          = 2,
-            subscene_name        = "Variable Diagram",
-            subscene_index       = 1,
-            parent_scene_id      = 3,
-            subscene_duration    = 5.7,
-            subscene_start_time  = 5.5,
-            subscene_end_time    = 11.2,
-            subscene_content     = "Box diagram shows variable assignment x = 5",
-            subscene_status      = "rendered",
+            subscene_id         = 2,
+            subscene_name       = "Variable Diagram",
+            subscene_index      = 1,
+            parent_scene_id     = 3,
+            subscene_duration   = 5700,          # 5.7 seconds
+            subscene_start_time = 5500,
+            subscene_end_time   = 11200,
+            subscene_content    = "Box diagram animates: x = 5 assignment",
+            subscene_status     = "rendered",
         ),
         SubScene(
-            subscene_id          = 3,
-            subscene_name        = "Summary Text",
-            subscene_index       = 2,
-            parent_scene_id      = 3,
-            subscene_duration    = 5.6,
-            subscene_start_time  = 11.2,
-            subscene_end_time    = 16.8,
-            subscene_content     = "Three example variable names fade in one by one",
-            subscene_status      = "rendered",
+            subscene_id         = 3,
+            subscene_name       = "Summary Text",
+            subscene_index      = 2,
+            parent_scene_id     = 3,
+            subscene_duration   = 5600,          # 5.6 seconds
+            subscene_start_time = 11200,
+            subscene_end_time   = 16800,
+            subscene_content    = "Three variable examples fade in one by one",
+            subscene_status     = "rendered",
         ),
     ]
 )
@@ -10958,44 +10916,61 @@ Scene(
 
 ---
 
+# Section 3.4: Entity 2 — SubScene
 
+## Subsection 3.4.1: What Is a SubScene?
 
+A SubScene is a mini-scene inside a Scene. It represents one specific,
+distinct animation block — one phase or moment within the larger Scene.
 
-## Section 3.4 Entity 2 — SubScene
-
-
-A SubScene is a mini-scene inside a Scene. It represents one specific
-animation block — one moment or sequence within the larger Scene.
+Think of a Scene like a chapter in a book. A SubScene is like a paragraph
+inside that chapter. The chapter is the big container. The paragraphs are
+the smaller, ordered pieces of content inside it.
 
 ```
 +=====================================================================+
 |                  THE SUBSCENE INSIDE A SCENE                        |
 +=====================================================================+
 |                                                                     |
-|   SCENE 3 — "Python Variables" (16.8 seconds)                       |
+|   SCENE 3 — "Python Variables" (16800 ms total)                     |
 |   ─────────────────────────────────────────────────────────────    |
 |   |                                                               | |
-|   |  SubScene 1        SubScene 2        SubScene 3               | |
-|   |  scene_map[0]      scene_map[1]      scene_map[2]             | |
+|   |  SubScene 1          SubScene 2          SubScene 3           | |
+|   |  scene_map[0]        scene_map[1]        scene_map[2]         | |
 |   |                                                               | |
-|   |  start: 0.0s       start: 5.5s       start: 11.2s            | |
-|   |  end:   5.5s       end:  11.2s       end:   16.8s            | |
-|   |  duration: 5.5s    duration: 5.7s    duration: 5.6s          | |
+|   |  start: 0 ms         start: 5500 ms      start: 11200 ms     | |
+|   |  end:   5500 ms      end:   11200 ms     end:   16800 ms     | |
+|   |  dur:   5500 ms      dur:   5700 ms      dur:   5600 ms      | |
 |   |                                                               | |
-|   |  "Title card       "Variable         "Summary with          | |
-|   |   animates in"      assignment        three examples"        | |
-|   |                     diagram draws"                            | |
+|   |  "Title card         "Variable           "Summary fades      | |
+|   |   animates in"        diagram draws"      in line by line"   | |
 |   |                                                               | |
 |   ─────────────────────────────────────────────────────────────    |
+|                                                                     |
+|   Total: 5500 + 5700 + 5600 = 16800 ms  ← MUST equal scene_duration|
 |                                                                     |
 +=====================================================================+
 ```
 
+### Subsubsection 3.4.1.1: Where Is the SubScene Class Defined on Disk?
 
-### Subsection 3.4.1 The Full SubScene Entity
+The `SubScene` class is defined in the same file as the `Scene` class,
+directly below it:
+
+```
+/home/mina/SuperManim/core/entities/scenes.py
+```
+
+Both classes live in the same file because SubScene is always used as a
+component of Scene — it is part of the same domain concept. They are
+defined in the same file to make this relationship obvious and to keep
+related code together.
+
+## Subsection 3.4.2: The Full Python Class of the SubScene Entity
 
 ```python
-# core/entities/subscene.py
+# File location: /home/mina/SuperManim/core/entities/scenes.py
+# (This class is defined BELOW the Scene class in the same file)
 
 from __future__ import annotations
 from dataclasses import dataclass
@@ -11005,204 +10980,285 @@ from typing import Optional
 @dataclass
 class SubScene:
     """
-    A SubScene is one animation block inside a Scene.
-    It represents a distinct phase or moment within the Scene's animation.
-    Like the Scene Entity, it is a pure data container.
-    It holds information only. It does not call any external tools.
+    The SubScene Entity represents one animation block inside a Scene.
+
+    It represents a distinct phase or moment within the Scene's animation
+    sequence. Like the Scene Entity, it is a pure data container.
+    It holds information only. It does not call any external tools,
+    does not run Manim, and does not talk to any database.
+
+    TIMING CONVENTION:
+    All timing fields (subscene_duration, subscene_start_time,
+    subscene_end_time) are stored as integers in MILLISECONDS,
+    consistent with the parent Scene entity.
+
+    IMPORTANT RULE:
+    The sum of all subscene_duration values within one Scene MUST
+    equal the parent Scene's scene_duration. If they do not add up
+    correctly, the SubScenes do not fully cover the Scene, which is
+    a data integrity error.
     """
 
-    # ── IDENTITY ──────────────────────────────────────────────────────
+    # ── GROUP 1 — IDENTITY ────────────────────────────────────────────
     subscene_id:            int
-    subscene_name:          Optional[str]   = None
-    subscene_index:         int             = 0
-    parent_scene_id:        int             = 0
+    subscene_name:          Optional[str]    = None
+    subscene_index:         int              = 0
+    parent_scene_id:        int              = 0
 
-    # ── TIMING (relative to the START of the parent Scene) ────────────
-    subscene_duration:      Optional[float] = None
-    subscene_start_time:    Optional[float] = None
-    subscene_end_time:      Optional[float] = None
+    # ── GROUP 2 — TIMING (relative to start of parent Scene, in ms) ───
+    subscene_duration:      Optional[int]    = None
+    subscene_start_time:    Optional[int]    = None
+    subscene_end_time:      Optional[int]    = None
 
-    # ── CONTENT ───────────────────────────────────────────────────────
-    subscene_content:       Optional[str]   = None
-    subscene_code_path:     Optional[str]   = None
-    subscene_hash:          Optional[str]   = None
+    # ── GROUP 3 — CONTENT ─────────────────────────────────────────────
+    subscene_content:       Optional[str]    = None
+    subscene_code_path:     Optional[str]    = None
+    subscene_hash:          Optional[str]    = None
 
-    # ── STATUS ────────────────────────────────────────────────────────
-    subscene_status:        str             = "pending"
-    subscene_output_path:   Optional[str]   = None
+    # ── GROUP 4 — STATUS ──────────────────────────────────────────────
+    subscene_status:        str              = "pending"
+    subscene_output_path:   Optional[str]    = None
+
+    # ── ALLOWED VALUES FOR subscene_status ────────────────────────────
+    # "pending"   → block exists but has not been processed yet
+    # "rendered"  → block was rendered successfully
+    # "failed"    → processing was attempted but failed
+    # "skipped"   → skipped because nothing changed (hash match)
 ```
 
+## Subsection 3.4.3: Every Property of the SubScene Entity Explained
 
-### Subsection 3.4.2 Every SubScene Property Explained
+Here is a quick reference table for all SubScene properties:
 
 ```
 +================================================================+
 |       SUBSCENE ENTITY — COMPLETE PROPERTY REFERENCE           |
 +================================================================+
 |                                                                |
-|  subscene_id         int           Unique ID within scene.    |
-|  subscene_name       str | None    Human label. Optional.     |
-|  subscene_index      int           Position within scene.     |
-|  parent_scene_id     int           Which scene owns this.     |
-|  subscene_duration   float | None  Length in seconds.         |
-|  subscene_start_time float | None  Start within parent scene. |
-|  subscene_end_time   float | None  End within parent scene.   |
-|  subscene_content    str | None    Description.               |
-|  subscene_code_path  str | None    Optional separate code.    |
-|  subscene_hash       str | None    Hash of subscene code.     |
-|  subscene_status     str           pending/rendered/failed.   |
-|  subscene_output_path str|None     Path to clip if rendered.  |
+|  GROUP 1 — IDENTITY                                            |
+|  ──────────────────────────────────────────────────────────── |
+|  subscene_id          int           Unique ID within scene.    |
+|  subscene_name        str | None    Human label. Optional.     |
+|  subscene_index       int           Position within scene.     |
+|  parent_scene_id      int           Which scene owns this.     |
+|                                                                |
+|  GROUP 2 — TIMING (milliseconds, relative to parent Scene)    |
+|  ──────────────────────────────────────────────────────────── |
+|  subscene_duration    int | None    Length in ms.              |
+|  subscene_start_time  int | None    Start offset in ms.        |
+|  subscene_end_time    int | None    End offset in ms.          |
+|                                                                |
+|  GROUP 3 — CONTENT                                             |
+|  ──────────────────────────────────────────────────────────── |
+|  subscene_content     str | None    Plain-text description.    |
+|  subscene_code_path   str | None    Optional separate .py file.|
+|  subscene_hash        str | None    SHA-256 of separate code.  |
+|                                                                |
+|  GROUP 4 — STATUS                                              |
+|  ──────────────────────────────────────────────────────────── |
+|  subscene_status      str           pending/rendered/failed.   |
+|  subscene_output_path str | None    Path to clip if rendered.  |
 |                                                                |
 +================================================================+
 ```
 
----
+### Subsubsection 3.4.3.1: GROUP 1 — Identity Properties
 
-**subscene_id**
+#### Subsubsubsection 3.4.3.1.1: subscene_id
 
 **Type:** `int`
+**Default:** Required — no default. Must be provided.
 **Example:** `1`, `2`, `3`
 
 The unique identifier for this SubScene within its parent Scene.
-`subscene_id = 1` means this is the first block in the scene.
+`subscene_id = 1` means this is the first block. `subscene_id = 2`
+means this is the second block, and so on.
 
----
+Note: `subscene_id` is only unique WITHIN the parent scene. Two different
+Scenes can each have a SubScene with `subscene_id = 1`. They are
+different objects belonging to different parents.
 
- **subscene_name**
+#### Subsubsubsection 3.4.3.1.2: subscene_name
 
 **Type:** `Optional[str]`
+**Default:** `None`
 **Example:** `"Title Card"`, `"Diagram Block"`, `"Summary Text"`
 
-A human-readable name for this animation block.
-Purely for documentation and reference.
+A human-readable name for this animation block. Purely for documentation.
+The system does not use this to make any processing decisions.
 
----
-
- **subscene_index**
+#### Subsubsubsection 3.4.3.1.3: subscene_index
 
 **Type:** `int`
 **Default:** `0`
+**Example value:** `1` (meaning this is the second block, 0-based)
 
-The order position of this SubScene within its parent Scene.
-The first SubScene has `subscene_index = 0`, the second has `1`, and so on.
-This determines the order in which the animation blocks play.
+The playback order position of this SubScene within its parent Scene.
+The first SubScene has `subscene_index = 0`, the second has `1`, and so
+on. This determines the order in which animation blocks play within the
+parent Scene.
 
----
-
-**parent_scene_id**
+#### Subsubsubsection 3.4.3.1.4: parent_scene_id
 
 **Type:** `int`
 **Default:** `0`
+**Example value:** `3`
 
-The `scene_id` of the Scene that this SubScene belongs to.
-This links the SubScene back to its parent. If `parent_scene_id = 3`,
-this SubScene is a block inside Scene 3.
-
----
-
-**subscene_duration**
-
-**Type:** `Optional[float]`
-**Example:** `5.5`
-
-How many seconds this animation block lasts.
-All SubScene durations inside one Scene must add up exactly to the
-parent Scene's `scene_duration`.
+The `scene_id` of the Scene that this SubScene belongs to. This is the
+back-link that connects the SubScene to its parent.
 
 ```
-Scene 3 scene_duration = 16.8 seconds
-  SubScene 1: subscene_duration = 5.5
-  SubScene 2: subscene_duration = 5.7
-  SubScene 3: subscene_duration = 5.6
-  ─────────────────────────────────────
-  Total:                          16.8  ← must match scene_duration
++-------------------------------------------------------------+
+|   HOW parent_scene_id LINKS SUBSCENES TO THEIR PARENT       |
++-------------------------------------------------------------+
+|                                                             |
+|   Scene 3  (scene_id = 3)                                   |
+|   │                                                         |
+|   ├── scene_map = [                                         |
+|   │       SubScene(subscene_id=1, parent_scene_id=3, ...),  |
+|   │       SubScene(subscene_id=2, parent_scene_id=3, ...),  |
+|   │       SubScene(subscene_id=3, parent_scene_id=3, ...),  |
+|   │   ]                                                     |
+|   │                                                         |
+|   Every SubScene in Scene 3 points back to it               |
+|   via parent_scene_id = 3.                                   |
+|                                                             |
+|   If you find a SubScene in the database and want to know   |
+|   which scene it belongs to, just read parent_scene_id.     |
++-------------------------------------------------------------+
 ```
 
----
+### Subsubsection 3.4.3.2: GROUP 2 — Timing Properties
 
-**subscene_start_time**
+**CRITICAL NOTE:** All timing values here are in **milliseconds** and are
+measured relative to the **start of the parent Scene**, NOT relative to
+the start of the full video.
 
-**Type:** `Optional[float]`
-**Example:** `5.5`
+So `subscene_start_time = 5500` means this block starts 5.5 seconds into
+Scene 3. It does NOT mean 5.5 seconds into the overall video.
 
-The second within the parent Scene when this animation block begins.
-This is measured from the START of the Scene (not from the start of the video).
-So `subscene_start_time = 5.5` means this block starts 5.5 seconds into Scene 3.
+```
++-------------------------------------------------------------+
+|   SUBSCENE TIMING IS RELATIVE TO THE PARENT SCENE           |
++-------------------------------------------------------------+
+|                                                             |
+|   Scene 3 starts at 31000ms in the full video               |
+|   Scene 3 is 16800ms long                                   |
+|                                                             |
+|   SubScene 2 inside Scene 3:                                |
+|     subscene_start_time = 5500   ← 5.5 sec into SCENE 3    |
+|     (NOT 5.5 sec into the full video)                       |
+|                                                             |
+|   Position in full video = 31000 + 5500 = 36500ms           |
+|   (This calculation is done by TimelineService, not here)   |
+|                                                             |
++-------------------------------------------------------------+
+```
 
----
+#### Subsubsubsection 3.4.3.2.1: subscene_duration
 
- **subscene_end_time**
+**Type:** `Optional[int]`
+**Default:** `None`
+**Example:** `5700` (meaning 5.7 seconds)
 
-**Type:** `Optional[float]`
-**Example:** `11.2`
+How many milliseconds this animation block lasts. All SubScene durations
+inside one Scene must add up exactly to the parent Scene's `scene_duration`.
+This is a data integrity rule enforced by the ValidationService.
 
-The second within the parent Scene when this animation block ends.
-Always computed as: `subscene_end_time = subscene_start_time + subscene_duration`.
+```
+Scene 3  →  scene_duration = 16800 ms
 
----
+  SubScene 1:  subscene_duration = 5500
+  SubScene 2:  subscene_duration = 5700
+  SubScene 3:  subscene_duration = 5600
+               ────────────────────────
+  Total:                        = 16800  ← must equal scene_duration
+```
 
-**subscene_content**
+#### Subsubsubsection 3.4.3.2.2: subscene_start_time
+
+**Type:** `Optional[int]`
+**Default:** `None`
+**Example:** `5500` (meaning 5500 ms into the parent Scene)
+
+The millisecond offset from the start of the parent Scene when this
+animation block begins.
+
+#### Subsubsubsection 3.4.3.2.3: subscene_end_time
+
+**Type:** `Optional[int]`
+**Default:** `None`
+**Example:** `11200` (meaning 11200 ms into the parent Scene)
+
+The millisecond offset from the start of the parent Scene when this
+animation block ends. Always computed as:
+```
+subscene_end_time = subscene_start_time + subscene_duration
+Example: 5500 + 5700 = 11200
+```
+
+### Subsubsection 3.4.3.3: GROUP 3 — Content Properties
+
+#### Subsubsubsection 3.4.3.3.1: subscene_content
 
 **Type:** `Optional[str]`
-**Example:** `"Animated title: Python Variables appear with a FadeIn effect"`
+**Default:** `None`
+**Example:** `"Animated title: Python Variables appear with FadeIn effect"`
 
-A text description of what happens in this animation block.
-Purely for documentation.
+A plain-English description of what happens in this animation block.
+Purely for human documentation and reference.
 
----
-
-**subscene_code_path**
-
-**Type:** `Optional[str]`
-**Example:** `"my_scenes/example_block_01.py"`
-
-If this SubScene has its own separate code file (rather than being part
-of the parent Scene's code file), this stores the path to that file.
-This is optional — many SubScenes are just sections of the parent
-Scene's code and do not have their own separate file.
-
----
-
-**subscene_hash**
+#### Subsubsubsection 3.4.3.3.2: subscene_code_path
 
 **Type:** `Optional[str]`
-**Example:** `"d4e9a1b3f7c2..."`
+**Default:** `None`
+**Example:** `"my_scenes/example_block_02.py"`
 
-The SHA-256 fingerprint of the SubScene's code file (if it has its own
-separate file). Used for change detection at the SubScene level.
+If this SubScene has its own separate Python code file (instead of being
+part of the parent Scene's single code file), the path to that file is
+stored here. This is optional. Most SubScenes are just sections within
+the parent Scene's code and do not have their own separate file.
 
----
+#### Subsubsubsection 3.4.3.3.3: subscene_hash
 
-**subscene_status**
+**Type:** `Optional[str]`
+**Default:** `None`
+**Example:** `"d4e9a1b3f7c2e9a1b3f7c2e9a1b3f7c2..."`
+
+The SHA-256 fingerprint of this SubScene's separate code file (only
+applicable when `subscene_code_path` is set). Used for change detection
+at the SubScene level, following the same principle as `scene_code_hash`
+on the parent Scene.
+
+### Subsubsection 3.4.3.4: GROUP 4 — Status Properties
+
+#### Subsubsubsection 3.4.3.4.1: subscene_status
 
 **Type:** `str`
 **Default:** `"pending"`
 **Allowed values:** `"pending"`, `"rendered"`, `"failed"`, `"skipped"`
 
-The render status of this specific SubScene.
-Follows the same four-value system as the parent Scene's `scene_status`.
+The processing status of this SubScene. Uses the same four-value system
+as `scene_status` on the parent Scene. Each value means the same thing
+but applies to this specific SubScene animation block rather than the
+whole scene.
 
----
-
-**subscene_output_path**
+#### Subsubsubsection 3.4.3.4.2: subscene_output_path
 
 **Type:** `Optional[str]`
-**Example:** `"output/scene_03/subscene_01.mp4"`
+**Default:** `None`
+**Example:** `"output/scene_03/subscene_02.mp4"`
 
-If this SubScene was rendered separately (as its own video clip),
-this stores the path to that clip.
+If this SubScene was rendered as its own separate video clip (rather than
+being part of the parent scene's single render output), this field stores
+the path to that clip on disk.
 
 ---
 
 
-## Section 3.5 Entity 3 — Project
+# Section 3.5: Entity 3 — Project
 
-
-
-### Subsection 3.5.1 What is a Project, Really?
-
-Before we look at any code or any property names, let us build a completely
-clear picture of what a Project actually IS inside SuperManim.
+## Subsection 3.5.1: What Is a Project?
 
 A Project is the top-level workspace for one complete video production.
 It is the container that holds absolutely everything related to that
@@ -11211,27 +11267,25 @@ every setting, every fingerprint, and every piece of history.
 
 Think of a Project like a physical desk in a studio. On that desk you have:
 a folder for each scene's code files, a drawer for your audio recordings,
-a shelf for your rendered video clips, a notepad where you wrote your settings,
-and a filing cabinet that remembers everything you have done so far.
-The desk itself is the Project. Without the desk, all those things would
-be scattered on the floor with no organization and no connection to each other.
+a shelf for your rendered video clips, a notepad where you wrote your
+settings, and a filing cabinet that remembers everything you have done
+so far. The desk itself is the Project. Without the desk, all those things
+would be scattered on the floor with no organization and no connection
+to each other.
 
-Every single command you type in SuperManim operates on a Project.
-When you type `set scene 3 duration 16.8`, that duration is stored in
-the current Project's database. When you type `render all`, the render
-system reads from the current Project to know what to render.
-When you type `export`, the export system reads the current Project's
-settings to know what format and quality to use.
-
-There is no work without a Project. The Golden Rule of SuperManim is:
+Every single command you type in SuperManim operates on a Project. There
+is no work without a Project. The Golden Rule of SuperManim is:
 **no command can run unless a Project is currently open.**
 
----
+### Subsubsection 3.5.1.1: Where Is the Project File on Disk?
 
+```
+/home/mina/SuperManim/core/entities/project.py
+```
 
-### Subsection 3.5.2 The Three Roles of a Project
+## Subsection 3.5.2: The Three Roles of a Project
 
-A Project plays three roles at the same time.
+A Project plays three roles at the same time:
 
 ```
 +=====================================================================+
@@ -11249,32 +11303,26 @@ A Project plays three roles at the same time.
 |   ─────────────────────────────────────────────────────────────    |
 |   A Project contains a database file (project_data.db).             |
 |   This database is the project's long-term memory.                  |
-|   It remembers: how many scenes exist, what their durations are,    |
+|   It remembers: how many scenes exist, their durations,             |
 |   which ones were rendered, what the fingerprints are,              |
 |   what the export settings are, and everything else.                |
 |   Without this database the project is just an empty folder.        |
 |                                                                     |
 |   ROLE 3 — THE IDENTITY                                             |
 |   ─────────────────────────────────────────────────────────────    |
-|   A Project has a name, a creation timestamp, and a         |
-|   location. These identify it among all other projects.             |
+|   A Project has a name, a creation timestamp, and a location.       |
+|   These identify it among all other projects.                       |
 |   When you type "list projects", SuperManim reads the identity      |
 |   fields of all projects and shows them to you.                     |
 |                                                                     |
 +=====================================================================+
 ```
 
----
+## Subsection 3.5.3: The Physical Folder Structure of a Project
 
-
-### Subsection 3.5.3 The Physical Folder Structure of a Project
-
-When you type `new project MyAnimation` and press Enter, SuperManim
-does not just create a record in a database. It creates a real folder
-on your computer's disk with a specific structure inside it.
-
-Every subfolder inside the project has a specific purpose and is managed
-by a specific Service. Let us look at the complete structure:
+When you type `new project MyAnimation` and press Enter, SuperManim does
+not just create a record in a database. It creates a real folder on your
+computer's disk with a specific structure inside it:
 
 ```
 +=====================================================================+
@@ -11283,73 +11331,47 @@ by a specific Service. Let us look at the complete structure:
 |                                                                     |
 |   /projects/MyAnimation/                                            |
 |   |                                                                 |
-|   +-- project_data.db         THE BRAIN                            |
-|   |                           The SQLite database. Stores all       |
-|   |                           settings, scene records, hashes,      |
-|   |                           audio records, and history.           |
-|   |                           Without this file, the project        |
-|   |                           cannot be opened.                     |
+|   +-- project_data.db          THE BRAIN                           |
+|   |                            SQLite database. Stores all settings,|
+|   |                            scene records, hashes, audio records.|
+|   |                            Without this, project cannot open.  |
 |   |                                                                 |
-|   +-- audio_clips/            THE SOUND ROOM                        |
-|   |   +-- original_audio.mp3  The master audio file. Copied here   |
-|   |   |                       when user runs "add audio".           |
-|   |   +-- clip_001.mp3        Cut piece for Scene 1.               |
-|   |   +-- clip_002.mp3        Cut piece for Scene 2.               |
-|   |   +-- clip_003.mp3        Cut piece for Scene 3.               |
-|   |                           Managed by:   |
+|   +-- audio_clips/             THE SOUND ROOM                       |
+|   |   +-- original_audio.mp3   The master audio file.              |
+|   |   +-- clip_001.mp3         Cut piece for Scene 1.              |
+|   |   +-- clip_002.mp3         Cut piece for Scene 2.              |
+|   |   +-- clip_003.mp3         Cut piece for Scene 3.              |
 |   |                                                                 |
-|   +-- scenes/                 THE WORKSHOP                          |
-|   |   +-- scene_01/           Folder for Scene 1's files.          |
-|   |   +-- scene_02/           Folder for Scene 2's files.          |
-|   |   +-- scene_03/           Folder for Scene 3's files.          |
-|   |                           Each scene_XX/ folder holds the       |
-|   |                           Python code and any related files     |
-|   |                           for that specific scene.              |
-|   |                           Managed by:     |
+|   +-- scenes/                  THE WORKSHOP                         |
+|   |   +-- scene_01/            Folder for Scene 1's files.         |
+|   |   +-- scene_02/            Folder for Scene 2's files.         |
+|   |   +-- scene_03/            Folder for Scene 3's files.         |
 |   |                                                                 |
-|   +-- output/                 THE CINEMA                            |
-|   |   +-- scene_01/           Rendered .mp4 for Scene 1.           |
+|   +-- output/                  THE CINEMA                           |
+|   |   +-- scene_01/            Rendered .mp4 for Scene 1.          |
 |   |   |   +-- scene_01.mp4                                          |
-|   |   +-- scene_02/           Rendered .mp4 for Scene 2.           |
+|   |   +-- scene_02/            Rendered .mp4 for Scene 2.          |
 |   |   |   +-- scene_02.mp4                                          |
-|   |   +-- scene_03/           Rendered .mp4 for Scene 3.           |
+|   |   +-- scene_03/            Rendered .mp4 for Scene 3.          |
 |   |       +-- scene_03.mp4                                          |
-|   |                           This is where the final high-quality  |
-|   |                           video clips appear after rendering.   |
-|   |                           Managed by:    |
 |   |                                                                 |
-|   +-- previews/               THE DRAFT ROOM                        |
-|   |   +-- scene_01_preview.mp4  Low-quality 480p draft video.      |
-|   |   +-- scene_02_preview.mp4  Generated by "preview scene N".    |
-|   |                           Never used in the final export.       |
-|   |                           Managed by:  |
+|   +-- previews/                THE DRAFT ROOM                       |
+|   |   +-- scene_01_preview.mp4  Low-quality 480p draft.            |
+|   |   +-- scene_02_preview.mp4                                      |
 |   |                                                                 |
-|   +-- exports/                THE DELIVERY ROOM                     |
-|   |   +-- MyAnimation_final.mp4  The final assembled video.        |
-|   |                           This is the finished product:         |
-|   |                           all scenes stitched together.         |
-|   |                           Managed by:      |
+|   +-- exports/                 THE DELIVERY ROOM                    |
+|   |   +-- MyAnimation_final.mp4  The assembled final video.        |
 |   |                                                                 |
-|   +-- assets/                 THE LIBRARY                           |
-|   |   +-- images/             User-provided images (.png, .jpg)    |
-|   |   +-- fonts/              Custom fonts (.ttf, .otf)            |
-|   |   +-- videos/             Embedded video clips                  |
-|   |                           When Manim code needs an image or    |
-|   |                           font, it looks in assets/.            |
+|   +-- assets/                  THE LIBRARY                          |
+|   |   +-- images/              User-provided images (.png, .jpg)   |
+|   |   +-- fonts/               Custom fonts (.ttf, .otf)           |
+|   |   +-- videos/              Embedded video clips                 |
 |   |                                                                 |
-|   +-- cache/                  THE FINGERPRINT VAULT                 |
-|   |                           Stores SHA-256 hash fingerprints      |
-|   |                           for each scene's code file.           |
-|   |                           Used by the incremental render system |
-|   |                           to detect what changed.               |
-|   |                           Managed by:        |
+|   +-- cache/                   THE FINGERPRINT VAULT                |
+|   |                            SHA-256 hash files for change detect.|
 |   |                                                                 |
-|   +-- temp/                   THE TRASH BIN                         |
-|                               Temporary files created during        |
-|                               processing (audio conversion,         |
-|                               video assembly, etc.).                |
-|                               Automatically cleaned up after use.   |
-|                               You never need to look here.          |
+|   +-- temp/                    THE TRASH BIN                        |
+|                                Temporary files. Auto-cleaned.       |
 |                                                                     |
 +=====================================================================+
 ```
@@ -11360,190 +11382,77 @@ by a specific Service. Let us look at the complete structure:
 A Project Entity is a `@dataclass`. It is a pure data container.
 It holds all the information about one project. It does not create folders.
 It does not open databases. It does not print anything.
-The `ProjectLifecycleService` does those things by reading and writing
+The `ProjectService` does those things by reading and writing
 the fields of this Entity.
 
 Here is the complete Project Entity with every property:
 
 ```python
 # core/entities/project.py
-
 from __future__ import annotations
-from dataclasses import dataclass
-from typing import Optional
+from dataclasses import dataclass, field
+from typing import Optional, List, TYPE_CHECKING
 
+# Using TYPE_CHECKING to avoid circular imports during type hinting
+if TYPE_CHECKING:
+    from .media_unit import MediaUnit
+    from .render_settings import RenderSettings
+    from .audio_settings import AudioSettings
+    from .video_settings import VideoSettings
+    from .export_settings import ExportSettings
 
 @dataclass
 class Project:
     """
     The Project Entity represents one complete video production workspace.
-
-    This is a pure data container — the filing card for the whole project.
-    It holds all identifying information, location data, timestamps,
-    mode settings, export settings, render settings, and project-level
-    statistics.
-
-    It does not create folders, does not open databases, does not call
-    Manim or FFmpeg. It is just structured data.
+    It is a pure data container holding identifying info, location data, 
+    settings, and the list of media items.
     """
 
-    # ── IDENTITY ──────────────────────────────────────────────────────
-    project_name:               str
-   
-    # ── LOCATION ──────────────────────────────────────────────────────
-    project_folder_path:        Optional[str]       = None
-    project_db_path:            Optional[str]       = None
+    # -- IDENTITY --
+    project_name: str
 
-    # ── TIMESTAMPS ────────────────────────────────────────────────────
-    project_created_at:         Optional[str]       = None
-   
-    # ── STATE ─────────────────────────────────────────────────────────
-     project_total_scenes:       int                 = 0
-    project_total_duration:     float               = 0.0
+    # -- LOCATION --
+    # Paths for project folders and database storage
+    project_folder_path: Optional[str] = None
+    project_db_path: Optional[str] = None
 
-    # ── EXPORT SETTINGS ───────────────────────────────────────────────
-    export_format:              Optional[str]       = "mp4"
-    export_quality:             Optional[str]       = "high"
-    export_name:                Optional[str]       = None
-    export_output_path:         Optional[str]       = None
+    # -- TIMESTAMPS --
+    # ISO formatted strings for creation and last update
+    project_created_at: Optional[str] = None
+    
+    # -- CONTENT --
+    # List of MediaUnit objects (audio clips, video clips, or Manim scenes)
+    # Using field(default_factory=list) ensures a fresh list for every new project
+    project_items: List[MediaUnit] = field(default_factory=list)
 
-    # ── RENDER SETTINGS ───────────────────────────────────────────────
-    render_resolution:          str                 = "1920x1080"
-    render_fps:                 int                 = 60
-    render_background_color:    str                 = "#000000"
-
-    # ── PREVIEW SETTINGS ──────────────────────────────────────────────
-    preview_resolution:         str                 = "854x480"
-    preview_fps:                int                 = 30
-
-    # ── AUDIO SETTINGS ────────────────────────────────────────────────
-    audio_format:               str                 = "mp3"
-    audio_file_path:            Optional[str]       = None
-    audio_total_duration:       Optional[float]     = None
-
-    # ── STATISTICS ────────────────────────────────────────────────────
-    project_rendered_scenes:    int                 = 0
-    project_pending_scenes:     int                 = 0
-    project_failed_scenes:      int                 = 0
-    project_is_export_ready:    bool                = False
-
-   ```
-
----
-
-
-### Subsection 3.5.5 Every Property Explained in Depth
-
-The properties are grouped into 9 groups. Each group handles one
-aspect of what the Project needs to know about itself.
-
-A quick reference table for every property in the Project Entity:
-
-```
-+================================================================+
-|         PROJECT ENTITY — COMPLETE PROPERTY REFERENCE          |
-+================================================================+
-|                                                                |
-|  GROUP 1 — IDENTITY                                            |
-|  ──────────────────────────────────────────────────────────── |
-|   |
-|  project_name         str         Required. Human name.       |
-|                                                               |
-|  GROUP 2 — LOCATION                                            |
-|  ──────────────────────────────────────────────────────────── |
-|  project_folder_path  str | None  Path to project root folder.|
-|  project_db_path      str | None  Path to project_data.db.   |
-|                                                                |
-|  GROUP 3 — TIMESTAMPS                                          |
-|  ──────────────────────────────────────────────────────────── |
-|  project_created_at      str|None When project was created.   |
-|  project_updated_at      str|None When last modified.         |
-|           |
-|                                                                |
-|  GROUP 4 — STATE                                               |
-|  ──────────────────────────────────────────────────────────── |
-|                                                               |
-|  project_total_scenes    int      How many scenes exist.      |
-|  project_total_duration  float    Sum of all scene durations. |
-|                                                                |
-|  GROUP 5 — EXPORT SETTINGS                                     |
-|  ──────────────────────────────────────────────────────────── |
-|  export_format        str         mp4/webm/mov/avi.           |
-|  export_quality       str         low/medium/high/ultra.      |
-|  export_name          str | None  Custom output filename.     |
-|  export_output_path   str | None  Full path to final video.   |
-|                                                                |
-|  GROUP 6 — RENDER SETTINGS                                     |
-|  ──────────────────────────────────────────────────────────── |
-|  render_resolution       str      e.g. "1920x1080". Def 1080p.|
-|  render_fps              int      Frames per second. Def 60.  |
-|  render_background_color str      Hex color. Default black.   |
-|                                                                |
-|  GROUP 7 — PREVIEW SETTINGS                                    |
-|  ──────────────────────────────────────────────────────────── |
-|  preview_resolution   str         Always "854x480".           |
-|  preview_fps          int         Default 30.                  |
-|                                                                |
-|  GROUP 8 — AUDIO SETTINGS                                      |
-|  ──────────────────────────────────────────────────────────── |
-|  audio_format         str         mp3/wav/ogg/aac. Def "mp3". |
-|  audio_file_path      str | None  Path to original audio.     |
-|  audio_total_duration float|None  Total seconds of audio.     |
-|                                                                |
-|  GROUP 9 — STATISTICS                                          |
-|  ──────────────────────────────────────────────────────────── |
-|  project_rendered_scenes  int     Count of rendered scenes.   |
-|  project_pending_scenes   int     Count of pending scenes.    |
-|  project_failed_scenes    int     Count of failed scenes.     |
-|  project_is_export_ready  bool    True only if all rendered.  |
-|                                                                |
-+================================================================+
+    # -- SETTINGS (Optional components) --
+    project_render_settings:   Optional[RenderSettings]  = None
+    project_audio_settings:    Optional[AudioSettings]   = None
+    project_video_settings:    Optional[VideoSettings]   = None
+    project_export_settings:   Optional[ExportSettings]  = None
+    project_preview_settings:  Optional[PreviewSettings] = None
+    # -- STATE --
+    # 1 = Open (Active in memory), 0 = Closed
+    project_state: int = 0
 ```
 
----
+-
 
-**GROUP 1 — IDENTITY PROPERTIES**
 
-These properties answer the question: "Which Project is this and what
-kind of work does it do?"
+## Subsection 3.5.5: Every Property of the Project Entity Explained
 
----
-**project_name**
+### Subsubsection 3.5.5.1: GROUP 1 — Identity Properties
+
+#### Subsubsubsection 3.5.5.1.1: project_name
 
 **Type:** `str`
-**Default:** Required (no default — you must provide it)
+**Default:** Required — no default. Must be provided.
 **Example value:** `"MyAnimation"`, `"Chapter1_Intro"`, `"PythonTutorial"`
 
-The `project_name` is the human-readable name for this project. It is the
-name the user gave when they typed `new project MyAnimation`. It is also
-the name of the folder created on disk.
-
-The name is case-sensitive. `MyAnimation` and `myanimation` are two
-different projects. The `project_name` is used everywhere in the system:
-in terminal output, in folder creation, in the database filename, and in
-the default export filename.
-
-```
-project_name = "MyAnimation"
-
-Folder created:
-  /projects/MyAnimation/
-
-Database created:
-  /projects/MyAnimation/project_data.db
-
-Default export file produced:
-  /projects/MyAnimation/exports/MyAnimation_final.mp4
-
-Every status display shows it:
-  Project Status — MyAnimation
-  ==============================
-  Project: MyAnimation
-```
-
-The name cannot contain spaces. If a user tries to create a project with
-a space in the name, the `ValidationService.project_name_is_valid()`
-method refuses it immediately and explains why.
+The `project_name` is the human-readable name for this project. It is
+the name the user gave when they typed `new project MyAnimation`. It is
+also the name of the folder created on disk. The name cannot contain spaces.
 
 ```
 +-------------------------------------------------------------+
@@ -11563,693 +11472,113 @@ method refuses it immediately and explains why.
 +-------------------------------------------------------------+
 ```
 
----
-**GROUP 2 — LOCATION PROPERTIES**
+### Subsubsection 3.5.5.2: GROUP 2 — Location Properties
 
-These properties answer the question: "Where does this Project live
-on the computer's disk?"
-
----
-
-**project_folder_path**
+#### Subsubsubsection 3.5.5.2.1: project_folder_path
 
 **Type:** `Optional[str]`
 **Default:** `None`
 **Example value:** `"/home/user/projects/MyAnimation"`
 
-The `project_folder_path` is the full absolute path to the root folder
-of this project on your computer's file system. This is the top-level
-folder that contains all subfolders and the database file.
-
-When the `ProjectLifecycleService` creates a new project, it:
-1. Determines the path (the global projects directory plus the project name)
-2. Creates the folder using the `FileStoragePort`
-3. Stores the full path in this field
-
-Every file path stored elsewhere in the system — `scene_output_path`,
-`audio_clip_path`, `scene_code_path` — is either an absolute path or
-a path relative to `project_folder_path`.
+The full absolute path to the root folder of this project on your
+computer's file system. Every other file path in the system (scene output,
+audio clips, etc.) lives inside this root folder.
 
 ```
 project_folder_path = "/home/user/projects/MyAnimation"
 
-All subfolders are inside this root:
-  audio_clips/  =  project_folder_path + "/audio_clips/"
-  scenes/       =  project_folder_path + "/scenes/"
-  output/       =  project_folder_path + "/output/"
-  database      =  project_folder_path + "/project_data.db"
+All paths derived from this root:
+  audio_clips/ = project_folder_path + "/audio_clips/"
+  scenes/      = project_folder_path + "/scenes/"
+  output/      = project_folder_path + "/output/"
+  database     = project_folder_path + "/project_data.db"
 ```
 
----
-
-**project_db_path**
+#### Subsubsubsection 3.5.5.2.2: project_db_path
 
 **Type:** `Optional[str]`
 **Default:** `None`
 **Example value:** `"/home/user/projects/MyAnimation/project_data.db"`
 
-The `project_db_path` is the full path to the SQLite database file for
-this project. This is the brain of the project — the file that remembers
-everything about it across sessions.
-
+The full path to the SQLite database file for this project. This is the
+brain of the project — the file that remembers everything across sessions.
 When you type `open project MyAnimation`, the very first thing the system
 does is locate this file and open it. If this file is missing or corrupted,
 the project cannot be opened.
 
-The database file is always named `project_data.db` and always lives
-directly inside `project_folder_path`. The `project_db_path` stores the
-full path as a convenience so that any code that needs the database can
-read this one field instead of constructing the path from parts every time.
+### Subsubsection 3.5.5.3: GROUP 3 — Timestamp Properties
 
-```
-project_db_path = project_folder_path + "/project_data.db"
-               = "/home/user/projects/MyAnimation/project_data.db"
-```
-
----
-
-**GROUP 3 — TIMESTAMP PROPERTIES**
-
-These properties answer the question: "When was this Project created,
-when was it last changed, and when was it last used?"
-
-All three are strings in the format `"YYYY-MM-DD HH:MM:SS"`, set
-automatically by the system using `datetime.now()` — the exact same
-mechanism explained in the Scene Entity's `scene_rendered_at` field.
-The system reads the operating system clock, formats it as a string,
-and stores it.
-
----
-
-**project_created_at**
+#### Subsubsubsection 3.5.5.3.1: project_created_at
 
 **Type:** `Optional[str]`
 **Default:** `None`
 **Example value:** `"2024-11-10 09:00:15"`
 
-The `project_created_at` stores the exact date and time when this project
-was first created — when the user ran `new project MyAnimation` and
-the `ProjectLifecycleService` created all the folders and the database.
+The exact date and time when this project was first created. Written
+once at creation time and never changed again for the life of the project.
+It is the project's birth certificate.
 
-This timestamp is written exactly once — at creation time — and never
-changed again for the life of the project. It is the project's birth certificate.
 
-You see it in the `project info` output:
+### Subsubsection 3.5.5.4: GROUP 4 — State Properties
 
-```
-supermanim> project info
-
-  ==========================================
-  Project: MyAnimation
-  ==========================================
-  Mode:          supermanim
-  Created:       2024-11-10 09:00      <- project_created_at
-  Last modified: 2024-11-12 14:30
-  Location:      /projects/MyAnimation/
-```
-
-**project_total_scenes**
+#### Subsubsubsection 3.5.5.4.1: project_state
 
 **Type:** `int`
 **Default:** `0`
-**Example value:** `5`
+**Allowed values:** `0` or `1`
 
-The `project_total_scenes` stores the count of how many Scene records
-currently exist in this project. This is a cached counter that is
-updated automatically whenever a scene is added or deleted:
+`project_state = 1` means the project is currently open and active in
+memory. `project_state = 0` means the project is closed. This field is
+stored in the database so that if SuperManim crashes or is force-closed,
+the next session can detect that a project was previously open and offer
+to re-open it.
 
-```
-User types: set scenes_number 5
-  → 5 scenes created
-  → project_total_scenes = 5
+### Subsubsection 3.5.5.5: GROUP 5 — Render Settings Properties
 
-User types: add scene
-  → 1 more scene added
-  → project_total_scenes = 6
+Theis is  the project-level property for how scenes are rendered.
+This property is an optional property which means the project can have it or
+it can be None if the tool is used only to edits some audio files or even
+video files such as splitting them , change the audio formats of them
+in this case the project doesn't need this property but when dealing with
+redering manim code then you need it.The RenderSettings is an entity and
+it will be defined in the following section 
 
-User types: delete scene 6
-  → 1 scene removed
-  → project_total_scenes = 5
-```
 
-Caching this count means the status display can show the total instantly
-without running a SQL `COUNT` query every time.
 
----
 
-**project_total_duration**
+### Subsubsection 3.5.5.6: GROUP 6 — Preview Settings Properties
 
-**Type:** `float`
-**Default:** `0.0`
-**Example value:** `60.3`
+Theis is  the project-level property for how scenes are previewed.
+This property is an optional property which means the project can have it or
+it can be None if the tool is used only to edits some audio files or even
+video files such as splitting them , change the audio formats of them
+in this case the project doesn't need this property but when dealing with
+redering manim code and want ot preview them then you need it.The PreviewSettings is an entity and
+it will be defined in the following section `Section `
 
-The `project_total_duration` stores the sum of all scene durations in
-seconds. It is a cached computed value updated whenever any scene's
-duration changes.
 
-```
-If your project has 5 scenes with these durations:
-  Scene 1: 12.5s
-  Scene 2: 18.5s
-  Scene 3: 16.8s
-  Scene 4:  7.0s
-  Scene 5:  5.5s
-  ─────────────
-  project_total_duration = 60.3 seconds
-```
 
-This value is critical in `supermanim` mode. The `TimelineService`
-compares `project_total_duration` to `audio_total_duration`. If they
-are not equal, the audio cannot be perfectly synchronized with the video.
-This is the core requirement of the duration-matching rule.
+### Subsubsection 3.5.5.7: GROUP 7 — Audio Settings Properties
 
----
+Theis is  the project-level property for the audio settings these
+all the settings related to the audio this property is needed when the
+tool is used to edit audio file and also when dealing with audio file related
+to the manim code rednered video explained AudioSettings in section ..
 
-**GROUP 5 — EXPORT SETTINGS PROPERTIES**
+### Subsubsection 3.5.5.8: GROUP 8 — Export Settings Properties
 
-These properties answer the question: "When the user types `export`,
-what format, quality, and filename should the final video have?"
+Theis is  the project-level property for the export settings these
 
-Export settings persist between sessions because they are stored as
-part of the Project Entity in the database. You set them once and they
-stay until you deliberately change them.
+### Subsubsection 3.5.5.9: GROUP 9 — Project Items Statistics Properties
 
----
+this the propert of the list of all items the project have this list can be
+a list of audio clips
+a list of video clips
+a list of rendered manim code
 
-**export_format**
 
-**Type:** `str`
-**Default:** `"mp4"`
-**Example value:** `"mp4"`, `"webm"`, `"mov"`, `"avi"`
 
-The `export_format` determines the container format of the final assembled
-video file. The user sets this with `set export format mp4`.
-
-```
-+================================================================+
-|                  THE FOUR EXPORT FORMATS                       |
-+================================================================+
-|                                                                |
-|   "mp4"   <- THE DEFAULT                                       |
-|   ─────────────────────────────────────────────────────────── |
-|   The most widely supported video format in the world.         |
-|   Works on Windows, macOS, Linux, Android, iOS,                |
-|   all web browsers, YouTube, and every video player.           |
-|   Best choice for almost every project.                        |
-|   File extension: .mp4                                         |
-|                                                                |
-|   "webm"                                                       |
-|   ─────────────────────────────────────────────────────────── |
-|   An open format designed for web use.                         |
-|   Good for embedding videos directly in websites.              |
-|   Slightly smaller file sizes than mp4 at the same quality.    |
-|   Not supported by all desktop video players.                  |
-|   File extension: .webm                                        |
-|                                                                |
-|   "mov"                                                        |
-|   ─────────────────────────────────────────────────────────── |
-|   Apple QuickTime format.                                      |
-|   Used in professional editing tools on macOS                  |
-|   such as Final Cut Pro and Adobe Premiere.                    |
-|   Larger file sizes. Use only if your workflow requires it.    |
-|   File extension: .mov                                         |
-|                                                                |
-|   "avi"                                                        |
-|   ─────────────────────────────────────────────────────────── |
-|   An older Microsoft format.                                   |
-|   Very large file sizes. Limited modern support.               |
-|   Only use this if a specific tool specifically requires it.   |
-|   File extension: .avi                                         |
-|                                                                |
-+================================================================+
-```
-
----
-
-**export_quality**
-
-**Type:** `str`
-**Default:** `"high"`
-**Example value:** `"low"`, `"medium"`, `"high"`, `"ultra"`
-
-The `export_quality` determines the video resolution and bitrate of the
-final assembled video. The user sets this with `set export quality high`.
-
-```
-+================================================================+
-|                  THE FOUR EXPORT QUALITY LEVELS                |
-+================================================================+
-|                                                                |
-|   "low"     ->  480p   (854 x 480 pixels)                      |
-|   ─────────────────────────────────────────────────────────── |
-|   File size for a 60-second video:  approximately 40 MB        |
-|   Render and export time:           fastest                    |
-|   When to use:  quick sharing, internal drafts, testing only.  |
-|   Not suitable for public publishing.                          |
-|                                                                |
-|   "medium"  ->  720p   (1280 x 720 pixels)                     |
-|   ─────────────────────────────────────────────────────────── |
-|   File size for a 60-second video:  approximately 90 MB        |
-|   When to use:  web uploads, YouTube (acceptable quality),     |
-|   general-purpose sharing and distribution.                    |
-|                                                                |
-|   "high"    ->  1080p  (1920 x 1080 pixels)   <- DEFAULT       |
-|   ─────────────────────────────────────────────────────────── |
-|   File size for a 60-second video:  approximately 214 MB       |
-|   When to use:  the standard for most projects. Looks sharp    |
-|   on most screens. The right choice for YouTube HD uploads     |
-|   and professional educational content.                        |
-|                                                                |
-|   "ultra"   ->  4K     (3840 x 2160 pixels)                    |
-|   ─────────────────────────────────────────────────────────── |
-|   File size for a 60-second video:  approximately 850 MB       |
-|   When to use:  professional publishing, large-screen          |
-|   displays, archival quality. Very slow to export.             |
-|                                                                |
-+================================================================+
-```
-
-An important note: `export_quality` only affects the final assembly step
-where FFmpeg stitches all clips together. The individual scene renders
-in the `output/` folder are always produced at full resolution (controlled
-by `render_resolution`). This means you can render all scenes once at
-full quality and then export multiple times at different quality levels
-without re-rendering a single scene.
-
----
-
-**export_name**
-
-**Type:** `Optional[str]`
-**Default:** `None`
-**Example value:** `"IntroductionToCalculus_Episode1"`, `"FinalVersion_v3"`
-
-The `export_name` is the custom filename the user wants for the final
-exported video, without the file extension.
-
-When `export_name` is `None`, the system uses the `project_name` followed
-by `_final` as the default filename. For a project named `MyAnimation`,
-the default exported file is `MyAnimation_final.mp4`.
-
-When the user types `set export name IntroductionToCalculus_Episode1`,
-the system stores that name here. The next export command produces a
-file named `IntroductionToCalculus_Episode1.mp4`.
-
-The file extension is never stored in `export_name` — the system always
-adds it automatically based on `export_format`. This means if you change
-the format from `mp4` to `webm`, the file name automatically becomes
-`IntroductionToCalculus_Episode1.webm` without you needing to change
-the name setting.
-
-```
-export_name   = "IntroductionToCalculus_Episode1"
-export_format = "mp4"
-Result:  exports/IntroductionToCalculus_Episode1.mp4
-
-If format changes to "webm":
-Result:  exports/IntroductionToCalculus_Episode1.webm
-(name setting unchanged, extension updates automatically)
-```
-
----
-
-**export_output_path**
-
-**Type:** `Optional[str]`
-**Default:** `None`
-**Example value:** `"exports/MyAnimation_final.mp4"`
-
-The `export_output_path` stores the full path to the final exported video
-after it has been successfully assembled by FFmpeg. It is `None` until
-the `export` command runs and completes without errors.
-
-After a successful export, this field tells the system (and the user)
-exactly where to find the finished video. The system uses it in the
-`open output` command to navigate directly to the file.
-
-This field is set automatically by `ProjectExportService`. You never
-set it manually.
-
----
-
-**GROUP 6 — RENDER SETTINGS PROPERTIES**
-
-These properties define the visual quality and appearance defaults for
-all rendered animation scenes in this project. They are the project-level
-defaults. Individual Scene objects have their own corresponding fields
-(`scene_resolution`, `scene_fps`, `scene_background_color`) that can
-override these project defaults for specific scenes.
-
----
-
-**render_resolution**
-
-**Type:** `str`
-**Default:** `"1920x1080"`
-**Example value:** `"1920x1080"`, `"3840x2160"`, `"1280x720"`, `"854x480"`
-
-The `render_resolution` is the default pixel dimensions for all rendered
-scenes in this project, stored as `"widthxheight"`.
-
-This value is passed to Manim as a command-line argument when rendering
-each scene. It tells Manim how large to make each frame of the animation.
-
-All scenes in a project should use the same resolution because when FFmpeg
-assembles them into the final video, every clip must have identical
-dimensions. Mixing resolutions will cause FFmpeg to fail or produce a
-broken video with mismatched frames.
-
-```
-+-------------------------------------------------------------+
-|   COMMON RENDER RESOLUTIONS                                 |
-+-------------------------------------------------------------+
-|                                                             |
-|   "854x480"    ->  480p   Fast. Low quality. Testing only.  |
-|   "1280x720"   ->  720p   HD. Good balance.                 |
-|   "1920x1080"  ->  1080p  Full HD. DEFAULT. Best for most.  |
-|   "3840x2160"  ->  4K.    Ultra HD. Very slow render.       |
-|                                                             |
-+-------------------------------------------------------------+
-```
-
----
-
-**render_fps**
-
-**Type:** `int`
-**Default:** `60`
-**Example value:** `24`, `30`, `60`
-
-The `render_fps` is the default frame rate for all rendered scenes in this
-project — how many frames Manim draws per second of animation.
-
-```
-+-------------------------------------------------------------+
-|   WHAT FRAME RATE MEANS FOR RENDER TIME                     |
-+-------------------------------------------------------------+
-|                                                             |
-|   For a 16.8-second scene:                                  |
-|   At 24 fps  ->  16.8 x 24  =  403 frames to draw          |
-|   At 30 fps  ->  16.8 x 30  =  504 frames to draw          |
-|   At 60 fps  ->  16.8 x 60  = 1008 frames to draw          |
-|                                                             |
-|   Higher fps = smoother motion = more frames = slower render|
-|                                                             |
-|   24 fps:  Cinema standard. Smooth enough for most video.   |
-|   30 fps:  TV standard. Good for educational animations.    |
-|   60 fps:  Very smooth. Best for fast-moving animations.    |
-|                                                             |
-+-------------------------------------------------------------+
-```
----
-
-**GROUP 7 — PREVIEW SETTINGS PROPERTIES**
-
-These properties define how preview videos are generated for scenes in
-this project. They are intentionally separate from and lower-quality than
-the render settings because the preview system's entire purpose is speed.
-
----
-
-**preview_resolution**
-
-**Type:** `str`
-**Default:** `"854x480"`
-
-The `preview_resolution` is fixed at `"854x480"` (480p) regardless of
-what `render_resolution` is set to. This is not a user-configurable setting.
-It is a system constant.
-
-The reason it is fixed: the entire purpose of the preview system is to
-generate a quick, rough draft that the user can check visually in seconds
-instead of minutes. Making the preview the same resolution as the final
-render would completely defeat that purpose.
-
-A 480p frame has roughly 410,000 pixels. A 1080p frame has roughly
-2,070,000 pixels — five times more pixels. This means a preview renders
-approximately five times faster than a full render.
-
----
-
-**preview_fps**
-
-**Type:** `int`
-**Default:** `30`
-
-The `preview_fps` is the frame rate used for preview videos. It defaults
-to 30fps rather than the 60fps used for full renders. Fewer frames per
-second means fewer frames to draw, which means faster generation.
-
-A 30fps preview takes half the time of a 60fps full render, on top of
-the speed savings already gained from the lower resolution. Together,
-a preview can be ready in seconds where a full render takes minutes.
-
----
-
-**GROUP 8 — AUDIO SETTINGS PROPERTIES**
-
-These properties are primarily used in `supermanim` . They store the
-project-level audio configuration — what audio file the user added and
-what its properties are.
-
----
-
-audio_format
-
-**Type:** `str`
-**Default:** `"mp3"`
-**Example value:** `"mp3"`, `"wav"`, `"ogg"`, `"aac"`, `"flac"`, `"m4a"`
-
-The `audio_format` stores the file format of the original audio file
-that was added to the project. When the user runs `add audio voice.mp3`,
-the system reads the `.mp3` extension and stores `"mp3"` here.
-
-When the user runs `change audio_format wav`, the `AudioPreparationService`
-converts the file using FFmpeg and updates this field to `"wav"`.
----
-
-**audio_file_path**
-
-**Type:** `Optional[str]`
-**Default:** `None`
-**Example value:** `"audio_clips/original_audio.mp3"`
-
-The `audio_file_path` stores the path to the original full-length audio
-file that was copied into the project when the user ran `add audio voice.mp3`.
-
-This is the master audio file — the complete, uncut narration or music
-track. All `AudioClip` objects (the smaller pieces for individual scenes)
-are derived from this file .
-
----
-
-**audio_total_duration**
-
-**Type:** `Optional[float]`
-**Default:** `None`
-**Example value:** `60.3`
-
-The `audio_total_duration` stores the total length of the original audio
-file in seconds. It is read automatically from the audio file when the
-user runs `add audio voice.mp3` — the system uses the `AudioAnalyzerPort`
-to measure the file and stores the result here.
-
-The core synchronization rule of SuperManim is:
-
-```
-+-------------------------------------------------------------+
-|   THE SYNCHRONIZATION RULE                                  |
-+-------------------------------------------------------------+
-|                                                             |
-|   project_total_duration  ==  audio_total_duration          |
-|                                                             |
-|   Example (PASS):                                           |
-|   project_total_duration  =  60.3 seconds                   |
-|   audio_total_duration    =  60.3 seconds                   |
-|   Result: MATCH. The video will sync perfectly.             |
-|                                                             |
-|   Example (FAIL):                                           |
-|   project_total_duration  =  58.0 seconds                   |
-|   audio_total_duration    =  60.3 seconds                   |
-|   Result: MISMATCH. 2.3 seconds of audio will have          |
-|   no matching video. WARNING is shown.                      |
-|                                                             |
-+-------------------------------------------------------------+
-```
-
-The `TimelineService.total_matches_audio()` domain service method
-compares these two values to check this rule.
-
----
-
-**GROUP 9 — STATISTICS PROPERTIES**
-
-These properties answer the question: "Right now, how many scenes are
-rendered, how many are still waiting, and is the project ready to export?"
-
-These are all cached counters. They are updated automatically whenever
-a scene's status changes, so the system can read them instantly without
-running a database count query.
-
----
-
-**project_rendered_scenes**
-
-**Type:** `int`
-**Default:** `0`
-**Example value:** `3`
-
-The count of scenes currently with `scene_status = "rendered"`. Updated
-automatically whenever a scene render succeeds (count goes up by 1) or
-whenever a rendered scene is reset to pending for any reason (count goes down).
-
-Shown in the project info:
-
-```
-  SCENES
-  ------
-  Total:         5
-  Rendered:      3    <- project_rendered_scenes
-  Pending:       1
-  Failed:        1
-```
-
----
-
-**project_pending_scenes**
-
-**Type:** `int`
-**Default:** `0`
-**Example value:** `1`
-
-The count of scenes currently with `scene_status = "pending"` — scenes
-that have been created and configured but have never been successfully rendered.
-Every newly created scene starts as pending and increments this counter.
-
-When a pending scene is successfully rendered, this counter decreases
-by 1 and `project_rendered_scenes` increases by 1.
-
----
-
-**project_failed_scenes**
-
-**Type:** `int`
-**Default:** `0`
-**Example value:** `1`
-
-The count of scenes currently with `scene_status = "failed"` — scenes
-where a render attempt was made but Manim returned an error. When the user
-fixes the code error and successfully re-renders the scene, the count
-decreases and `project_rendered_scenes` increases.
-
----
-
-**project_is_export_ready**
-
-**Type:** `bool`
-**Default:** `False`
-
-The `project_is_export_ready` flag is the single most important readiness
-signal for the entire project. It is `True` only when all of the following
-conditions are true at the same time:
-
-```
-project_is_export_ready = True   when:
-  project_total_scenes    > 0    (the project is not empty)
-  project_pending_scenes == 0    (nothing is waiting to be rendered)
-  project_failed_scenes  == 0    (nothing has failed)
-```
-
-In other words: only when every single scene in the project has been
-successfully rendered does this flag become `True`.
-
-The `export` command checks this flag first. If it is `False`, the export
-is refused before anything else happens, and the user is shown exactly
-which scenes need fixing.
-
-```
-+================================================================+
-|   project_is_export_ready — FULL LIFECYCLE                     |
-+================================================================+
-|                                                                |
-|   PROJECT CREATED (5 scenes, none rendered):                   |
-|   total=5  rendered=0  pending=5  failed=0                     |
-|   project_is_export_ready = False   <- cannot export yet       |
-|                                                                |
-|   AFTER RENDERING SCENES 1, 2, 3:                              |
-|   total=5  rendered=3  pending=2  failed=0                     |
-|   project_is_export_ready = False   <- still not ready         |
-|                                                                |
-|   SCENE 4 RENDERS WITH AN ERROR:                               |
-|   total=5  rendered=3  pending=1  failed=1                     |
-|   project_is_export_ready = False   <- one scene failed        |
-|                                                                |
-|   USER FIXES SCENE 4 AND RE-RENDERS. SCENE 5 ALSO RENDERS:    |
-|   total=5  rendered=5  pending=0  failed=0                     |
-|   project_is_export_ready = True    <- ALL RENDERED. EXPORT!   |
-|                                                                |
-+================================================================+
-```
-
----
-
-**A REAL PROJECT OBJECT IN FULL**
-
-Here is what a fully populated Project object looks like for a real
-SuperManim project called `MyAnimation` — after the user has set
-everything up, rendered all five scenes, and is ready to export.
-
-```python
-Project(
-    # ── IDENTITY ────────────────────────────────────────────────
-       project_name             = "MyAnimation",
-       # ── LOCATION ────────────────────────────────────────────────
-    project_folder_path      = "/home/user/projects/MyAnimation",
-    project_db_path          = "/home/user/projects/MyAnimation/project_data.db",
-
-    # ── TIMESTAMPS ──────────────────────────────────────────────
-    project_created_at       = "2024-11-10 09:00:15",
-   
-    # ── STATE ───────────────────────────────────────────────────
-       project_total_scenes     = 5,
-    project_total_duration   = 60.3,
-
-    # ── EXPORT SETTINGS ─────────────────────────────────────────
-    export_format            = "mp4",
-    export_quality           = "high",
-    export_name              = "IntroductionToCalculus_Episode1",
-    export_output_path       = None,        # not yet exported
-
-    # ── RENDER SETTINGS ─────────────────────────────────────────
-    render_resolution        = "1920x1080",
-    render_fps               = 60,
-   
-    # ── PREVIEW SETTINGS ────────────────────────────────────────
-    preview_resolution       = "854x480",
-    preview_fps              = 30,
-
-    # ── AUDIO SETTINGS ──────────────────────────────────────────
-    audio_format             = "mp3",
-    audio_file_path          = "audio_clips/original_audio.mp3",
-    audio_total_duration     = 60.3,        # matches project_total_duration
-
-    # ── STATISTICS ──────────────────────────────────────────────
-    project_rendered_scenes  = 5,
-    project_pending_scenes   = 0,
-    project_failed_scenes    = 0,
-    project_is_export_ready  = True,        # ready — all 5 scenes rendered
-)
-```
-
-Just by reading this object you know everything about the project:
-it has 5 scenes totalling 60.3 seconds,the audio file is also 60.3 seconds
-so durations match, all 5 scenes are rendered, the export settings are
-configured for a high-quality mp4 named `IntroductionToCalculus_Episode1.mp4`,
-and it is ready to export right now with a single `export` command.
-
----
-
-**HOW A PROJECT IS BORN — THE COMPLETE CREATION FLOW**
+### Subsection 3.5.6 HOW A PROJECT IS BORN — THE COMPLETE CREATION FLOW
 
 When the user types `new project MyAnimation` and presses Enter, here
 is the complete step-by-step sequence of everything that happens from
@@ -12329,1267 +11658,1338 @@ that moment until the project is ready to use:
 +=====================================================================+
 ```
 
----
 
 
 
-## Section 3.6 Entity 4 — AudioFile
 
+# Section 3.6: Entity 4 — MediaUnit
 
-### Subsection 3.6.1 What is an AudioFile, Really?
+## Subsection 3.6.1: What Is MediaUnit?
 
-Before we look at any code or any property names, let us build a completely
-clear picture of what an AudioFile actually IS inside SuperManim.
+`MediaUnit` is the **abstract base class** for all media items that can
+appear on a SuperManim project timeline. It is NOT a concrete thing you
+create directly — you can never write `MediaUnit(...)` in your code.
+Instead, it is the shared parent class that concrete media types
+(`AudioClip`, `VideoClip`, and `Scene`) all inherit from.
 
-An AudioFile represents the original, complete, uncut audio recording
-that the user adds to a project. When you record yourself explaining
-a concept for 60 seconds and save it as `voice.mp3`, that entire recording
-is the AudioFile. It is the master — the source of everything audio-related
-in the project.
-
-Think of the AudioFile like the original master tape in a recording studio.
-When a musician records an album, they first make one complete master recording.
-Everything else — the individual song tracks, the mixed versions, the radio edits
-— comes from that master. The master itself is never modified.
-In SuperManim, the AudioFile is that master tape.
+Think of it like this: in the real world, you might have audio clips,
+video clips, and Manim animation scenes. They are all very different
+things. But they all share one fundamental characteristic — they occupy
+a stretch of time. They have a start point, an end point, and a duration.
+`MediaUnit` is the concept that captures this shared characteristic.
 
 ```
 +=====================================================================+
-|                WHAT HAPPENS TO AN AUDIOFILE                         |
+|              THE MEDIAUNIT INHERITANCE HIERARCHY                     |
 +=====================================================================+
 |                                                                     |
-|   User records voice.mp3 (60.3 seconds of narration)               |
+|                      MediaUnit  (Abstract)                           |
+|                      ─────────────────────                          |
+|                       unit_type: str                                |
+|                       file_path: Optional[str]                      |
+|                       start_time: Optional[int]                     |
+|                       end_time: Optional[int]                       |
+|                       duration: Optional[int]                       |
 |                                                                     |
-|   User types: add audio voice.mp3                                   |
+|         ┌────────────────┬─────────────────┬───────────────┐        |
+|         │                │                 │               │        |
+|     AudioClip        VideoClip           Scene         (future)     |
+|     ──────────       ──────────         ──────                      |
+|     + audio_clip_id  + video_clip_id   + scene_id                   |
+|     + audio_format   + video_format    + scene_code_path            |
+|     + sample_rate    + fps             + scene_fps                  |
+|     + channels       + resolution      + scene_map                  |
+|     + is_synced      + has_audio        + hashes                    |
 |                                                                     |
-|   SuperManim copies it to the project:                              |
-|   audio_clips/original_audio.mp3                                    |
-|                                                                     |
-|   This copy becomes the AudioFile Entity.                           |
-|   The AudioFile is NEVER cut, NEVER modified directly.              |
-|   It is the read-only source.                                       |
-|                                                                     |
-|   Later, SuperManim cuts it into AudioClips:                        |
-|   audio_clips/clip_001.mp3   (12.5 seconds, for Scene 1)           |
-|   audio_clips/clip_002.mp3   (18.5 seconds, for Scene 2)           |
-|   audio_clips/clip_003.mp3   (16.8 seconds, for Scene 3)           |
-|   audio_clips/clip_004.mp3   ( 7.0 seconds, for Scene 4)           |
-|   audio_clips/clip_005.mp3   ( 5.5 seconds, for Scene 5)           |
-|                                                                     |
-|   The AudioFile is Entity 4.                                        |
-|   The AudioClips are Entity 5.                                      |
-|   They are completely separate things.                              |
+|   All three inherit start_time, end_time, duration, file_path       |
+|   from MediaUnit. They just add their own specific fields.          |
 |                                                                     |
 +=====================================================================+
 ```
 
-An AudioFile is different from an AudioClip in two key ways.
-First, there is only ever ONE AudioFile per project. A project has one
-master recording. But a project can have many AudioClips — one for each scene.
-Second, the AudioFile is the source that AudioClips are derived from.
-You never modify the AudioFile directly. You only read from it and cut pieces out of it.
-
----
-
-
-### Subsection 3.6.2 The Two Things an AudioFile Knows
-
-An AudioFile Entity knows two categories of things about itself.
-
-The first category is what the file IS — its identity and location.
-What is its name? Where is it stored? What format is it in?
-
-The second category is what the file SOUNDS like — its technical properties.
-How long is it in seconds? What is its sample rate? How many audio channels does it have?
-What is its file size on disk?
+### Subsubsection 3.6.1.1: Where Is the MediaUnit Class Defined on Disk?
 
 ```
-+=====================================================================+
-|              TWO CATEGORIES OF AUDIOFILE KNOWLEDGE                  |
-+=====================================================================+
-|                                                                     |
-|   CATEGORY 1 — IDENTITY AND LOCATION                                |
-|   What is this file? Where is it?                                   |
-|                                                                     |
-|   audio_file_id         The unique database ID.                     |
-|                                                                     |
-|   original_path         Where the user's file came from on disk.    |
-|   stored_path           Where the copy lives in the project folder. |
-|   original_filename     The original name (e.g. "voice.mp3")        |
-|   audio_format          The file format: mp3, wav, ogg, etc.        |
-|   audio_added_at        When the user ran "add audio".              |
-|                                                                     |
-|   CATEGORY 2 — TECHNICAL AUDIO PROPERTIES                           |
-|   What does this file sound like?                                   |
-|                                                                     |
-|   audio_total_duration  Total length in seconds (e.g. 60.3)        |
-|   audio_sample_rate     Samples per second (e.g. 44100 Hz)         |
-|   audio_channels        1 = mono, 2 = stereo                        |
-|   audio_bit_rate        Bits per second of audio data               |
-|   audio_file_size_bytes File size on disk in bytes                  |
-|   audio_is_split        Has it been cut into clips yet?             |
-|   audio_clip_count      How many clips were cut from it             |
-|                                                                     |
-+=====================================================================+
+/home/mina/SuperManim/core/entities/media_unit.py
 ```
 
----
-
-
-### Subsection 3.6.3 The Full Python Class
+## Subsection 3.6.2: The Full Python Class of MediaUnit
 
 ```python
-# core/entities/audio_file.py
+# File location: /home/mina/SuperManim/core/entities/media_unit.py
 
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
+from abc import ABC, abstractmethod
 
 
 @dataclass
-class AudioFile:
+class MediaUnit(ABC):
     """
-    The AudioFile Entity represents the original, complete audio recording
-    that the user adds to the project.
+    MediaUnit is the abstract base class for all media items that
+    can appear on a SuperManim project timeline.
 
-    This is a pure data container. It holds all information about the master
-    audio file — its location on disk, its format, its duration, and its
-    technical properties.
+    Every concrete media type (AudioClip, VideoClip, Scene) inherits
+    from this class. By inheriting, each subclass is GUARANTEED to
+    have a unit_type, a file_path, and timing properties (start_time,
+    end_time, duration). The Project entity can then hold a single
+    list[MediaUnit] and work with all types uniformly.
 
-    There is exactly ONE AudioFile per project.
-    All AudioClips (the cut pieces) are derived from this AudioFile.
+    This class is abstract — you CANNOT instantiate it directly:
+        unit = MediaUnit(...)     ← This will raise a TypeError.
 
-    It does not play audio, does not call FFmpeg, does not open files.
-    It is just structured data.
+    You CAN instantiate its concrete subclasses:
+        clip = AudioClip(...)     ← This works fine.
+        clip = VideoClip(...)     ← This works fine.
+        scene = Scene(...)        ← This works fine.
+
+    All timing values are integers in MILLISECONDS.
     """
 
-    # ── IDENTITY ──────────────────────────────────────────────────────
-    audio_file_id:          int
-   
-    # ── LOCATION ──────────────────────────────────────────────────────
-    original_path:          Optional[str]   = None
-    stored_path:            Optional[str]   = None
-    original_filename:      Optional[str]   = None
+    # ── CORE IDENTITY ─────────────────────────────────────────────────
+    # unit_type tells the system what kind of media item this is.
+    # Allowed values: "audio_clip", "video_clip", "scene"
+    unit_type:      str
 
-    # ── FORMAT ────────────────────────────────────────────────────────
-    audio_format:           str             = "mp3"
+    # ── FILE LOCATION ─────────────────────────────────────────────────
+    # The path to the media file on disk that this unit represents.
+    file_path:      Optional[str]   = None
 
-    # ── DURATION AND TECHNICAL PROPERTIES ─────────────────────────────
-    audio_total_duration:   Optional[float] = None
-    audio_sample_rate:      Optional[int]   = None
-    audio_channels:         int             = 1
-    audio_bit_rate:         Optional[int]   = None
-    audio_file_size_bytes:  Optional[int]   = None
-
-    # ── STATE ─────────────────────────────────────────────────────────
-    audio_is_split:         bool            = False
-    audio_clip_count:       int             = 0
-    audio_added_at:         Optional[str]   = None
-
-   ```
-
----
-
-
-### Subsection 3.6.4 Every Property Explained in Depth
-
-```
-+================================================================+
-|         AUDIOFILE ENTITY — COMPLETE PROPERTY REFERENCE        |
-+================================================================+
-|                                                                |
-|  GROUP 1 — IDENTITY                                            |
-|  ──────────────────────────────────────────────────────────── |
-|  audio_file_id        int         Required. Unique DB key.    |
-|  |                                                                |
-|  GROUP 2 — LOCATION                                            |
-|  ──────────────────────────────────────────────────────────── |
-|  original_path        str | None  Where the user's file was.  |
-|  stored_path          str | None  Where the copy lives.       |
-|  original_filename    str | None  The original file name.     |
-|                                                                |
-|  GROUP 3 — FORMAT                                              |
-|  ──────────────────────────────────────────────────────────── |
-|  audio_format         str         mp3/wav/ogg/aac/flac/m4a.  |
-|                                   Default: "mp3".              |
-|                                                                |
-|  GROUP 4 — TECHNICAL PROPERTIES                                |
-|  ──────────────────────────────────────────────────────────── |
-|  audio_total_duration float|None  Total length in seconds.    |
-|  audio_sample_rate    int | None  Hz. Usually 44100 or 48000. |
-|  audio_channels       int         1=mono, 2=stereo. Def: 1.  |
-|  audio_bit_rate       int | None  Bits per second.            |
-|  audio_file_size_bytes int|None   File size in bytes.         |
-|                                                                |
-|  GROUP 5 — STATE                                               |
-|  ──────────────────────────────────────────────────────────── |
-|  audio_is_split       bool        Has it been cut yet?        |
-|                                   Default: False.              |
-|  audio_clip_count     int         How many clips were cut.    |
-|                                   Default: 0.                  |
-|  audio_added_at       str | None  Timestamp of "add audio".   |
-|                                                                |
-+================================================================+
+    # ── TIMING (in milliseconds) ───────────────────────────────────────
+    # These represent where this media unit sits in the timeline.
+    # start_time and end_time are positions in the OVERALL project video.
+    # duration is the length of this media unit itself.
+    start_time:     Optional[int]   = None
+    end_time:       Optional[int]   = None
+    duration:       Optional[int]   = None
 ```
 
+## Subsection 3.6.3: Why Does MediaUnit Exist?
+
+Without `MediaUnit`, the `Project` entity would need a separate list for
+each media type:
+
+```python
+# WITHOUT MediaUnit (fragile, closed design):
+@dataclass
+class Project:
+    audio_clips: list = field(default_factory=list)   # List[AudioClip]
+    video_clips: list = field(default_factory=list)   # List[VideoClip]
+    scenes:      list = field(default_factory=list)   # List[Scene]
+    # Problem 1: Every time you add a new media type (e.g., ImageSlide),
+    #            you must add a new list HERE and update EVERY service
+    #            that iterates over project items.
+    # Problem 2: You cannot treat all items as one unified timeline.
+```
+
+With `MediaUnit`, the `Project` entity has ONE unified list:
+
+```python
+# WITH MediaUnit (open, extensible design):
+@dataclass
+class Project:
+    project_items: list = field(default_factory=list)   # List[MediaUnit]
+    # AudioClip, VideoClip, and Scene ALL go into this same list.
+    # Adding a brand new media type (e.g., ImageSlide) requires:
+    #   - Creating the new class that inherits from MediaUnit
+    #   - That's it. No changes to Project needed.
+```
+
+This is called the **Open/Closed Principle** — the system is open for
+extension (add new types) but closed for modification (existing code does
+not change when you add new types).
+
+## Subsection 3.6.4: How Subclasses Use MediaUnit
+
+When you define `AudioClip(MediaUnit)`, Python copies all of MediaUnit's
+fields into `AudioClip` automatically. You just add the AudioClip-specific
+fields on top:
+
+```python
+# AudioClip inherits from MediaUnit:
+@dataclass
+class AudioClip(MediaUnit):
+    # These fields come from MediaUnit (inherited automatically):
+    #   unit_type, file_path, start_time, end_time, duration
+
+    # These fields are AudioClip-specific (defined here):
+    audio_clip_id:      int        = 0
+    audio_clip_format:  str        = "mp3"
+    audio_clip_channels: int       = 1
+    audio_clip_is_synced: bool     = False
+    # ... and more
+```
+
+When the system iterates over `project.project_items` to build the
+timeline, it can treat every item identically because they all have
+`start_time`, `end_time`, and `duration`. When the audio sync service
+needs to check if an item is an audio clip, it checks `unit.unit_type`.
+
 ---
 
-GROUP 1 — IDENTITY PROPERTIES
+# Section 3.7: Entity 5 — AudioClip
 
----
+## Subsection 3.7.1: What Is an AudioClip?
 
-audio_file_id
+An `AudioClip` is one cut piece of the master audio file. It is a specific
+time segment of the original full-length recording — the piece that belongs
+to and will play alongside a single specific Scene.
+
+When the user runs `split audio 4` (split the master audio into 4 pieces,
+one for each scene), the system uses FFmpeg to cut the audio file into
+pieces. Each piece is saved to disk, and an `AudioClip` Entity is created
+to record all the metadata about that piece.
+
+```
++=====================================================================+
+|          THE MASTER AUDIO BECOMES INDIVIDUAL AUDIOCLIPS             |
++=====================================================================+
+|                                                                     |
+|   MASTER AUDIO FILE                                                 |
+|   original_audio.mp3  (60000 ms = 60.0 seconds total)              |
+|   ─────────────────────────────────────────────────────────────    |
+|   │                                                               | |
+|   │  0ms ────── 12500ms ────── 31000ms ──── 47800ms ──── 60000ms | |
+|   │                                                               | |
+|   ────────────────────────────────────────────────────────────     |
+|         ↓              ↓              ↓              ↓              |
+|   AudioClip 1    AudioClip 2    AudioClip 3    AudioClip 4          |
+|   clip_001.mp3   clip_002.mp3   clip_003.mp3   clip_004.mp3         |
+|   (0-12500ms)    (12500-31000ms)(31000-47800ms)(47800-60000ms)      |
+|   12.5 seconds   18.5 seconds   16.8 seconds   12.2 seconds         |
+|                                                                     |
+|   Scene 1 ────↑  Scene 2 ────↑  Scene 3 ────↑  Scene 4 ────↑       |
+|   (each clip is linked to the scene it plays with)                  |
+|                                                                     |
++=====================================================================+
+```
+
+### Subsubsection 3.7.1.1: Where Is the AudioClip Class Defined on Disk?
+
+```
+/home/mina/SuperManim/core/entities/audio_clip.py
+```
+
+## Subsection 3.7.2: The Full Python Class of the AudioClip Entity
+
+```python
+# File location: /home/mina/SuperManim/core/entities/audio_clip.py
+
+from __future__ import annotations
+from dataclasses import dataclass
+from typing import Optional
+from core.entities.media_unit import MediaUnit
+
+
+@dataclass
+class AudioClip(MediaUnit):
+    """
+    The AudioClip Entity represents one cut section of the master audio file.
+
+    It is a pure data container. It holds information about a specific
+    audio clip file on disk — its path, its timing, its format, and its
+    relationship to a Scene.
+
+    It does NOT call FFmpeg. It does NOT read audio files from disk.
+    It does NOT play audio. It does NOT call print(). It is just data.
+
+    TIMING NOTE:
+    The timing fields inherited from MediaUnit (start_time, end_time,
+    duration) use milliseconds like all other entities.
+
+    The AudioClip-specific timing fields (audio_clip_duration,
+    audio_clip_start_time, audio_clip_end_time) store values in
+    SECONDS as floats — because this is the native unit used by audio
+    file metadata and audio analysis tools like librosa and FFprobe.
+    """
+
+    # ── GROUP 1 — IDENTITY ────────────────────────────────────────────
+    audio_clip_id:              int             = 0
+    audio_file_id:              int             = 0
+
+    # ── GROUP 2 — ORDERING AND LINKING ───────────────────────────────
+    audio_clip_index:           int             = 0
+    scene_id:                   Optional[int]   = None
+
+    # ── GROUP 3 — LOCATION ────────────────────────────────────────────
+    audio_clip_path:            Optional[str]   = None
+
+    # ── GROUP 4 — FORMAT ──────────────────────────────────────────────
+    audio_clip_format:          str             = "mp3"
+
+    # ── GROUP 5 — TIMING (in SECONDS as floats — audio convention) ────
+    audio_clip_duration:        Optional[float] = None
+    audio_clip_start_time:      Optional[float] = None
+    audio_clip_end_time:        Optional[float] = None
+
+    # ── GROUP 6 — TECHNICAL PROPERTIES ───────────────────────────────
+    audio_clip_sample_rate:     Optional[int]   = None
+    audio_clip_channels:        int             = 1
+    audio_clip_file_size_bytes: Optional[int]   = None
+
+    # ── GROUP 7 — STATE ───────────────────────────────────────────────
+    audio_clip_is_synced:       bool            = False
+    audio_clip_created_at:      Optional[str]   = None
+
+    # NOTE: The unit_type field (inherited from MediaUnit) is always
+    # set to "audio_clip" for AudioClip instances. It tells the system
+    # what type of MediaUnit this is when iterating over project_items.
+    # Set it explicitly when creating an AudioClip:
+    #   AudioClip(unit_type="audio_clip", audio_clip_id=3, ...)
+```
+
+## Subsection 3.7.3: Every Property of the AudioClip Entity Explained
+
+### Subsubsection 3.7.3.1: GROUP 1 — Identity Properties
+
+#### Subsubsubsection 3.7.3.1.1: audio_clip_id
 
 **Type:** `int`
-**Default:** Required
-**Example value:** `1`
+**Default:** `0` (should always be set to a real value when creating)
+**Example value:** `3`
 
-The `audio_file_id` is the unique number that identifies this AudioFile
-in the database. Since there is only ONE AudioFile per project, this will
-almost always be `1`. The database uses this as the primary key when
-storing or loading the AudioFile record.
+The unique identifier for this AudioClip within the project. No two
+AudioClips in the same project share the same `audio_clip_id`. Used as
+the primary key in the database.
 
----
-GROUP 2 — LOCATION PROPERTIES
-
----
-
-audio_file_original_path
-
-**Type:** `Optional[str]`
-**Default:** `None`
-**Example value:** `"/home/user/recordings/voice.mp3"` or `"C:/Users/Ahmed/Desktop/lecture.mp3"`
-
-The `original_path` stores the full path to the audio file on the user's
-computer BEFORE it was copied into the project. This is where the user's
-file lived before SuperManim touched it.
-
-When the user types `add audio /home/user/recordings/voice.mp3`, that
-path is stored in `original_path`. This is purely for reference — so that
-if the user ever needs to find their original file again, the project record
-remembers where it came from.
-
-The original file is never modified. SuperManim makes a copy of it.
-
----
-
-audio_file_stored_path
-
-**Type:** `Optional[str]`
-**Default:** `None`
-**Example value:** `"audio_clips/original_audio.mp3"`
-
-The `stored_path` is the path to the copy of the audio file that SuperManim
-made inside the project's `audio_clips/` folder. This is the file the
-system actually reads and works with.
-
-When you type `add audio voice.mp3`, SuperManim:
-1. Reads the file from `original_path`
-2. Makes a copy in the project's `audio_clips/` folder
-3. Names the copy `original_audio.mp3` (keeping the original extension)
-4. Stores the new location in `stored_path`
-
-From that moment on, all operations — format conversion, silence detection,
-splitting into clips — are done on the file at `stored_path`. The original
-at `original_path` is never touched again.
-
-```
-What the terminal shows when you run "add audio":
-
-  Audio file added successfully.
-  Copied to:   audio_clips/original_audio.mp3    <- this is stored_path
-  Format:      mp3
-  Duration:    60.3 seconds
-```
-
----
-
-audio_file_original_filename
-
-**Type:** `Optional[str]`
-**Default:** `None`
-**Example value:** `"voice.mp3"`, `"lecture_recording.wav"`
-
-The `original_filename` stores just the filename part (not the full path)
-of the user's original audio file. If the user added `/home/user/recordings/voice.mp3`,
-then `original_filename = "voice.mp3"`.
-
-This is stored for display purposes — so the user interface can say
-"Original file: voice.mp3" in the audio info display without showing
-the entire long path.
-
----
-
-GROUP 3 — FORMAT PROPERTIES
-
----
-
-audio_file_format
-
-**Type:** `str`
-**Default:** `"mp3"`
-**Example value:** `"mp3"`, `"wav"`, `"ogg"`, `"aac"`, `"flac"`, `"m4a"`
-
-The `audio_format` stores the file format of the audio file. When the
-user first adds an audio file, the format is read from the file extension.
-If the user adds `voice.mp3`, the format is `"mp3"`.
-
-When the user runs `change audio_format wav`, the `AudioPreparationService`
-converts the file using FFmpeg and updates this field to `"wav"`.
-
-```
-+-------------------------------------------------------------+
-|   THE SIX SUPPORTED AUDIO FORMATS                           |
-+-------------------------------------------------------------+
-|                                                             |
-|   "mp3"   Most common. Lossy compression.                   |
-|            Small files. Slight quality loss at low bitrates.|
-|            Good for voice recordings.                       |
-|                                                             |
-|   "wav"   Lossless. No compression. Maximum quality.        |
-|            Files are large (about 10x larger than mp3).     |
-|            Best if you want to preserve every detail.       |
-|                                                             |
-|   "ogg"   Open format. Good lossy compression.              |
-|            Better quality than mp3 at the same file size.  |
-|            Good web and gaming standard.                    |
-|                                                             |
-|   "aac"   Apple format. Lossy compression.                  |
-|            Better quality than mp3 at the same bitrate.    |
-|            Default on iPhone and iTunes.                    |
-|                                                             |
-|   "flac"  Lossless compression. Smaller than wav.           |
-|            Perfect quality with smaller files than wav.     |
-|            Best of both: quality + size.                    |
-|                                                             |
-|   "m4a"   Apple container format. Usually contains AAC.     |
-|            Used by iTunes, Apple Music, and iOS.            |
-|                                                             |
-+-------------------------------------------------------------+
-```
-
----
-
-GROUP 4 — TECHNICAL PROPERTIES
-
-These properties are read automatically from the audio file when
-the user runs `add audio`. The user never sets them manually.
-They are measured and stored by the `AudioAnalyzerPort` (which uses
-the librosa library internally).
-
----
-
-**audio_file_total_duration**
-
-**Type:** `Optional[float]`
-**Default:** `None`
-**Example value:** `60.3`
-
-The `audio_total_duration` stores the total length of the audio file
-in seconds. This is the most important technical property.
-
-When you type `add audio voice.mp3`, SuperManim immediately measures
-the duration and stores it here. Everything that comes after — setting
-scene durations, splitting into clips, checking sync — depends on this value.
-
-In supermanim mode, the sum of all scene durations must equal `audio_total_duration`
-exactly. If they do not match, the audio cannot be synchronized perfectly
-with the video. The `TimelineService` compares these values constantly.
-
-```
-audio_total_duration = 60.3 seconds
-
-This becomes the target for all scene durations:
-  Scene 1: 12.5s
-  Scene 2: 18.5s
-  Scene 3: 16.8s
-  Scene 4:  7.0s
-  Scene 5:  5.5s
-  ─────────────
-  Total:   60.3s   <- must equal audio_total_duration
-```
-
----
-
-**audio_sample_rate**
-
-**Type:** `Optional[int]`
-**Default:** `None`
-**Example value:** `44100`, `48000`, `22050`
-
-The `audio_sample_rate` is how many times per second the audio is measured
-(sampled) when it is recorded. It is measured in Hertz (Hz).
-
-A sample rate of 44100 Hz means the audio was measured 44,100 times every
-single second. Higher sample rates capture more detail in the sound.
-
-```
-+-------------------------------------------------------------+
-|   COMMON SAMPLE RATES                                       |
-+-------------------------------------------------------------+
-|                                                             |
-|   22050 Hz   Low quality. Old telephone standard.           |
-|   44100 Hz   CD quality. Standard for most music and voice. |
-|   48000 Hz   Professional/broadcast standard.               |
-|              Used in film, TV, and professional recordings. |
-|   96000 Hz   High-resolution audio. Studio use only.        |
-|                                                             |
-|   For voice recordings (narration): 44100 Hz is perfect.   |
-|   For professional productions: 48000 Hz is recommended.   |
-|                                                             |
-+-------------------------------------------------------------+
-```
-
-SuperManim stores this information for reference. FFmpeg uses it
-when converting the format or when mixing audio into the final video.
-
----
-
-**audio_channels**
-
-**Type:** `int`
-**Default:** `1` (mono)
-**Example value:** `1`, `2`
-
-The `audio_channels` field stores how many independent audio streams
-the file contains.
-
-```
-+-------------------------------------------------------------+
-|   MONO vs STEREO                                            |
-+-------------------------------------------------------------+
-|                                                             |
-|   1 = MONO                                                  |
-|   One single audio stream.                                  |
-|   Plays the same sound in both the left and right speaker.  |
-|   Voice recordings and narration are almost always mono.   |
-|   Smaller file size than stereo.                            |
-|                                                             |
-|   2 = STEREO                                                |
-|   Two separate audio streams (left and right).              |
-|   Different sound can come from each speaker.               |
-|   Music is usually stereo.                                  |
-|   Larger file size than mono.                               |
-|                                                             |
-|   For SuperManim narration: mono is the right choice.       |
-|   One person speaking does not need a left and right track. |
-|                                                             |
-+-------------------------------------------------------------+
-```
-
----
-
-**audio_bit_rate**
-
-**Type:** `Optional[int]`
-**Default:** `None`
-**Example value:** `128000`, `192000`, `320000`
-
-The `audio_bit_rate` is how many bits of audio data are used per second
-of sound. It is measured in bits per second (bps). Higher bit rates
-mean better audio quality but larger file sizes.
-
-Common MP3 bit rates: 128 kbps (128,000 bps) is basic quality,
-192 kbps is good quality, 320 kbps is the highest MP3 quality.
-
-For voice narration, 128 kbps is usually sufficient because the human
-voice does not require the same detail as music.
-
----
-
-**audio_file_size_bytes**
-
-**Type:** `Optional[int]`
-**Default:** `None`
-**Example value:** `4404019` (approximately 4.2 MB)
-
-The `audio_file_size_bytes` stores the size of the stored audio file
-in bytes. This is useful for:
-- Showing the user how much disk space the audio is using
-- Comparing file sizes before and after format conversion
-- Estimating how much space the project will need
-
-The terminal shows a human-readable version of this when you change format:
-
-```
-supermanim> change audio_format wav
-
-  Converting: original_audio.mp3  -->  original_audio.wav
-  Old size:   4.2 MB     <- audio_file_size_bytes before
-  New size:   31.8 MB    <- audio_file_size_bytes after
-```
-
----
-
-**GROUP 5 — STATE PROPERTIES**
-
----
-
-**audio_is_split**
-
-**Type:** `bool`
-**Default:** `False`
-
-The `audio_is_split` flag tracks whether the AudioFile has been cut
-into AudioClip pieces yet. It starts as `False` when the audio is
-first added. It becomes `True` after any split command runs successfully
-(`split audio auto`, `split audio half`, or `split audio duration`).
-
-This flag is useful for validation. Before splitting, the system can check
-if the audio has already been split. If `audio_is_split = True` and the
-user tries to split again, the system can warn them that cutting again
-will replace all existing clips and break any existing sync links.
-
-```
-+-------------------------------------------------------------+
-|   audio_is_split — THE LIFECYCLE                            |
-+-------------------------------------------------------------+
-|                                                             |
-|   add audio voice.mp3                                       |
-|   -> audio_is_split = False                                 |
-|      audio_clip_count = 0                                   |
-|                                                             |
-|   split audio auto   (finds 5 segments)                     |
-|   -> audio_is_split = True                                  |
-|      audio_clip_count = 5                                   |
-|                                                             |
-|   split audio duration 12.5 18.5 16.8   (re-split)         |
-|   -> audio_is_split = True   (still True)                   |
-|      audio_clip_count = 3   (updated to new count)          |
-|                                                             |
-+-------------------------------------------------------------+
-```
-
----
-
-**audio_clip_count**
+#### Subsubsubsection 3.7.3.1.2: audio_file_id
 
 **Type:** `int`
 **Default:** `0`
-
-The `audio_clip_count` stores how many AudioClip pieces were cut from
-this AudioFile the last time a split command ran. It starts at 0 and
-is updated every time the audio is split.
-
-This number is shown in the audio info display and in the project status
-output so the user can quickly see how many clips were generated.
-
----
-
-**audio_added_at**
-
-**Type:** `Optional[str]`
-**Default:** `None`
-**Example value:** `"2024-11-10 09:05:30"`
-
-The `audio_added_at` timestamp records the exact date and time when the
-user ran `add audio` and the file was copied into the project.
-It is set once using `datetime.now()` and never changed again.
-
----
-
-**A REAL AUDIOFILE OBJECT IN FULL**
-
-```python
-AudioFile(
-    # ── IDENTITY ────────────────────────────────────────────────
-    audio_file_id          = 1,
-   
-    # ── LOCATION ────────────────────────────────────────────────
-    original_path          = "/home/user/recordings/voice.mp3",
-    stored_path            = "audio_clips/original_audio.mp3",
-    original_filename      = "voice.mp3",
-
-    # ── FORMAT ──────────────────────────────────────────────────
-    audio_format           = "mp3",
-
-    # ── TECHNICAL PROPERTIES ────────────────────────────────────
-    audio_total_duration   = 60.3,
-    audio_sample_rate      = 44100,
-    audio_channels         = 1,              # mono voice recording
-    audio_bit_rate         = 192000,         # 192 kbps
-    audio_file_size_bytes  = 4404019,        # about 4.2 MB
-
-    # ── STATE ───────────────────────────────────────────────────
-    audio_is_split         = True,           # has been cut into clips
-    audio_clip_count       = 5,              # 5 clips were generated
-    audio_added_at         = "2024-11-10 09:05:30",
-)
-```
-
----
-
----
-
-
-## Section 3.7 Entity 5 — AudioClip
-
-
-
-### Subsection 3.7.1 What is an AudioClip, Really?
-
-An AudioClip represents one piece of audio. It is always derived from an
-AudioFile — it is one cut section of the master recording.
-
-Think of the AudioFile as a long roll of film. The AudioClips are the
-individual frames you cut out of that roll. Each cut piece is an AudioClip.
-The roll itself is the AudioFile and it never changes.
-
-There are two completely different situations when an AudioClip Entity exists:
-
-```
-+=====================================================================+
-|             THE TWO KINDS OF AUDIOCLIP                             |
-+=====================================================================+
-|                                                                     |
-|   KIND 1 — SCENE CLIP                                               |
-|   ─────────────────────────────────────────────────────────────    |
-|   A piece of audio that was cut from the master AudioFile           |
-|   to match one specific scene.                                      |
-|                                                                     |
-|   Example:                                                          |
-|   clip_001.mp3 — the first 12.5 seconds of voice.mp3               |
-|   This clip belongs to Scene 1.                                     |
-|   It plays while Scene 1's animation is on screen.                  |
-|   It is exactly 12.5 seconds long — same as Scene 1's duration.    |
-|                                                                     |
-|   clip_002.mp3 — seconds 12.5 to 31.0 of voice.mp3                |
-|   This clip belongs to Scene 2.                                     |
-|   It is exactly 18.5 seconds long — same as Scene 2's duration.    |
-|                                                                     |
-|   KIND 2 — STANDALONE EDITED CLIP                  |
-|   ─────────────────────────────────────────────────────────────    |
-|   In "normal" mode, the user edits audio files without animation.   |
-|   An AudioClip here is any piece of audio the user creates by       |
-|   cutting, splitting, or converting the original audio file.        |
-|   It does not necessarily link to any Scene.                        |
-|                                                                     |
-+=====================================================================+
-```
-
-The most important kind — the one that powers supermanim mode — is Kind 1.
-This is the clip that gets attached to a Scene and synchronized with it,
-so that when the scene is rendered, the audio and animation play together
-at exactly the right time.
-
----
-
-
-### Subsection 3.7.2 The Relationship Between AudioFile and AudioClip
-
-```
-+=====================================================================+
-|              AUDIOFILE  ->  AUDIOCLIPS  ->  SCENES                  |
-+=====================================================================+
-|                                                                     |
-|   AudioFile (audio_file_id=1)                                       |
-|   original_audio.mp3                                                |
-|   Total duration: 60.3 seconds                                      |
-|   |                                                                 |
-|   | split audio duration 12.5 18.5 16.8 7.0 5.5                    |
-|   |                                                                 |
-|   +-- AudioClip (clip_id=1, clip_index=1)                           |
-|   |   clip_001.mp3   (0.0s to 12.5s)   duration: 12.5s             |
-|   |   linked to Scene 1 (scene_id=1)                                |
-|   |                                                                 |
-|   +-- AudioClip (clip_id=2, clip_index=2)                           |
-|   |   clip_002.mp3   (12.5s to 31.0s)  duration: 18.5s             |
-|   |   linked to Scene 2 (scene_id=2)                                |
-|   |                                                                 |
-|   +-- AudioClip (clip_id=3, clip_index=3)                           |
-|   |   clip_003.mp3   (31.0s to 47.8s)  duration: 16.8s             |
-|   |   linked to Scene 3 (scene_id=3)                                |
-|   |                                                                 |
-|   +-- AudioClip (clip_id=4, clip_index=4)                           |
-|   |   clip_004.mp3   (47.8s to 54.8s)  duration:  7.0s             |
-|   |   linked to Scene 4 (scene_id=4)                                |
-|   |                                                                 |
-|   +-- AudioClip (clip_id=5, clip_index=5)                           |
-|       clip_005.mp3   (54.8s to 60.3s)  duration:  5.5s             |
-|       linked to Scene 5 (scene_id=5)                                |
-|                                                                     |
-+=====================================================================+
-```
-
-Each AudioClip knows three time-related things:
-- Its own duration (how long it is)
-- Where it started in the original AudioFile (`audio_clip_start_time`)
-- Where it ended in the original AudioFile (`audio_clip_end_time`)
-
-These three values together mean you can always reconstruct exactly which
-part of the master recording this clip came from.
-
----
-
-
-### Subsection 3.7.3 The Full Python Class
-
-```python
-# core/entities/audio_clip.py
-
-from __future__ import annotations
-from dataclasses import dataclass
-from typing import Optional
-
-
-@dataclass
-class AudioClip:
-    """
-    The AudioClip Entity represents one piece of audio — a cut section
-    of the master AudioFile that belongs to one specific scene.
-
-    This is a pure data container. It holds all information about one
-    audio clip: where it lives on disk, how long it is, which part of
-    the original audio it came from, and which scene it belongs to.
-
-    It does NOT play audio, does NOT call FFmpeg.
-    It is just structured data.
-    """
-
-    # ── IDENTITY ──────────────────────────────────────────────────────
-    audio_clip_id:                    int
-    audio_file_id:              int
-
-    # ── ORDERING AND LINKING ──────────────────────────────────────────
-    audio_clip_index:                 Optional[int]   = None
-    scene_id:                   Optional[int]   = None
-
-    # ── LOCATION ──────────────────────────────────────────────────────
-    audio_clip_path:                  Optional[str]   = None
-
-    # ── FORMAT ────────────────────────────────────────────────────────
-    audio_clip_format:                str             = "mp3"
-
-    # ── TIMING — OWN DURATION ─────────────────────────────────────────
-    audio_clip_duration:              Optional[float] = None
-
-    # ── TIMING — POSITION IN THE ORIGINAL AUDIOFILE ───────────────────
-    audio_clip_start_time:     Optional[float] = None
-    audio_clip_end_time  :     Optional[float] = None
-
-    # ── TECHNICAL PROPERTIES ──────────────────────────────────────────
-    audio_clip_sample_rate:           Optional[int]   = None
-    audio_clip_channels:              int             = 1
-    audio_clip_file_size_bytes:       Optional[int]   = None
-
-    # ── STATE ─────────────────────────────────────────────────────────
-    audio_clip_is_synced:             bool            = False
-    audio_clip_created_at:            Optional[str]   = None
-```
-
----
-
-
-### Subsection 3.7.4 Every Property Explained in Depth
-
-```
-+================================================================+
-|         AUDIOCLIP ENTITY — COMPLETE PROPERTY REFERENCE        |
-+================================================================+
-|                                                                |
-|  GROUP 1 — IDENTITY                                            |
-|  ──────────────────────────────────────────────────────────── |
-|  clip_id              int         Required. Unique DB key.    |
-|  project_id           int         Required. Owner project.    |
-|  audio_file_id        int         Required. Source AudioFile. |
-|                                                                |
-|  GROUP 2 — ORDERING AND LINKING                                |
-|  ──────────────────────────────────────────────────────────── |
-|  clip_index           int | None  Position in clip sequence.  |
-|                                   1=first, 2=second, etc.     |
-|  scene_id             int | None  Which scene owns this clip. |
-|                                   None = not assigned yet.    |
-|                                                                |
-|  GROUP 3 — LOCATION                                            |
-|  ──────────────────────────────────────────────────────────── |
-|  clip_path            str | None  Path to clip file on disk.  |
-|                                                                |
-|  GROUP 4 — FORMAT                                              |
-|  ──────────────────────────────────────────────────────────── |
-|  clip_format          str         mp3/wav/ogg/aac. Def "mp3". |
-|                                                                |
-|  GROUP 5 — TIMING                                              |
-|  ──────────────────────────────────────────────────────────── |
-|  clip_duration           float|None Own length in seconds.    |
-|  clip_start_in_original  float|None Start second in master.   |
-|  clip_end_in_original    float|None End second in master.     |
-|                                                                |
-|  GROUP 6 — TECHNICAL PROPERTIES                                |
-|  ──────────────────────────────────────────────────────────── |
-|  clip_sample_rate     int | None  Hz. Usually 44100 or 48000. |
-|  clip_channels        int         1=mono, 2=stereo. Def: 1.  |
-|  clip_file_size_bytes int | None  File size in bytes.         |
-|                                                                |
-|  GROUP 7 — STATE                                               |
-|  ──────────────────────────────────────────────────────────── |
-|  clip_is_synced       bool        True if Scene is synced.    |
-|                                   Default: False.              |
-|  clip_created_at      str | None  When clip was cut.          |
-|                                                                |
-+================================================================+
-```
-
----
-
-GROUP 1 — IDENTITY PROPERTIES
-
----
-
-audio_clip_id
-
-**Type:** `int`
-**Default:** Required
-**Example value:** `3`
-
-The `clip_id` is the unique number that identifies this AudioClip in the
-database. For a project with 5 clips, the IDs are 1, 2, 3, 4, and 5.
-
----
-audio_file_id
-
-**Type:** `int`
-**Default:** Required
 **Example value:** `1`
 
-Links this AudioClip back to the specific AudioFile it was cut from.
-This is the foreign key relationship: the clip knows which master file
-it came from. If you ever need to re-cut the clips from the original
-(for example, if the split was wrong), the system can find the master
-by reading `audio_file_id`.
+The `audio_file_id` of the master `AudioFile` that this clip was cut
+from. This is the back-link that connects the AudioClip to its parent
+AudioFile entity.
 
----
+A project typically has one master `AudioFile` with `audio_file_id = 1`.
+All the AudioClips produced by splitting it will have `audio_file_id = 1`.
+If a project ever has two separate master audio files, this field tells
+you which master each clip came from.
 
-GROUP 2 — ORDERING AND LINKING PROPERTIES
+### Subsubsection 3.7.3.2: GROUP 2 — Ordering and Linking Properties
 
----
+#### Subsubsubsection 3.7.3.2.1: audio_clip_index
 
-audio_clip_index
+**Type:** `int`
+**Default:** `0`
+**Example value:** `2` (third clip, 0-based)
 
-**Type:** `Optional[int]`
-**Default:** `None`
-**Example value:** `1`, `2`, `3`, `4`, `5`
+The position of this clip in the sequence of clips cut from the master
+audio file. Zero-based: the first clip has `audio_clip_index = 0`, the
+second has `1`, and so on. Used for ordering clips in display and export.
 
-The `clip_index` is the position number of this clip in the sequence of
-all clips generated from the AudioFile. The first clip has index 1, the
-second has index 2, and so on.
-
-This is used to name the clip files on disk. Clip 1 becomes `clip_001.mp3`,
-clip 2 becomes `clip_002.mp3`, and so on. The naming is always zero-padded
-to three digits so that clips sort alphabetically in the correct order in
-the file explorer.
-
-```
-clip_index = 1  ->  filename: clip_001.mp3
-clip_index = 2  ->  filename: clip_002.mp3
-clip_index = 3  ->  filename: clip_003.mp3
-...
-clip_index = 10 ->  filename: clip_010.mp3
-```
-
-`clip_index` is `None` only in "normal" mode when a clip is created
-as a standalone edited piece that does not belong to a numbered sequence.
-
----
-
-**scene_id**
+#### Subsubsubsection 3.7.3.2.2: scene_id
 
 **Type:** `Optional[int]`
 **Default:** `None`
 **Example value:** `3`
 
-The `scene_id` stores which Scene this AudioClip belongs to. When the
-clip has been linked to a scene, this field holds the `scene_id` of
-that scene.
+The `scene_id` of the Scene that this audio clip is linked to and will
+play alongside. When the user runs `sync scene 3`, the system links
+AudioClip 3 to Scene 3 by setting `scene_id = 3` on the AudioClip.
 
-When `scene_id` is `None`, this clip has not been linked to any scene
-yet. When the user runs `sync scene 3 audio_clip 3`, the `AudioPreparationService`
-sets `scene_id = 3` on AudioClip 3 and also sets `synced_with_audio = True`
-on Scene 3. Both sides of the link are updated at the same time.
+`None` means this clip has not been linked to any scene yet.
 
-```
-Before sync:
-  AudioClip 3: scene_id = None, clip_is_synced = False
-  Scene 3: synced_with_audio = False, audio_clip_path = None
+### Subsubsection 3.7.3.3: GROUP 3 — Location Properties
 
-After "sync scene 3 audio_clip 3":
-  AudioClip 3: scene_id = 3,    clip_is_synced = True
-  Scene 3: synced_with_audio = True, audio_clip_path = "audio_clips/clip_003.mp3"
-```
-
----
-
-**GROUP 3 — LOCATION PROPERTIES**
-
----
-
-**audio_clip_path**
+#### Subsubsubsection 3.7.3.3.1: audio_clip_path
 
 **Type:** `Optional[str]`
 **Default:** `None`
 **Example value:** `"audio_clips/clip_003.mp3"`
 
-The `clip_path` is the file path where this AudioClip's audio file is
-stored on disk inside the project folder. It is set automatically when
-the clip is created by the split command.
+The file path to this audio clip on disk. FFmpeg saved the cut audio
+file here when the `split audio` command ran. The render system reads
+this path when it needs to mix this audio into the rendered video.
 
-The render system reads this path when it needs to include audio in a
-rendered video. FFmpeg receives this path as the audio input when baking
-audio into the scene's video file.
+### Subsubsection 3.7.3.4: GROUP 4 — Format Properties
 
----
-
-**GROUP 4 — FORMAT PROPERTIES**
-
----
-
-**audio_clip_format**
+#### Subsubsubsection 3.7.3.4.1: audio_clip_format
 
 **Type:** `str`
 **Default:** `"mp3"`
-**Example value:** `"mp3"`, `"wav"`, `"ogg"`
+**Example value:** `"mp3"`, `"wav"`, `"ogg"`, `"aac"`
 
-The format of this specific clip file. AudioClips inherit the format
-of the AudioFile they were cut from. If the master AudioFile is in
-`"mp3"` format, all the clips cut from it will also be `"mp3"`.
+The file format of this audio clip. AudioClips automatically inherit
+the format of the master AudioFile they were cut from, because FFmpeg
+preserves the original format when cutting a section of audio (unless
+you explicitly request a conversion).
 
-If the user runs `change audio_format wav` before splitting, the new
-clips will be in `"wav"` format. If they run the format change after
-splitting, the system also converts all the existing clips.
+### Subsubsection 3.7.3.5: GROUP 5 — Timing Properties
 
----
+**IMPORTANT NOTE ON UNITS:** The timing fields in this group are stored
+in **SECONDS as float values**, not in milliseconds. This is different
+from all other timing in the system. The reason is that audio file
+metadata and audio analysis libraries (like FFprobe, librosa) all work
+natively in seconds. Storing audio timing in seconds avoids unnecessary
+conversions when reading/writing audio metadata.
 
-**GROUP 5 — TIMING PROPERTIES**
+When comparing with Scene timing (which is in milliseconds), the
+`ValidationService` does the conversion: `audio_seconds × 1000 == scene_ms`.
 
-This is the most important group for understanding what an AudioClip IS.
-The three timing properties together tell the complete story of this clip:
-how long it is, where it started in the original audio, and where it ended.
-
----
-
-**clip_duration**
+#### Subsubsubsection 3.7.3.5.1: audio_clip_duration
 
 **Type:** `Optional[float]`
 **Default:** `None`
-**Example value:** `16.8`
+**Example value:** `16.8` (meaning 16.8 seconds)
 
-The `clip_duration` is the length of this specific AudioClip in seconds.
-This is the most critical value for synchronization because it must
-exactly equal the duration of the Scene it is linked to.
+The length of this audio clip in seconds. This is the value that gets
+compared to the Scene's `scene_duration` (after unit conversion) during
+the `sync scene` command.
 
 ```
-The Duration Matching Rule:
+AudioClip 3:  audio_clip_duration = 16.8 seconds
+Scene 3:      scene_duration      = 16800 milliseconds
 
-audio_clip_duration  ==  scene_duration
-
-AudioClip 3: audio_clip_duration = 16.8 seconds
-Scene 3:     scene_duration = 16.8 seconds
-Match: YES  ->  can sync.
-
-AudioClip 4: audio_clip_duration = 9.3 seconds
-Scene 4:     scene_duration = 7.0 seconds
-Difference:  2.3 seconds  ->  CANNOT sync. Will be refused.
+Sync check conversion:
+  16.8 seconds × 1000 = 16800 ms
+  16800 ms == 16800 ms  →  MATCH  →  sync approved
 ```
 
-This is the value that `ValidationService.sync_is_valid()` compares
-against the scene's `scene_duration` when the user runs `sync scene`.
+#### Subsubsubsection 3.7.3.5.2: audio_clip_start_time
 
----
-
-**audio_clip_start_time**
 **Type:** `Optional[float]`
 **Default:** `None`
 **Example value:** `31.0`
 
-The `clip_start_in_original` stores the exact second in the MASTER
-AudioFile where this clip begins. This is a reference to the original,
-not a property of the clip itself.
+The exact second in the MASTER AudioFile where this clip begins. This is
+a reference back to the original uncut recording, not a property of the
+clip file itself.
 
-For AudioClip 3 (which covers the third section of the narration),
-`clip_start_in_original = 31.0` means: "This clip is the section of the
-original audio that starts at the 31.0-second mark."
+For AudioClip 3, `audio_clip_start_time = 31.0` means: "This clip
+represents the portion of original_audio.mp3 that starts at the
+31.0-second mark."
 
 This value is essential for:
-- Showing the user the audio timeline in `show audio info`
+- Displaying the audio timeline (`show audio info` command)
 - Re-cutting the clips if needed (the system knows exactly where to cut)
 - Debugging timing problems
 
----
-Here’s the corrected and consistent version with all references renamed to `audio_clip_start_time`:
+#### Subsubsubsection 3.7.3.5.3: audio_clip_end_time
 
----
-
-**audio_clip_end_time**
 **Type:** `Optional[float]`
 **Default:** `None`
 **Example value:** `47.8`
 
-The `audio_clip_end_time` stores the exact second in the MASTER AudioFile
-where this clip ends.
-
-Together with `audio_clip_start_time`, this tells you exactly which
-portion of the master recording this clip represents:
+The exact second in the MASTER AudioFile where this clip ends. Together
+with `audio_clip_start_time`, this precisely defines which portion of the
+original recording this clip represents.
 
 ```
-AudioClip 3:
-  audio_clip_start_time = 31.0
-  audio_clip_end_time   = 47.8
-  clip_duration         = 16.8  (= 47.8 - 31.0)
+AudioClip 3 — complete timing picture:
+  audio_clip_start_time = 31.0  (starts at second 31.0 of original)
+  audio_clip_end_time   = 47.8  (ends at second 47.8 of original)
+  audio_clip_duration   = 16.8  (= 47.8 - 31.0 seconds long)
 
-  This clip is the section from second 31.0 to second 47.8
-  of the original voice.mp3 recording.
+Terminal display in "show audio info":
+  ┌─────────┬───────────┬───────────┬───────────┬─────────────────┐
+  │ Scene   │ Start     │ End       │ Duration  │ Clip File       │
+  ├─────────┼───────────┼───────────┼───────────┼─────────────────┤
+  │   3     │  31.0s    │  47.8s    │  16.8s    │ clip_003.mp3   │
+  └─────────┴───────────┴───────────┴───────────┴─────────────────┘
 ```
 
-The terminal shows this information in the `show audio info` command:
+### Subsubsection 3.7.3.6: GROUP 6 — Technical Properties
 
-```
-SCENE AUDIO MAP
-+---------+-----------+-----------+-----------+-----------------+
-| Scene   | Start     | End       | Duration  | Clip File       |
-+---------+-----------+-----------+-----------+-----------------+
-|   3     |  31.0s    |  47.8s    |  16.8s    | clip_003.mp3    |
-+---------+-----------+-----------+-----------+-----------------+
-```
+These properties store the raw technical metadata of the audio file.
+They are read automatically from the file using FFprobe or librosa when
+the clip is created.
 
-Those Start and End columns come directly from `audio_clip_start_time`
-and `audio_clip_end_time`.
-
----
-
-
-**GROUP 6 — TECHNICAL PROPERTIES**
-
-These properties mirror the same fields in the AudioFile Entity but
-apply to this specific clip file rather than the master.
-
----
-Here is the same content with only the `clip_` prefix changed to `audio_`:
-
----
-Got it — using `audio_clip_` and keeping the `**    **` style exactly:
-
----
-
-**audio_clip_sample_rate**
+#### Subsubsubsection 3.7.3.6.1: audio_clip_sample_rate
 
 **Type:** `Optional[int]`
 **Default:** `None`
 **Example value:** `44100`
 
-The sample rate of this clip's audio file in Hz. AudioClips inherit
-the sample rate of the AudioFile they were cut from. FFmpeg preserves
-the sample rate when it cuts a section of audio.
+The sample rate of this clip's audio file in Hz (samples per second).
+AudioClips inherit this value from the parent AudioFile. Standard values:
+- `44100` Hz — CD quality. Most common for music and narration.
+- `48000` Hz — Professional/broadcast standard. Used in video production.
 
----
+FFmpeg preserves the sample rate when cutting sections of audio.
 
- **audio_clip_channels**
+#### Subsubsubsection 3.7.3.6.2: audio_clip_channels
 
 **Type:** `int`
 **Default:** `1`
-**Example value:** `1`, `2`
+**Example value:** `1` (mono), `2` (stereo)
 
-The number of audio channels in this clip. Same as in AudioFile —
-1 means mono, 2 means stereo. Voice narration clips are typically mono.
+The number of audio channels in this clip. Voice narration is almost
+always mono (1 channel) because human speech does not benefit from stereo
+separation. Background music is typically stereo (2 channels).
 
----
-
- **audio_clip_file_size_bytes**
+#### Subsubsubsection 3.7.3.6.3: audio_clip_file_size_bytes
 
 **Type:** `Optional[int]`
 **Default:** `None`
-**Example value:** `880804` (approximately 0.84 MB for a 12.5-second mp3 clip)
+**Example value:** `1410048` (approximately 1.3 MB)
 
 The size of this clip file on disk in bytes. Proportional to the clip's
-duration and the format's compression level.
+duration and the compression level of the audio format (MP3 is compressed;
+WAV is uncompressed and much larger).
 
----
+### Subsubsection 3.7.3.7: GROUP 7 — State Properties
 
----
-
-**GROUP 7 — STATE PROPERTIES**
-
- **audio_clip_is_synced**
+#### Subsubsubsection 3.7.3.7.1: audio_clip_is_synced
 
 **Type:** `bool`
 **Default:** `False`
 
-The `audio_clip_is_synced` flag mirrors the `synced_with_audio` flag on the
-Scene. It is `True` when this clip has been successfully linked to a Scene
-through the `sync scene` command and the duration check has passed.
+`True` when this clip has been successfully linked to a Scene through the
+`sync scene` command AND the duration check has passed. When `True`, this
+clip will be mixed into the video when the linked scene is rendered.
+When `False`, the clip exists on disk but is not active in any render.
 
-When `audio_clip_is_synced = True`, this clip will be baked into the video when
-the linked scene is rendered. When `audio_clip_is_synced = False`, the clip exists
-on disk but is not currently active in any render workflow.
-
----
-
- **audio_clip_created_at**
+#### Subsubsubsection 3.7.3.7.2: audio_clip_created_at
 
 **Type:** `Optional[str]`
 **Default:** `None`
 **Example value:** `"2024-11-10 09:10:45"`
 
-The timestamp when this clip file was created — when the split command
-ran and FFmpeg cut this specific section from the master AudioFile.
+The timestamp of when this clip file was created on disk — specifically,
+the moment when FFmpeg finished cutting this section from the master
+AudioFile during the `split audio N` command.
 
----
+## Subsection 3.7.4: A Real AudioClip Object in Full
 
----
+```python
+# AudioClip 3 — fully populated example
 
-**A REAL AUDIOCLIP OBJECT IN FULL**
-
-```
 AudioClip(
-    # ── IDENTITY ────────────────────────────────────────────────
-    audio_clip_id                  = 3,
-    audio_file_id                  = 1,        # comes from AudioFile 1
+    # Inherited from MediaUnit:
+    unit_type               = "audio_clip",
+    file_path               = "audio_clips/clip_003.mp3",
+    start_time              = 31000,   # ms position in project timeline
+    end_time                = 47800,   # ms position in project timeline
+    duration                = 16800,   # ms length
 
-    # ── ORDERING AND LINKING ────────────────────────────────────
-    audio_clip_index               = 3,        # third clip in the sequence
-    scene_id                       = 3,        # linked to Scene 3
+    # ── GROUP 1 — IDENTITY ──────────────────────────────────────────
+    audio_clip_id           = 3,
+    audio_file_id           = 1,
 
-    # ── LOCATION ────────────────────────────────────────────────
-    audio_clip_path                = "audio_clips/clip_003.mp3",
+    # ── GROUP 2 — ORDERING AND LINKING ──────────────────────────────
+    audio_clip_index        = 2,       # 0-based, so this is the 3rd clip
+    scene_id                = 3,       # linked to Scene 3
 
-    # ── FORMAT ──────────────────────────────────────────────────
-    audio_clip_format              = "mp3",
+    # ── GROUP 3 — LOCATION ──────────────────────────────────────────
+    audio_clip_path         = "audio_clips/clip_003.mp3",
 
-    # ── TIMING ──────────────────────────────────────────────────
-    audio_clip_duration            = 16.8,
-    audio_clip_start_time          = 31.0,    # starts at second 31.0 of voice.mp3
-    audio_clip_end_time            = 47.8,    # ends at second 47.8 of voice.mp3
+    # ── GROUP 4 — FORMAT ────────────────────────────────────────────
+    audio_clip_format       = "mp3",
 
-    # ── TECHNICAL PROPERTIES ────────────────────────────────────
-    audio_clip_sample_rate         = 44100,
-    audio_clip_channels            = 1,       # mono
-    audio_clip_file_size_bytes     = 1410048, # about 1.3 MB
+    # ── GROUP 5 — TIMING (in seconds as floats) ─────────────────────
+    audio_clip_duration     = 16.8,    # 16.8 seconds
+    audio_clip_start_time   = 31.0,    # starts at 31.0s in original
+    audio_clip_end_time     = 47.8,    # ends at 47.8s in original
 
-    # ── STATE ───────────────────────────────────────────────────
-    audio_clip_is_synced           = True,    # linked and duration verified
-    audio_clip_created_at          = "2024-11-10 09:10:45",
+    # ── GROUP 6 — TECHNICAL PROPERTIES ──────────────────────────────
+    audio_clip_sample_rate          = 44100,
+    audio_clip_channels             = 1,       # mono voice narration
+    audio_clip_file_size_bytes      = 1410048, # ~1.3 MB
+
+    # ── GROUP 7 — STATE ─────────────────────────────────────────────
+    audio_clip_is_synced    = True,    # linked and duration verified
+    audio_clip_created_at   = "2024-11-10 09:10:45",
 )
 ```
 
-
-
-## Section 3.8 Entity 6 — ProjectSettings
-
-
-### Subsection 3.8.1 What is ProjectSettings, Really?
-
-ProjectSettings is a data container that holds all the configurable
-preferences for one specific project. These are the settings that
-control how the project behaves — what export format it uses, what quality
-it renders at, what background color scenes use, and so on.
-
-You might ask: why is this separate from the Project Entity? Why not
-put all settings directly on the Project?
-
-The reason is the read-only rule. When a project is created, some information
-is locked forever — the project's name,  its creation timestamp,
-and its folder location. These never change. But the settings — export format,
-quality, resolution — change frequently as the user adjusts them.
-
-By separating settings into their own Entity, we make this distinction
-explicit and clear in the code. The Project Entity holds identity and
-state. The ProjectSettings Entity holds preferences. They are different
-kinds of data and they deserve to be in different places.
-
-```
-+=====================================================================+
-|         WHY PROJECTSETTINGS IS SEPARATE FROM PROJECT                |
-+=====================================================================+
-|                                                                     |
-|   Project Entity holds:                                             |
-|   - Identity ( project_name,)              |
-|   - Location (folder_path, db_path)                                 |
-|   - Timestamps (created_at, updated_at)                             |
-|   - Statistics (total_scenes, rendered_count, etc.)                 |
-|                                                                     |
-|   These are FACTS. They describe what the project IS.               |
-|   project_name never changes. Mode never changes.                   |
-|   created_at is locked the moment the project is born.              |
-|                                                                     |
-|   ProjectSettings Entity holds:                                     |
-|   - Export preferences (format, quality, output name)               |
-|   - Render preferences (resolution, fps, background color)          |
-|   - Preview preferences (resolution, fps)                           |
-|   - Audio preferences (default format)                              |
-|                                                                     |
-|   These are CHOICES. They describe how the project BEHAVES.         |
-|   The user changes export_format from mp4 to webm.                  |
-|   The user changes export_quality from high to ultra.               |
-|   The user changes render_fps from 60 to 30.                        |
-|   All of these are frequent, normal changes.                        |
-|                                                                     |
-+=====================================================================+
-```
-
 ---
 
+# Section 3.8: Entity 6 — VideoClip
 
-### Subsection 3.8.2 Where ProjectSettings Lives
+## Subsection 3.8.1: What Is a VideoClip?
 
-ProjectSettings is stored as a table called `project_settings` inside
-the project's `project_data.db` file. It is not a separate file.
-
-```
-/projects/MyAnimation/
-└── project_data.db
-    ├── table: scenes
-    ├── table: audio_clips
-    └── table: project_settings   <- ProjectSettings lives here
-```
-
-There is exactly ONE row in the `project_settings` table per project.
-When the project is created, that one row is written with all the default
-values. After that, only the mutable columns are ever updated.
-
----
-
-**THE LOCKED FIELDS vs THE MUTABLE FIELDS**
-
-This is the most important concept about ProjectSettings.
-Some fields are written ONCE at creation and NEVER changed again.
-Other fields are changed by the user through commands.
+A `VideoClip` is one cut section of a master video file. It is the video
+equivalent of an `AudioClip`. When the user has a video file and wants to
+split it into pieces for the timeline, each piece is represented as a
+`VideoClip` entity.
 
 ```
 +=====================================================================+
-|           LOCKED FIELDS vs MUTABLE FIELDS                           |
+|          THE MASTER VIDEO BECOMES INDIVIDUAL VIDEOCLIPS             |
 +=====================================================================+
 |                                                                     |
-|   LOCKED AT CREATION (written once, never changed):                 |
+|   MASTER VIDEO FILE                                                 |
+|   screen_record.mp4  (60000 ms = 60.0 seconds total)               |
 |   ─────────────────────────────────────────────────────────────    |
-|   project_name          The name given at creation.                 |
-|   project_folder_path   Where the project lives on disk.            |
-|   project_db_path       Path to this database file.                 |
-|   settings_created_at   Timestamp of when the project was created.  |
-|                                                                     |
-|   If you try to change these through any command or any port,       |
-|   the system refuses. The adapter has no method to change them.     |
-|                                                                     |
-|   MUTABLE — CHANGE AS NEEDED:                                       |
-|   ─────────────────────────────────────────────────────────────    |
-|   export_format         "set export format webm"                    |
-|   export_quality        "set export quality ultra"                  |
-|   export_name           "set export name MyVideo_v2"               |
-|   render_resolution     (changed through settings commands)         |
-|   render_fps            (changed through settings commands)         |
-|   render_background_color (changed through settings commands)       |
-|   preview_resolution    (internal — always 854x480)                 |
-|   preview_fps           (internal — default 30)                     |
-|   audio_default_format  (changed through settings commands)         |
-|   settings_updated_at   (auto-updated whenever any field changes)   |
+|   │                                                               | |
+|   │  0ms ─────────── 20000ms ──────────── 45000ms ─── 60000ms   | |
+|   │                                                               | |
+|   ────────────────────────────────────────────────────────────     |
+|         ↓                       ↓                    ↓              |
+|   VideoClip 1            VideoClip 2           VideoClip 3          |
+|   (0-20000ms)            (20000-45000ms)        (45000-60000ms)     |
+|   20.0 seconds           25.0 seconds           15.0 seconds        |
 |                                                                     |
 +=====================================================================+
 ```
 
----
+### Subsubsection 3.8.1.1: Where Is the VideoClip Class Defined on Disk?
 
+```
+/home/mina/SuperManim/core/entities/video_clip.py
+```
 
-### Subsection 3.8.3 The Full Python Class
+## Subsection 3.8.2: The Full Python Class of the VideoClip Entity
 
 ```python
-# core/entities/project_settings.py
+# File location: /home/mina/SuperManim/core/entities/video_clip.py
+
+from __future__ import annotations
+from dataclasses import dataclass
+from typing import Optional
+from core.entities.media_unit import MediaUnit
+
+
+@dataclass
+class VideoClip(MediaUnit):
+    """
+    The VideoClip Entity represents one cut section of a master video file.
+
+    It is a pure data container. It holds all the information about a
+    specific video clip file on disk — its path, its timing, its
+    visual dimensions, its codec, and its link to a Scene.
+
+    It does NOT call FFmpeg. It does NOT read video files.
+    It does NOT decode frames. It is just structured data.
+
+    All timing values (video_clip_duration, video_clip_start_time,
+    video_clip_end_time) are stored as integers in MILLISECONDS,
+    consistent with the rest of the system.
+    """
+
+    # ── GROUP 1 — IDENTITY ────────────────────────────────────────────
+    video_clip_id:              int             = 0
+    video_file_id:              int             = 0
+
+    # ── GROUP 2 — ORDERING AND LINKING ───────────────────────────────
+    video_clip_index:           int             = 0
+    scene_id:                   Optional[int]   = None
+
+    # ── GROUP 3 — LOCATION ────────────────────────────────────────────
+    video_clip_path:            Optional[str]   = None
+
+    # ── GROUP 4 — FORMAT ──────────────────────────────────────────────
+    video_clip_format:          str             = "mp4"
+
+    # ── GROUP 5 — TIMING (in milliseconds) ────────────────────────────
+    video_clip_duration:        Optional[int]   = None
+    video_clip_start_time:      Optional[int]   = None
+    video_clip_end_time:        Optional[int]   = None
+
+    # ── GROUP 6 — VISUAL PROPERTIES ───────────────────────────────────
+    video_clip_resolution:      Optional[str]   = None
+    video_clip_fps:             Optional[int]   = None
+    video_clip_has_audio:       bool            = False
+
+    # ── GROUP 7 — TECHNICAL PROPERTIES ───────────────────────────────
+    video_clip_file_size_bytes: Optional[int]   = None
+    video_clip_codec:           Optional[str]   = None
+
+    # ── GROUP 8 — STATE ───────────────────────────────────────────────
+    video_clip_status:          str             = "pending"
+    video_clip_created_at:      Optional[str]   = None
+```
+
+## Subsection 3.8.3: Every Property of the VideoClip Entity Explained
+
+### Subsubsection 3.8.3.1: GROUP 1 — Identity Properties
+
+#### Subsubsubsection 3.8.3.1.1: video_clip_id
+
+**Type:** `int`
+**Default:** `0`
+**Example value:** `2`
+
+The unique identifier for this VideoClip within the project. Used as the
+primary key in the database.
+
+#### Subsubsubsection 3.8.3.1.2: video_file_id
+
+**Type:** `int`
+**Default:** `0`
+**Example value:** `1`
+
+The ID of the master `VideoFile` entity that this clip was cut from.
+Links the VideoClip back to its parent VideoFile.
+
+### Subsubsection 3.8.3.2: GROUP 2 — Ordering and Linking Properties
+
+#### Subsubsubsection 3.8.3.2.1: video_clip_index
+
+**Type:** `int`
+**Default:** `0`
+**Example value:** `1` (second clip, 0-based)
+
+The position of this clip in the sequence of clips cut from the master
+video file. Zero-based counting, same as `audio_clip_index`.
+
+#### Subsubsubsection 3.8.3.2.2: scene_id
+
+**Type:** `Optional[int]`
+**Default:** `None`
+**Example value:** `3`
+
+The `scene_id` of the Scene this video clip is linked to. When set,
+this clip will be used when rendering or assembling Scene 3.
+`None` means not yet linked to any scene.
+
+### Subsubsection 3.8.3.3: GROUP 3 — Location Properties
+
+#### Subsubsubsection 3.8.3.3.1: video_clip_path
+
+**Type:** `Optional[str]`
+**Default:** `None`
+**Example value:** `"video_clips/clip_002.mp4"`
+
+The file path to this video clip on disk.
+
+### Subsubsection 3.8.3.4: GROUP 4 — Format Properties
+
+#### Subsubsubsection 3.8.3.4.1: video_clip_format
+
+**Type:** `str`
+**Default:** `"mp4"`
+**Example value:** `"mp4"`, `"webm"`, `"mov"`, `"avi"`, `"mkv"`
+
+The container format of this video clip file.
+
+### Subsubsection 3.8.3.5: GROUP 5 — Timing Properties
+
+All values are **integers in milliseconds**.
+
+#### Subsubsubsection 3.8.3.5.1: video_clip_duration
+
+**Type:** `Optional[int]`
+**Default:** `None`
+**Example value:** `25000` (meaning 25.0 seconds)
+
+The length of this video clip in milliseconds.
+
+#### Subsubsubsection 3.8.3.5.2: video_clip_start_time
+
+**Type:** `Optional[int]`
+**Default:** `None`
+**Example value:** `20000` (meaning 20.0 seconds into the master video)
+
+The millisecond mark in the master VideoFile where this clip begins.
+
+#### Subsubsubsection 3.8.3.5.3: video_clip_end_time
+
+**Type:** `Optional[int]`
+**Default:** `None`
+**Example value:** `45000` (meaning 45.0 seconds into the master video)
+
+The millisecond mark in the master VideoFile where this clip ends.
+Always: `video_clip_end_time = video_clip_start_time + video_clip_duration`
+(`20000 + 25000 = 45000`)
+
+### Subsubsection 3.8.3.6: GROUP 6 — Visual Properties
+
+#### Subsubsubsection 3.8.3.6.1: video_clip_resolution
+
+**Type:** `Optional[str]`
+**Default:** `None`
+**Example value:** `"1920x1080"`
+
+The pixel dimensions of this video clip. Read from the video file's
+metadata when the clip is created. Important for ensuring compatibility
+when assembling clips in the final export step.
+
+#### Subsubsubsection 3.8.3.6.2: video_clip_fps
+
+**Type:** `Optional[int]`
+**Default:** `None`
+**Example value:** `30`, `60`
+
+The frame rate of this video clip. Read from the file metadata.
+All clips in a project should have the same fps to assemble cleanly.
+
+#### Subsubsubsection 3.8.3.6.3: video_clip_has_audio
+
+**Type:** `bool`
+**Default:** `False`
+
+`True` if this video clip contains an embedded audio track.
+`False` if it is a silent (video-only) clip. The export system uses
+this flag to decide whether to extract and include the audio from this
+clip during the final video assembly.
+
+### Subsubsection 3.8.3.7: GROUP 7 — Technical Properties
+
+#### Subsubsubsection 3.8.3.7.1: video_clip_file_size_bytes
+
+**Type:** `Optional[int]`
+**Default:** `None`
+**Example value:** `52428800` (approximately 50 MB)
+
+The size of this video clip file on disk in bytes.
+
+#### Subsubsubsection 3.8.3.7.2: video_clip_codec
+
+**Type:** `Optional[str]`
+**Default:** `None`
+**Example value:** `"h264"`, `"h265"`, `"vp9"`, `"av1"`
+
+The video compression codec used to encode this clip. Different codecs
+produce different quality-vs-file-size trade-offs. When assembling
+multiple clips with different codecs, FFmpeg may need to re-encode some
+of them to produce a consistent final output.
+
+### Subsubsection 3.8.3.8: GROUP 8 — State Properties
+
+#### Subsubsubsection 3.8.3.8.1: video_clip_status
+
+**Type:** `str`
+**Default:** `"pending"`
+**Allowed values:** `"pending"`, `"ready"`, `"failed"`
+
+The processing status of this video clip.
+- `"pending"` — clip was just created, not yet fully processed
+- `"ready"` — clip has been processed and is available for use
+- `"failed"` — processing encountered an error
+
+#### Subsubsubsection 3.8.3.8.2: video_clip_created_at
+
+**Type:** `Optional[str]`
+**Default:** `None`
+**Example value:** `"2024-11-10 09:30:00"`
+
+The timestamp when this video clip was cut from the master video file
+by FFmpeg.
+
+---
+
+# Section 3.9: Entity 7 — AudioFile
+
+## Subsection 3.9.1: What Is an AudioFile?
+
+An `AudioFile` is the master audio recording for a project. It represents
+the complete, uncut audio file — the full-length narration or music track
+that the user adds to the project with the `add audio voice.mp3` command.
+
+The relationship between `AudioFile` and `AudioClip` is exactly like a
+whole pizza and its individual slices. The `AudioFile` is the whole pizza.
+Each `AudioClip` is one slice. You cut the pizza into slices (one per
+scene), but the whole pizza still exists and is tracked as an `AudioFile`.
+
+`AudioFile` is flexible — it is also used when a user simply wants to
+process a standalone audio file without any Manim animation involved.
+For example: splitting a podcast recording into separate clips, or
+converting an audio file from one format to another.
+
+```
++=====================================================================+
+|          AUDIOFILE AND AUDIOCLIPS — THE PIZZA METAPHOR              |
++=====================================================================+
+|                                                                     |
+|   AudioFile                                                         |
+|   (the whole pizza = original_audio.mp3 = 60.0 seconds)            |
+|                                                                     |
+|   ─────────────────────────────────────────────────────────────    |
+|   │           │              │              │          │            |
+|   AudioClip1  AudioClip2     AudioClip3     AudioClip4              |
+|   12.5s       18.5s          16.8s          12.2s                   |
+|   (slice 1)   (slice 2)      (slice 3)      (slice 4)               |
+|                                                                     |
+|   5500 + 18500 + 16800 + 12200 = 60000 ms                           |
+|   (the slices add up to exactly the whole pizza's duration)         |
+|                                                                     |
++=====================================================================+
+```
+
+### Subsubsection 3.9.1.1: Where Is the AudioFile Class Defined on Disk?
+
+```
+/home/mina/SuperManim/core/entities/audio_file.py
+```
+
+## Subsection 3.9.2: The Full Python Class of the AudioFile Entity
+
+```python
+# File location: /home/mina/SuperManim/core/entities/audio_file.py
+
+from __future__ import annotations
+from dataclasses import dataclass, field
+from typing import Optional, List
+
+
+@dataclass
+class AudioFile:
+    """
+    The AudioFile Entity represents the master audio file added to the project.
+
+    It is a pure data container. It holds all the metadata about the
+    original full-length audio file — its path, format, duration, and
+    technical properties. It also contains a list of all AudioClip
+    objects that were produced by cutting this master file.
+
+    It does NOT read audio files from disk.
+    It does NOT call FFmpeg or librosa.
+    It does NOT play or process audio.
+    It is just structured data.
+    """
+
+    # ── GROUP 1 — IDENTITY ────────────────────────────────────────────
+    audio_file_id:              int
+
+    # ── GROUP 2 — LOCATION ────────────────────────────────────────────
+    audio_file_path:            Optional[str]   = None
+    audio_file_original_name:   Optional[str]   = None
+
+    # ── GROUP 3 — FORMAT ──────────────────────────────────────────────
+    audio_file_format:          str             = "mp3"
+
+    # ── GROUP 4 — TIMING (in seconds as float — audio convention) ─────
+    audio_file_duration:        Optional[float] = None
+
+    # ── GROUP 5 — TECHNICAL PROPERTIES ───────────────────────────────
+    audio_file_sample_rate:     Optional[int]   = None
+    audio_file_channels:        int             = 1
+    audio_file_bitrate:         Optional[int]   = None
+    audio_file_size_bytes:      Optional[int]   = None
+
+    # ── GROUP 6 — CLIPS ───────────────────────────────────────────────
+    # The list of AudioClip objects cut from this master AudioFile.
+    # Populated when the user runs "split audio N".
+    audio_clips:                List            = field(default_factory=list)
+
+    # ── GROUP 7 — STATE ───────────────────────────────────────────────
+    audio_file_is_split:        bool            = False
+    audio_file_added_at:        Optional[str]   = None
+```
+
+## Subsection 3.9.3: Every Property of the AudioFile Entity Explained
+
+### Subsubsection 3.9.3.1: GROUP 1 — Identity Properties
+
+#### Subsubsubsection 3.9.3.1.1: audio_file_id
+
+**Type:** `int`
+**Default:** Required.
+**Example value:** `1`
+
+The unique identifier for this master audio file within the project.
+A typical SuperManim project has exactly one AudioFile with
+`audio_file_id = 1`. If a project ever has multiple master audio files
+(e.g., one narration track and one background music track), they would
+have `audio_file_id = 1` and `audio_file_id = 2`.
+
+### Subsubsection 3.9.3.2: GROUP 2 — Location Properties
+
+#### Subsubsubsection 3.9.3.2.1: audio_file_path
+
+**Type:** `Optional[str]`
+**Default:** `None`
+**Example value:** `"audio_clips/original_audio.mp3"`
+
+The path to the master audio file inside the project folder. When the
+user runs `add audio voice.mp3`, the system copies `voice.mp3` into the
+project's `audio_clips/` directory and stores the internal path here.
+
+`None` means no audio file has been added to this project yet.
+
+#### Subsubsubsection 3.9.3.2.2: audio_file_original_name
+
+**Type:** `Optional[str]`
+**Default:** `None`
+**Example value:** `"voice.mp3"`
+
+The original filename as the user provided it, before it was copied into
+the project folder (and possibly renamed). Stored for reference so the
+user can always see what file they originally added to the project.
+
+### Subsubsection 3.9.3.3: GROUP 3 — Format Properties
+
+#### Subsubsubsection 3.9.3.3.1: audio_file_format
+
+**Type:** `str`
+**Default:** `"mp3"`
+**Example value:** `"mp3"`, `"wav"`, `"ogg"`, `"aac"`, `"flac"`, `"m4a"`
+
+The file format of the master audio file. Determines which FFmpeg codec
+flags are used during audio processing and splitting operations.
+
+### Subsubsection 3.9.3.4: GROUP 4 — Timing Properties
+
+#### Subsubsubsection 3.9.3.4.1: audio_file_duration
+
+**Type:** `Optional[float]`
+**Default:** `None`
+**Example value:** `60.3` (seconds)
+
+The total duration of the master audio file in seconds. Measured
+automatically by the `AudioAnalyzerPort` (using FFprobe or librosa) when
+the user adds the file. This is the source of truth for the total audio
+duration that the video must match.
+
+### Subsubsection 3.9.3.5: GROUP 5 — Technical Properties
+
+#### Subsubsubsection 3.9.3.5.1: audio_file_sample_rate
+
+**Type:** `Optional[int]`
+**Default:** `None`
+**Example value:** `44100`
+
+The sample rate of the audio file in Hz. All AudioClips cut from this
+master inherit this sample rate. Standard values: `44100` Hz (CD quality)
+or `48000` Hz (professional broadcast standard).
+
+#### Subsubsubsection 3.9.3.5.2: audio_file_channels
+
+**Type:** `int`
+**Default:** `1`
+**Example value:** `1` (mono), `2` (stereo)
+
+The number of audio channels. Voice narration is typically `1` (mono).
+Background music is typically `2` (stereo).
+
+#### Subsubsubsection 3.9.3.5.3: audio_file_bitrate
+
+**Type:** `Optional[int]`
+**Default:** `None`
+**Example value:** `128000` (meaning 128 kbps)
+
+The bitrate of the audio file in bits per second. Higher bitrate = better
+audio quality but larger file size. Common values: `128000` (128 kbps,
+standard), `192000` (192 kbps, good quality), `320000` (320 kbps, high quality).
+
+#### Subsubsubsection 3.9.3.5.4: audio_file_size_bytes
+
+**Type:** `Optional[int]`
+**Default:** `None`
+**Example value:** `5292640` (approximately 5 MB for a 60-second mp3)
+
+The size of the master audio file on disk in bytes.
+
+### Subsubsection 3.9.3.6: GROUP 6 — Clips Properties
+
+#### Subsubsubsection 3.9.3.6.1: audio_clips
+
+**Type:** `List[AudioClip]`
+**Default:** `[]` (empty list per instance)
+
+The list of all `AudioClip` objects that were produced by cutting this
+master AudioFile. When the user runs `split audio 4`, this list is
+populated with 4 AudioClip objects, one for each scene.
+
+```python
+# After running "split audio 4":
+audio_file.audio_clips = [
+    AudioClip(audio_clip_id=1, audio_clip_duration=12.5, scene_id=None, ...),
+    AudioClip(audio_clip_id=2, audio_clip_duration=18.5, scene_id=None, ...),
+    AudioClip(audio_clip_id=3, audio_clip_duration=16.8, scene_id=None, ...),
+    AudioClip(audio_clip_id=4, audio_clip_duration=12.2, scene_id=None, ...),
+]
+# All clips start with scene_id=None until the user runs "sync scene"
+```
+
+### Subsubsection 3.9.3.7: GROUP 7 — State Properties
+
+#### Subsubsubsection 3.9.3.7.1: audio_file_is_split
+
+**Type:** `bool`
+**Default:** `False`
+
+`True` when the master audio file has already been split into individual
+AudioClips. `False` when the file was just added and splitting has not
+run yet.
+
+This flag prevents the user from accidentally running `split audio` twice
+on the same file, which would produce a second set of duplicate clips.
+If the user tries to split an already-split file, the system checks this
+flag and refuses with a warning.
+
+#### Subsubsubsection 3.9.3.7.2: audio_file_added_at
+
+**Type:** `Optional[str]`
+**Default:** `None`
+**Example value:** `"2024-11-10 09:05:00"`
+
+The timestamp of when this audio file was added to the project — when
+the user ran `add audio voice.mp3` and the system copied the file into
+the project directory.
+
+---
+
+# Section 3.10: Entity 8 — VideoFile
+
+## Subsection 3.10.1: What Is a VideoFile?
+
+A `VideoFile` is the master video recording that a user adds to a
+SuperManim project. It is the complete, uncut video file before it is
+split into individual `VideoClip` pieces. It is the video equivalent of
+the `AudioFile` entity — the same concept but for video.
+
+Like `AudioFile`, `VideoFile` is flexible. It is used both in `supermanim`
+mode (to embed external video content inside Manim scenes) and when the
+project is used purely to process a standalone video file (splitting it,
+changing its format, extracting audio from it, and so on).
+
+### Subsubsection 3.10.1.1: Where Is the VideoFile Class Defined on Disk?
+
+```
+/home/mina/SuperManim/core/entities/video_file.py
+```
+
+## Subsection 3.10.2: The Full Python Class of the VideoFile Entity
+
+```python
+# File location: /home/mina/SuperManim/core/entities/video_file.py
+
+from __future__ import annotations
+from dataclasses import dataclass, field
+from typing import Optional, List
+
+
+@dataclass
+class VideoFile:
+    """
+    The VideoFile Entity represents a master video file added to the project.
+
+    It is a pure data container. It holds all the metadata about the
+    original full-length video file — its path, format, duration, and
+    visual/technical properties. It also contains a list of all VideoClip
+    objects produced by cutting this master file.
+
+    It does NOT read video files from disk.
+    It does NOT call FFmpeg or decode any frames.
+    It is just structured data.
+    """
+
+    # ── GROUP 1 — IDENTITY ────────────────────────────────────────────
+    video_file_id:              int
+
+    # ── GROUP 2 — LOCATION ────────────────────────────────────────────
+    video_file_path:            Optional[str]   = None
+    video_file_original_name:   Optional[str]   = None
+
+    # ── GROUP 3 — FORMAT ──────────────────────────────────────────────
+    video_file_format:          str             = "mp4"
+    video_file_codec:           Optional[str]   = None
+
+    # ── GROUP 4 — TIMING (in milliseconds) ────────────────────────────
+    video_file_duration:        Optional[int]   = None
+
+    # ── GROUP 5 — VISUAL PROPERTIES ───────────────────────────────────
+    video_file_resolution:      Optional[str]   = None
+    video_file_fps:             Optional[int]   = None
+    video_file_has_audio:       bool            = False
+
+    # ── GROUP 6 — TECHNICAL PROPERTIES ───────────────────────────────
+    video_file_size_bytes:      Optional[int]   = None
+    video_file_bitrate:         Optional[int]   = None
+
+    # ── GROUP 7 — CLIPS ───────────────────────────────────────────────
+    video_clips:                List            = field(default_factory=list)
+
+    # ── GROUP 8 — STATE ───────────────────────────────────────────────
+    video_file_is_split:        bool            = False
+    video_file_added_at:        Optional[str]   = None
+```
+
+## Subsection 3.10.3: Every Property of the VideoFile Entity Explained
+
+### Subsubsection 3.10.3.1: GROUP 1 — Identity Properties
+
+#### Subsubsubsection 3.10.3.1.1: video_file_id
+
+**Type:** `int`
+**Default:** Required.
+**Example value:** `1`
+
+The unique identifier for this master video file within the project.
+
+### Subsubsection 3.10.3.2: GROUP 2 — Location Properties
+
+#### Subsubsubsection 3.10.3.2.1: video_file_path
+
+**Type:** `Optional[str]`
+**Default:** `None`
+**Example value:** `"assets/videos/screen_record.mp4"`
+
+The path to the master video file inside the project folder. When a user
+adds a video file, the system copies it into the project and stores the
+internal path here.
+
+#### Subsubsubsection 3.10.3.2.2: video_file_original_name
+
+**Type:** `Optional[str]`
+**Default:** `None`
+**Example value:** `"screen_record.mp4"`
+
+The original filename as given by the user, before any copying or
+renaming. Stored for reference and display purposes.
+
+### Subsubsection 3.10.3.3: GROUP 3 — Format Properties
+
+#### Subsubsubsection 3.10.3.3.1: video_file_format
+
+**Type:** `str`
+**Default:** `"mp4"`
+**Example value:** `"mp4"`, `"webm"`, `"mov"`, `"avi"`, `"mkv"`
+
+The container format of this video file.
+
+#### Subsubsubsection 3.10.3.3.2: video_file_codec
+
+**Type:** `Optional[str]`
+**Default:** `None`
+**Example value:** `"h264"`, `"h265"`, `"vp9"`, `"av1"`
+
+The video codec used to encode this file. Different codecs have different
+quality-vs-file-size trade-offs:
+- `"h264"` — Most compatible. Works everywhere. Medium compression.
+- `"h265"` — Better compression than h264. Same quality at ~half the size.
+  Slightly slower to encode/decode.
+- `"vp9"` — Google's open codec. Good for web streaming.
+- `"av1"` — Newest. Best compression. Slowest to encode.
+
+### Subsubsection 3.10.3.4: GROUP 4 — Timing Properties
+
+#### Subsubsubsection 3.10.3.4.1: video_file_duration
+
+**Type:** `Optional[int]`
+**Default:** `None`
+**Example value:** `60000` (meaning 60.0 seconds)
+
+The total duration of the master video file in milliseconds.
+
+### Subsubsection 3.10.3.5: GROUP 5 — Visual Properties
+
+#### Subsubsubsection 3.10.3.5.1: video_file_resolution
+
+**Type:** `Optional[str]`
+**Default:** `None`
+**Example value:** `"1920x1080"`
+
+The pixel dimensions of this video file, read from the file's metadata.
+
+#### Subsubsubsection 3.10.3.5.2: video_file_fps
+
+**Type:** `Optional[int]`
+**Default:** `None`
+**Example value:** `30`, `60`
+
+The frame rate of this video file, read from the file's metadata. All
+video clips in a project should have the same fps for smooth assembly.
+
+#### Subsubsubsection 3.10.3.5.3: video_file_has_audio
+
+**Type:** `bool`
+**Default:** `False`
+
+`True` if this video file contains an embedded audio track alongside the
+video. Used by the export system to decide whether to extract the audio.
+
+### Subsubsection 3.10.3.6: GROUP 6 — Technical Properties
+
+#### Subsubsubsection 3.10.3.6.1: video_file_size_bytes
+
+**Type:** `Optional[int]`
+**Default:** `None`
+**Example value:** `209715200` (approximately 200 MB)
+
+The size of the master video file on disk in bytes.
+
+#### Subsubsubsection 3.10.3.6.2: video_file_bitrate
+
+**Type:** `Optional[int]`
+**Default:** `None`
+**Example value:** `8000000` (meaning 8 Mbps)
+
+The overall bitrate of the video file in bits per second. Higher bitrate
+= better quality but larger file size. Typical values: `4000000` (4 Mbps,
+standard web), `8000000` (8 Mbps, good quality), `16000000` (16 Mbps, high quality).
+
+### Subsubsection 3.10.3.7: GROUP 7 — Clips Properties
+
+#### Subsubsubsection 3.10.3.7.1: video_clips
+
+**Type:** `List[VideoClip]`
+**Default:** `[]` (empty list per instance)
+
+The list of all `VideoClip` objects cut from this master VideoFile.
+Populated when the user runs `split video N`. Follows the exact same
+pattern as `AudioFile.audio_clips`.
+
+### Subsubsection 3.10.3.8: GROUP 8 — State Properties
+
+#### Subsubsubsection 3.10.3.8.1: video_file_is_split
+
+**Type:** `bool`
+**Default:** `False`
+
+`True` when the master video has been split into VideoClips. Prevents
+accidental double-splitting, just like `audio_file_is_split`.
+
+#### Subsubsubsection 3.10.3.8.2: video_file_added_at
+
+**Type:** `Optional[str]`
+**Default:** `None`
+**Example value:** `"2024-11-10 10:00:00"`
+
+Timestamp of when this video file was added to the project.
+
+---
+
+# Section 3.11: Entity 9 — AssetFile
+
+## Subsection 3.11.1: What Is an AssetFile?
+
+An `AssetFile` is any supporting file that a Manim animation scene uses
+but that is not itself the animation code, audio, or video. Think of
+asset files as the props and resources that appear inside the animation.
+
+Examples of what counts as an asset file:
+- A **PNG or JPG image** file that appears inside a Manim scene using `ImageMobject()`
+- A **custom font** file (`.ttf`, `.otf`) used by Manim's `Text()` or `MathTex()`
+- An **SVG vector graphic** file imported using `SVGMobject()`
+
+When Manim renders a scene that uses an image, that image must be present
+on disk at exactly the path the code expects. The system tracks every such
+file as an `AssetFile` entity so it knows all the dependencies of each
+scene. This is crucial for the hash fingerprint system — if an image changes,
+the `scene_assets_hash` changes, which changes the `final_scene_hash`,
+which causes the scene to be re-rendered.
+
+```
++=====================================================================+
+|           WHAT COUNTS AS AN ASSET FILE                              |
++=====================================================================+
+|                                                                     |
+|   TYPE: image                                                       |
+|   diagram.png   → used with ImageMobject("assets/images/diagram.png")|
+|   logo.svg      → used with SVGMobject("assets/images/logo.svg")    |
+|   background.jpg → background image                                  |
+|                                                                     |
+|   TYPE: font                                                        |
+|   MyFont.ttf    → used with Text("Hello", font="MyFont")            |
+|   MathFont.otf  → used for custom mathematical rendering            |
+|                                                                     |
+|   TYPE: svg                                                         |
+|   diagram.svg   → used with SVGMobject(...)                         |
+|                                                                     |
+|   ALL STORED IN THE PROJECT ASSETS FOLDER:                          |
+|   /projects/MyAnimation/assets/images/diagram.png                   |
+|   /projects/MyAnimation/assets/images/logo.svg                      |
+|   /projects/MyAnimation/assets/fonts/MyFont.ttf                     |
+|                                                                     |
++=====================================================================+
+```
+
+### Subsubsection 3.11.1.1: Where Is the AssetFile Class Defined on Disk?
+
+```
+/home/mina/SuperManim/core/entities/asset_file.py
+```
+
+## Subsection 3.11.2: The Full Python Class of the AssetFile Entity
+
+```python
+# File location: /home/mina/SuperManim/core/entities/asset_file.py
 
 from __future__ import annotations
 from dataclasses import dataclass
@@ -13597,452 +12997,2829 @@ from typing import Optional
 
 
 @dataclass
-class ProjectSettings:
+class AssetFile:
     """
-    The ProjectSettings Entity holds all configurable preferences for
-    one specific project.
+    The AssetFile Entity represents one supporting file used by a Manim
+    animation scene — such as an image, SVG graphic, or font file.
 
-    It is stored as a table inside project_data.db.
-    There is exactly ONE row per project.
+    It is a pure data container. It holds the path, type, and metadata
+    of the asset file, and links it to the scene that uses it.
 
-    LOCKED FIELDS are written at project creation and never changed.
-    MUTABLE FIELDS are changed by the user through settings commands.
+    This entity is critical for the hash fingerprint system. If any
+    asset file linked to a scene changes (a different image is placed
+    in the assets folder), the scene_assets_hash on the parent Scene
+    changes, which triggers a re-render of that scene.
 
-    Only ProjectLifecycleService is allowed to update the mutable fields.
-    The locked fields have no update method — they cannot be changed.
-
-    This is a pure data container. It holds structured preferences.
-    It does not call Manim, FFmpeg, or SQLite.
+    It does NOT read files from disk.
+    It does NOT load or process images or fonts.
+    It is just structured data.
     """
-    # ── LOCKED FIELDS (written once at creation, never changed) ───────
-    project_name:               str                 = ""
-    project_folder_path:        Optional[str]       = None
-    project_db_path:            Optional[str]       = None
-    
-    # ── MUTABLE — EXPORT SETTINGS ─────────────────────────────────────
-    export_format:              str                 = "mp4"
-    export_quality:             str                 = "high"
-    export_name:                Optional[str]       = None
 
-    # ── MUTABLE — RENDER SETTINGS ─────────────────────────────────────
-    render_resolution:          str                 = "1920x1080"
-    render_fps:                 int                 = 60
-    render_background_color:    str                 = "#000000"
+    # ── GROUP 1 — IDENTITY ────────────────────────────────────────────
+    asset_file_id:              int
 
-    # ── MUTABLE — PREVIEW SETTINGS ────────────────────────────────────
-    preview_resolution:         str                 = "854x480"
-    preview_fps:                int                 = 30
+    # ── GROUP 2 — LINKING ─────────────────────────────────────────────
+    scene_id:                   Optional[int]   = None
 
-    # ── MUTABLE — AUDIO SETTINGS ──────────────────────────────────────
-    audio_format:               str                 = "mp3"
+    # ── GROUP 3 — LOCATION ────────────────────────────────────────────
+    asset_file_path:            Optional[str]   = None
+    asset_file_original_name:   Optional[str]   = None
+
+    # ── GROUP 4 — TYPE AND FORMAT ─────────────────────────────────────
+    asset_file_type:            str             = "image"
+    asset_file_format:          Optional[str]   = None
+
+    # ── GROUP 5 — TECHNICAL PROPERTIES ───────────────────────────────
+    asset_file_size_bytes:      Optional[int]   = None
+
+    # ── GROUP 6 — HASH ────────────────────────────────────────────────
+    asset_file_hash:            Optional[str]   = None
+
+    # ── GROUP 7 — STATE ───────────────────────────────────────────────
+    asset_file_added_at:        Optional[str]   = None
+
+    # ALLOWED VALUES FOR asset_file_type:
+    # "image"  → .png, .jpg, .jpeg raster image
+    # "svg"    → .svg vector graphic
+    # "font"   → .ttf, .otf font file
+    # "video"  → .mp4 or other video embedded inside a scene
 ```
 
----
+## Subsection 3.11.3: Every Property of the AssetFile Entity Explained
 
+### Subsubsection 3.11.3.1: GROUP 1 — Identity Properties
 
-### Subsection 3.8.4 Every Property Explained in Depth
-
-```
-+================================================================+
-|      PROJECTSETTINGS ENTITY — COMPLETE PROPERTY REFERENCE     |
-+================================================================+
-|                                                                |
-|  GROUP 1 — IDENTITY                                            |
-|  ──────────────────────────────────────────────────────────── |
-|  settings_id          int         Required. Unique DB key.    |
-|  project_id           int         Required. Owner project.    |
-|                                                                |
-|  GROUP 2 — LOCKED FIELDS (written once, never changed)         |
-|  ──────────────────────────────────────────────────────────── |
-|  project_name         str         The project's name.         |
-|  project_mode         str         normal/simplemanim/super.   |
-|  project_folder_path  str | None  Root folder on disk.        |
-|  project_db_path      str | None  Database file path.         |
-|  settings_created_at  str | None  Creation timestamp.         |
-|                                                                |
-|  GROUP 3 — MUTABLE EXPORT SETTINGS                             |
-|  ──────────────────────────────────────────────────────────── |
-|  export_format        str         mp4/webm/mov/avi. Def: mp4. |
-|  export_quality       str         low/medium/high/ultra.      |
-|                                   Default: "high".             |
-|  export_name          str | None  Custom output filename.     |
-|                                   Default: None (uses project  |
-|                                   name + "_final").            |
-|                                                                |
-|  GROUP 4 — MUTABLE RENDER SETTINGS                             |
-|  ──────────────────────────────────────────────────────────── |
-|  render_resolution    str         Default: "1920x1080".        |
-|  render_fps           int         Default: 60.                 |
-|  render_background_color str      Hex. Default: "#000000".    |
-|                                                                |
-|  GROUP 5 — MUTABLE PREVIEW SETTINGS                            |
-|  ──────────────────────────────────────────────────────────── |
-|  preview_resolution   str         Always "854x480".           |
-|  preview_fps          int         Default: 30.                 |
-|                                                                |
-|  GROUP 6 — MUTABLE AUDIO SETTINGS                              |
-|  ──────────────────────────────────────────────────────────── |
-|  audio_default_format str         Default: "mp3".              |
-|                                                                |
-|  GROUP 7 — AUTO-UPDATED                                        |
-|  ──────────────────────────────────────────────────────────── |
-|  settings_updated_at  str | None  Set by system on any change.|
-|                                                                |
-+================================================================+
-```
-
-GROUP 2 — LOCKED FIELDS
-
-These fields are written exactly once — when the project is created —
-and can never be changed through any command, any service, or any port.
-The `SqliteProjectSettingsRepository` adapter literally has no method
-to update these columns. They are read-only from the moment of creation.
-
----
-
-project_name
-
-**Type:** `str`
-**Default:** `""` (empty, but always set at creation)
-**Example value:** `"MyAnimation"`
-
-A copy of the project's name, stored in the settings table for fast
-access. Having it here means a service can read all project configuration
-from one place without needing to join the projects table.
-
-This is a copy — the authoritative source is the Project Entity. If
-these ever differ (which they should not), the Project Entity's value
-is the truth.
-
----
-
-project_folder_path
-
-**Type:** `Optional[str]`
-**Default:** `None`
-**Example value:** `"/home/user/projects/MyAnimation"`
-
-The full path to the project's root folder. Locked because if the project
-folder moves, the project must be re-opened pointing at the new location
-rather than updated in the database.
-
----
-
-project_db_path
-
-**Type:** `Optional[str]`
-**Default:** `None`
-**Example value:** `"/home/user/projects/MyAnimation/project_data.db"`
-
-The full path to this very database file. Stored here so that any
-service reading the settings knows exactly where the database lives
-without having to construct the path from parts.
-
-GROUP 3 — MUTABLE EXPORT SETTINGS
-
-These are the settings the user changes most often. They control
-what the final exported video looks like.
-
----
-
-export_format
-
-**Type:** `str`
-**Default:** `"mp4"`
-
-The file format of the final exported video. Changed with:
-`set export format webm`
-
-```
-What happens in the system when the user types "set export format webm":
-
-  1. Shell receives: do_set("export format webm")
-  2. ProjectLifecycleService.set_export_format("webm") is called.
-  3. ValidationService.export_format_is_supported("webm") -> True
-  4. ProjectSettingsRepositoryPort.update_export_format(project_id, "webm")
-  5. SqliteProjectSettingsRepository writes to the database:
-     UPDATE project_settings SET export_format='webm',
-     settings_updated_at='2024-11-12 14:30:55'
-     WHERE project_id=1
-  6. The in-memory ProjectSettings object is updated.
-  7. User sees: "Export format updated. Format: webm"
-```
-
-Supported values: `"mp4"`, `"webm"`, `"mov"`, `"avi"`.
-Any other value is refused by the `ValidationService` before it reaches
-the repository.
-
----
-
-export_quality
-
-**Type:** `str`
-**Default:** `"high"`
-
-The quality level of the final exported video. Changed with:
-`set export quality ultra`
-
-```
-+-------------------------------------------------------------+
-|   EXPORT QUALITY LEVELS AND THEIR MEANINGS                  |
-+-------------------------------------------------------------+
-|                                                             |
-|   "low"    ->  480p   (854x480)    ~40 MB per 60 seconds   |
-|   "medium" ->  720p   (1280x720)   ~90 MB per 60 seconds   |
-|   "high"   ->  1080p  (1920x1080)  ~214 MB per 60 seconds  |
-|   "ultra"  ->  4K     (3840x2160)  ~850 MB per 60 seconds  |
-|                                                             |
-|   Note: This only affects the EXPORT assembly step.        |
-|   Individual scene renders in output/ are always            |
-|   produced at render_resolution quality.                    |
-|                                                             |
-+-------------------------------------------------------------+
-```
-
----
-
-export_name
-
-**Type:** `Optional[str]`
-**Default:** `None`
-**Example value:** `"IntroductionToCalculus_Episode1"`
-
-The custom filename for the exported video, without extension.
-When `None`, the system uses `{project_name}_final` as the default.
-Changed with: `set export name MyCustomName`
-
-The extension is added automatically based on `export_format`.
-Storing the name without extension means changing the format
-automatically updates the file extension without needing to
-change the name separately.
-
-```
-export_name = "IntroductionToCalculus_Episode1"
-export_format = "mp4"   -> IntroductionToCalculus_Episode1.mp4
-export_format = "webm"  -> IntroductionToCalculus_Episode1.webm
-(name unchanged, only the extension updates)
-```
-
----
-
-GROUP 4 — MUTABLE RENDER SETTINGS
-
-These settings control the visual output of every rendered scene.
-
----
-
-render_resolution
-
-**Type:** `str`
-**Default:** `"1920x1080"`
-**Example value:** `"1920x1080"`, `"3840x2160"`, `"1280x720"`
-
-The pixel dimensions used when Manim renders scenes. All scenes in a project
-must use the same resolution because FFmpeg requires all input clips to have
-identical dimensions when stitching them into the final video.
-
----
-
-render_fps
+#### Subsubsubsection 3.11.3.1.1: asset_file_id
 
 **Type:** `int`
-**Default:** `60`
-**Example value:** `24`, `30`, `60`
+**Default:** Required.
+**Example value:** `5`
 
-How many frames Manim draws per second of animation. 60fps is smooth
-but slow to render. 24fps is cinema standard and much faster to render.
+The unique identifier for this asset file within the project. Used as
+the primary key in the database.
+
+### Subsubsection 3.11.3.2: GROUP 2 — Linking Properties
+
+#### Subsubsubsection 3.11.3.2.1: scene_id
+
+**Type:** `Optional[int]`
+**Default:** `None`
+**Example value:** `3`
+
+The `scene_id` of the Scene that uses this asset file. This back-link
+is what allows the hash system to compute `scene_assets_hash` correctly.
+The system finds all AssetFiles with `scene_id = 3`, reads their
+`asset_file_hash` values, combines them, and produces the
+`scene_assets_hash` for Scene 3.
 
 ```
-For a 16.8-second scene:
-  24 fps ->  403 frames to draw
-  30 fps ->  504 frames to draw
-  60 fps -> 1008 frames to draw
-
-Lower fps = fewer frames = faster render = less smooth motion.
+scene_assets_hash for Scene 3 is computed from:
+  AssetFile(asset_file_id=5, scene_id=3, asset_file_hash="e3b0...")
+  AssetFile(asset_file_id=6, scene_id=3, asset_file_hash="f8a1...")
+  AssetFile(asset_file_id=7, scene_id=3, asset_file_hash="9c4d...")
+  ─────────────────────────────────────────────────────────────────
+  Combined → scene_assets_hash = "a9f3b2c1..."
 ```
 
----
+### Subsubsection 3.11.3.3: GROUP 3 — Location Properties
 
-render_background_color
+#### Subsubsubsection 3.11.3.3.1: asset_file_path
 
-**Type:** `str`
-**Default:** `"#000000"` (pure black)
-**Example value:** `"#000000"`, `"#FFFFFF"`, `"#1a1a2e"`
+**Type:** `Optional[str]`
+**Default:** `None`
+**Example value:** `"assets/images/diagram.png"`
 
-The background color of the animation canvas in hex format.
-Manim fills the canvas with this color before drawing anything.
-Most educational animations use black because shapes and text
-stand out clearly against it.
+The path to the asset file inside the project folder.
 
----
+#### Subsubsubsection 3.11.3.3.2: asset_file_original_name
 
-GROUP 5 — MUTABLE PREVIEW SETTINGS
+**Type:** `Optional[str]`
+**Default:** `None`
+**Example value:** `"diagram.png"`
 
----
+The original filename as provided by the user.
 
-preview_resolution
+### Subsubsection 3.11.3.4: GROUP 4 — Type and Format Properties
 
-**Type:** `str`
-**Default:** `"854x480"` (480p)
-
-The resolution used for preview renders. This is always 480p and is not
-intended to be changed by the user — it exists as a setting so the system
-can read it consistently from one place rather than hardcoding it.
-
-480p is chosen because it is roughly five times fewer pixels than 1080p,
-making previews about five times faster to generate than full renders.
-
----
-
-preview_fps
-
-**Type:** `int`
-**Default:** `30`
-
-The frame rate used for preview renders. Lower than the render fps
-by default (30 vs 60) to make previews twice as fast. Again, this
-is not intended to be changed by the user directly.
-
----
-
-GROUP 6 — MUTABLE AUDIO SETTINGS
-
----
-
-audio_format
+#### Subsubsubsection 3.11.3.4.1: asset_file_type
 
 **Type:** `str`
-**Default:** `"mp3"`
-**Example value:** `"mp3"`, `"wav"`, `"ogg"`
+**Default:** `"image"`
+**Allowed values:** `"image"`, `"svg"`, `"font"`, `"video"`
 
-The default format that will be used when audio files are added to this
-project or when audio clips are generated from splitting. Changed with:
-`change audio_format wav`
+The category of this asset. Determines how it is used in Manim code
+and how it is processed by the system.
 
-When this setting is changed, the next time audio is added or split,
-the clips will be created in the new format.
+```
+"image"  → ImageMobject("assets/images/diagram.png")
+"svg"    → SVGMobject("assets/images/logo.svg")
+"font"   → Text("Hello World", font="MyFont")
+"video"  → (embedded video clips inside a Manim scene)
+```
+
+#### Subsubsubsection 3.11.3.4.2: asset_file_format
+
+**Type:** `Optional[str]`
+**Default:** `None`
+**Example value:** `"png"`, `"jpg"`, `"svg"`, `"ttf"`, `"otf"`
+
+The file extension/format of this asset.
+
+### Subsubsection 3.11.3.5: GROUP 5 — Technical Properties
+
+#### Subsubsubsection 3.11.3.5.1: asset_file_size_bytes
+
+**Type:** `Optional[int]`
+**Default:** `None`
+**Example value:** `245760` (approximately 240 KB for a medium-resolution PNG)
+
+The size of this asset file on disk in bytes.
+
+### Subsubsection 3.11.3.6: GROUP 6 — Hash Properties
+
+#### Subsubsubsection 3.11.3.6.1: asset_file_hash
+
+**Type:** `Optional[str]`
+**Default:** `None`
+**Example value:** `"e3b0c44298fc1c149afb4c8996fb92427ae41e4649b934ca495991b7852b855"`
+
+The SHA-256 fingerprint of this asset file's content. If the user
+replaces `diagram.png` with a different image (even if it has the same
+filename), this hash changes. That change then propagates:
+
+```
+asset_file_hash changes
+      ↓
+scene_assets_hash on the parent Scene changes
+      ↓
+final_scene_hash on the parent Scene changes
+      ↓
+Scene must be re-rendered (hash no longer matches stored hash)
+```
+
+### Subsubsection 3.11.3.7: GROUP 7 — State Properties
+
+#### Subsubsubsection 3.11.3.7.1: asset_file_added_at
+
+**Type:** `Optional[str]`
+**Default:** `None`
+**Example value:** `"2024-11-10 09:15:00"`
+
+The timestamp when this asset file was registered in the project. Set
+when the user runs `add asset diagram.png scene 3`.
 
 ---
 
-A REAL PROJECTSETTINGS OBJECT IN FULL
+
+# Section 3.12: Entity 10 — Timeline
+
+## Subsection 3.12.1: What Is a Timeline?
+
+The Timeline is the entity that represents the ordered sequence of all
+media units in a project and the calculated total duration of the
+entire video. Think of it like a spreadsheet row that says:
+"This project has 5 scenes, they play in this order, and together they
+last exactly 60300 milliseconds."
+
+The Timeline does not store scenes itself — the Scenes are stored
+separately. The Timeline is a calculated summary of how all scenes
+connect into a continuous video.
+
+```
++=====================================================================+
+|                    THE TIMELINE CONCEPT                             |
++=====================================================================+
+|                                                                     |
+|   0ms     12500ms    31000ms    47800ms    60000ms                  |
+|   |────────|──────────|──────────|──────────|                      |
+|   Scene 1   Scene 2    Scene 3    Scene 4                           |
+|   12500ms   18500ms    16800ms    12200ms                           |
+|                                                                     |
+|   Timeline:                                                         |
+|     total_duration  = 60000ms                                       |
+|     scene_count     = 4                                             |
+|     is_complete     = True  (no gaps between scenes)               |
+|                                                                     |
++=====================================================================+
+```
+
+### Subsubsection 3.12.1.1: Where Is the Timeline File on Disk?
+
+```
+/home/mina/SuperManim/core/entities/timeline.py
+```
+
+## Subsection 3.12.2: The Full Python Class of the Timeline Entity
 
 ```python
-ProjectSettings(
-    # ── IDENTITY ────────────────────────────────────────────────
-    settings_id              = 1,
-    project_id               = 1,
+# File location: /home/mina/SuperManim/core/entities/timeline.py
 
-    # ── LOCKED FIELDS ───────────────────────────────────────────
-    project_name             = "MyAnimation",
-    project_mode             = "supermanim",
-    project_folder_path      = "/home/user/projects/MyAnimation",
-    project_db_path          = "/home/user/projects/MyAnimation/project_data.db",
-    settings_created_at      = "2024-11-10 09:00:15",
+from __future__ import annotations
+from dataclasses import dataclass, field
+from typing import Optional, List
 
-    # ── MUTABLE EXPORT SETTINGS ──────────────────────────────────
-    export_format            = "mp4",
-    export_quality           = "high",
-    export_name              = "IntroductionToCalculus_Episode1",
 
-    # ── MUTABLE RENDER SETTINGS ──────────────────────────────────
-    render_resolution        = "1920x1080",
-    render_fps               = 60,
-    render_background_color  = "#000000",
+@dataclass
+class Timeline:
+    """
+    The Timeline Entity represents the ordered arrangement of all scenes
+    in a project and the computed overall duration of the final video.
 
-    # ── MUTABLE PREVIEW SETTINGS ─────────────────────────────────
-    preview_resolution       = "854x480",
-    preview_fps              = 30,
+    It is a pure data container. It holds ordering information and
+    calculated totals. It does not compute anything itself — the
+    TimelineService computes all values and stores them here.
 
-    # ── MUTABLE AUDIO SETTINGS ───────────────────────────────────
-    audio_default_format     = "mp3",
+    All timing values are in milliseconds as integers.
+    """
+    # ── GROUP 2 — SUMMARY ─────────────────────────────────────────────
+    total_duration:         int             = 0
+    scene_count:            int             = 0
 
-    # ── AUTO-UPDATED ─────────────────────────────────────────────
-    settings_updated_at      = "2024-11-12 14:30:55",
-)
+    # ── GROUP 3 — ORDERED SCENE IDs ──────────────────────────────────
+    ordered_scene_ids:      List[int]       = field(default_factory=list)
+
+    # ── GROUP 4 — SYNCHRONIZATION ─────────────────────────────────────
+    audio_total_duration:   Optional[float] = None
+    is_synced_with_audio:   bool            = False
+
+    # ── GROUP 5 — VALIDATION ──────────────────────────────────────────
+    has_gaps:               bool            = False
+    is_complete:            bool            = False
+
+    # ── GROUP 6 — STATE ───────────────────────────────────────────────
+    last_calculated_at:     Optional[str]   = None
 ```
 
-What you can read from this object in one glance:
-the project is named MyAnimation, it is in supermanim mode, it exports
-to a 1080p mp4 named IntroductionToCalculus_Episode1, it renders at
-60fps on a black background, preview mode uses 480p at 30fps, audio
-defaults to mp3, and the settings were last updated on November 12 at 2:30 PM.
+## Subsection 3.12.3: Every Property of the Timeline Entity Explained
+### Subsubsection 3.12.3.2: GROUP 2 — Summary Properties
+
+#### Subsubsubsection 3.12.3.2.1: total_duration
+
+**Type:** `int`
+**Default:** `0`
+**Example value:** `60000` (60 seconds in milliseconds)
+
+The sum of all scene durations in the project. Recomputed automatically
+by `TimelineService` every time a scene is added, removed, or its
+duration changes.
+
+```
+Scene 1: 12500ms
+Scene 2: 18500ms
+Scene 3: 16800ms
+Scene 4: 12200ms
+─────────────────
+Total:   60000ms  ← stored in timeline.total_duration
+```
+
+#### Subsubsubsection 3.12.3.2.2: scene_count
+
+**Type:** `int`
+**Default:** `0`
+**Example value:** `4`
+
+The total number of scenes currently in the timeline.
+
+### Subsubsection 3.12.3.3: GROUP 3 — Ordered Scene IDs
+
+#### Subsubsubsection 3.12.3.3.1: ordered_scene_ids
+
+**Type:** `List[int]`
+**Default:** `[]`
+**Example value:** `[1, 2, 3, 4]`
+
+An ordered list of `scene_id` values representing the sequence in which
+scenes will play. The first ID in the list is the first scene to play.
+When the user runs `move scene 4 to 1`, this list is reordered:
+ `[4, 1, 2, 3]`.
+
+The scene_index is the order of the scene in the timeline but the scene_id is the uniqe identifier of
+ the scene
+if the list is 
+`[4, 1, 2, 3]`.
+Then the scene_id = 4 is placed in scene_index = 0  
+     the scene_id = 3 is placed in scene_index = 3 in the list   
+### Subsubsection 3.12.3.4: GROUP 4 — Synchronization Properties
+
+#### Subsubsubsection 3.12.3.4.1: audio_total_duration
+
+**Type:** `Optional[float]`
+**Default:** `None`
+**Example value:** `60.0` (seconds)
+
+The total duration of the master audio file (mirrored from
+`Project.audio_total_duration`). Stored here for quick comparison
+with `total_duration` during the sync validation check.
+for sync the total duration (sums of all scenes durations) must be equal the audio total duration 
+#### Subsubsubsection 3.12.3.4.2: is_synced_with_audio
+
+**Type:** `bool`
+**Default:** `False`
+
+`True` when `total_duration` (converted to seconds) equals
+`audio_total_duration`. Meaning: the total video duration matches the
+total audio duration exactly. The video will play in perfect sync with
+the audio from start to finish.
+
+### Subsubsection 3.12.3.5: GROUP 5 — Validation Properties
+
+#### Subsubsubsection 3.12.3.5.1: has_gaps
+
+**Type:** `bool`
+**Default:** `False`
+
+`True` if there are gaps between scenes — places where one scene ends
+and the next scene does not begin immediately. A gap means the final
+video will have a blank/silent section. This is usually a mistake and
+the system warns the user.
+
+#### Subsubsubsection 3.12.3.5.2: is_complete
+
+**Type:** `bool`
+**Default:** `False`
+
+`True` when:
+1. `scene_count > 0` (at least one scene exists)
+2. `has_gaps = False` (no empty spaces between scenes)
+3. `total_duration > 0` (the timeline has actual content)
+
+A complete timeline means the scenes connect seamlessly from start to
+finish with no holes.
+
+# SuperManim Settings Entities — Full Reference
+
+> **What this document covers:**
+> The five settings entities used in every SuperManim project:
+> `AudioSettings`, `VideoSettings`, `RenderSettings`, `PreviewSettings`, and `ExportSettings`.
+>
+> Each section explains what the entity IS, what it DOES, where it LIVES, all its PROPERTIES
+> (with types, defaults, and examples), and how it CONNECTS to other parts of the system.
 
 ---
 
-HOW PROJECTSETTINGS IS SHOWN TO THE USER
+---
 
-When the user types `show export settings`, the system loads the
-ProjectSettings Entity and displays the relevant fields:
-
-```
-supermanim> show export settings
-
-  Export Settings — MyAnimation
-  ================================
-  Output filename:    IntroductionToCalculus_Episode1
-  Format:             mp4
-  Quality:            high (1080p)
-  Full output path:   exports/IntroductionToCalculus_Episode1.mp4
-
-  Estimated file size for this project:  ~214 MB
-  Total assembled duration:              60.3 seconds
-
-  To change these settings:
-    set export name     <filename>
-    set export format   <format>
-    set export quality  <level>
-
-  To run the export:
-    export
-```
-
-Every line of this display comes from reading fields of the
-ProjectSettings Entity and formatting them for the user.
+# Section 3.13 Entity 11  — AudioSettings
 
 ---
 
+##  Subsection 3.13.1  What Is AudioSettings?
 
-## Section 3.9 How All Entities Work Together
+`AudioSettings` is the entity that stores all information about the
+**project-level audio file** — the single audio recording (narration or
+background music) that plays behind the entire animation from start to finish.
+
+Think of it like a **cassette tape label**. The label does not contain the
+actual audio. It just describes the tape:
+
+- What format is it? (MP3? WAV?)
+- Where is the file stored on disk?
+- How long is it?
+
+`AudioSettings` is that label. It is a pure data container — it does not
+play audio, convert audio, or read audio bytes. It just holds three pieces
+of information about the audio file.
 
 ```
 +=====================================================================+
-|        HOW AUDIOFILE, AUDIOCLIP, AND PROJECTSETTINGS RELATE         |
+|              THE THREE QUESTIONS AUDIOSETTINGS ANSWERS              |
 +=====================================================================+
 |                                                                     |
-|   Project (project_id=1, "MyAnimation")                             |
-|   |                                                                 |
-|   +-- ProjectSettings (project_id=1)                                |
-|   |   export_format="mp4", export_quality="high"                    |
-|   |   render_resolution="1920x1080", render_fps=60                  |
-|   |   <- These settings apply to all renders and exports            |
-|   |                                                                 |
-|   +-- AudioFile (project_id=1, audio_file_id=1)                     |
-|   |   stored_path="audio_clips/original_audio.mp3"                  |
-|   |   audio_total_duration=60.3, audio_format="mp3"                 |
-|   |   audio_is_split=True, audio_clip_count=5                       |
-|   |   <- The master recording. Never cut. Never modified.           |
-|   |                                                                 |
-|   +-- AudioClip (clip_id=1, audio_file_id=1, scene_id=1)            |
-|   |   clip_path="audio_clips/clip_001.mp3"                          |
-|   |   clip_duration=12.5                                            |
-|   |   clip_start_in_original=0.0, clip_end_in_original=12.5        |
-|   |   clip_is_synced=True  <- linked to Scene 1                     |
-|   |                                                                 |
-|   +-- AudioClip (clip_id=3, audio_file_id=1, scene_id=3)            |
-|   |   clip_path="audio_clips/clip_003.mp3"                          |
-|   |   clip_duration=16.8                                            |
-|   |   clip_start_in_original=31.0, clip_end_in_original=47.8       |
-|   |   clip_is_synced=True  <- linked to Scene 3                     |
-|   |                                                                 |
-|   +-- Scene (scene_id=3)                                            |
-|       scene_duration=16.8                                           |
-|       audio_clip_path="audio_clips/clip_003.mp3"                    |
-|       synced_with_audio=True                                        |
-|       <- render uses clip_003.mp3 (duration matches: 16.8==16.8)   |
+|   1.  WHAT FORMAT is the audio file?                                |
+|       Is it MP3? WAV? OGG? AAC? FLAC? M4A?                         |
+|       → Stored in:  audio_format                                    |
+|                                                                     |
+|   2.  WHERE is the audio file on disk?                              |
+|       What is the full path to the master audio file?               |
+|       → Stored in:  audio_file_path                                 |
+|                                                                     |
+|   3.  HOW LONG is the audio file?                                   |
+|       How many total seconds of audio are there?                    |
+|       → Stored in:  audio_total_duration                            |
 |                                                                     |
 +=====================================================================+
 ```
 
+---
+
+##  Subsection 3.13.2  Where Does AudioSettings Live?
+
+`AudioSettings` is a **nested field inside the `Project` entity**.
+Every project holds exactly one `AudioSettings` object. If no audio has
+been added to the project yet, the field is `None`.
+
+```
+Project
+├── project_name:            "My Math Video"
+├── project_total_duration:  60.3
+├── project_items:           [Scene 1, Scene 2, Scene 3, Scene 4]
+└── project_audio_settings:  AudioSettings   ← lives here
+                                 ├── audio_format:          "mp3"
+                                 ├── audio_file_path:       "audio_clips/original_audio.mp3"
+                                 └── audio_total_duration:  60.3
+
+When no audio has been added yet:
+└── project_audio_settings:  None
+```
+
+---
+
+##  Subsection 3.13.3  File Location on Disk
+
+```
+/home/mina/SuperManim/core/entities/audio_settings.py
+```
+
+It is imported inside `project.py` like this:
+
+```python
+from .audio_settings import AudioSettings
+
+@dataclass
+class Project:
+    ...
+    project_audio_settings: Optional[AudioSettings] = None
+```
+
+---
+
+##  Subsection 3.13.4  All Properties inside AudioSettings entity
+
+---
+
+### Subsubsection 3.13.4.1  `audio_format`
+
++------------------+------------------------------------------------------+
+| Field            | Value                                                |
++------------------+------------------------------------------------------+
+| Type             | str                                                  |
+| Default          | "mp3"                                                |
+| Example values   | "mp3", "wav", "ogg", "aac", "flac", "m4a"            |
++------------------+------------------------------------------------------+
+ 
+The `audio_format` field stores the file format of the master audio file
+as a lowercase string.
+
+This value is used by `AudioService` when the system needs to
+convert the audio to a different format (for example, converting MP3 to WAV
+before high-quality export). It is also used when the system needs to pass
+the correct FFmpeg codec flags during the final video assembly step.
+
+```
+Supported format values and what they mean:
+
+"mp3"   → MPEG Audio Layer III. Most common. Works everywhere.
+           Smaller file size. Slight quality loss (lossy compression).
+           Best for: general use, narration, background music.
+
+"wav"   → Waveform Audio File Format. Uncompressed.
+           Very large file sizes. Perfect audio quality (lossless).
+           Best for: professional audio workflows, studio-quality output.
+
+"ogg"   → Ogg Vorbis. Open format. Smaller than MP3 at same quality.
+           Not supported by all players. Best for: web use, open-source projects.
+
+"aac"   → Advanced Audio Coding. Better quality than MP3 at same file size.
+           Widely supported. Used by YouTube, Apple devices.
+           Best for: modern web and mobile delivery.
+
+"flac"  → Free Lossless Audio Codec. Lossless but compressed.
+           Much smaller than WAV. Still perfect quality.
+           Best for: archival, high-quality editing workflows.
+
+"m4a"   → MPEG-4 Audio. AAC inside an MP4 container.
+           Used by Apple ecosystem (iTunes, iPhones).
+           Best for: Apple-targeted workflows.
+```
+
+---
+
+ ### Subsubsection 3.13.4.2  `audio_file_path`
+
++------------------+---------------------------------------------+
+| Field            | Value                                       |
++------------------+---------------------------------------------+
+| Type             | str                                         |
+| Default          | "" (empty string)                           |
+| Example values   | "audio_clips/original_audio.mp3"            |
+|                  | "/home/mina/projects/narration.wav"         |
++------------------+---------------------------------------------+
+
+The `audio_file_path` field stores the path to the master audio file on disk.
+This is the single long audio recording that covers the entire project.
+
+This path can be either:
+- A **relative path** from the project root directory: `"audio_clips/narration.mp3"`
+- An **absolute path** from the filesystem root: `"/home/mina/audio/narration.mp3"`
+
+The `AudioService` reads this path to locate the file before
+any cutting, converting, or processing operation. The `AudioService`
+uses this path as the source when it cuts smaller `AudioClip` pieces for
+each scene.
+
+```
+IMPORTANT RULES about audio_file_path:
+─────────────────────────────────────────────────────────────
+  1.  The file must exist at this path when any service tries to use it.
+      If the file is moved or deleted after being registered, all
+      audio-related operations will fail with a FileNotFoundError.
+
+  2.  The path should be consistent across machines if the project
+      is shared. Relative paths are safer for shared projects.
+
+  3.  This field is NEVER None. If no audio has been added,
+      the entire project_audio_settings field is None.
+      Once AudioSettings exists, it always has a valid path.
+```
+
+---
+ ### Subsubsection 3.13.4.3 `audio_total_duration`
++------------------+-----------------------------+
+| Field            | Value                       |
++------------------+-----------------------------+
+| Type             | int                         |
+| Default          | 0                           |
+| Example values   | 60000, 3000                 |
+|                  |                             |
++------------------+-----------------------------+
+
+ The `audio_total_duration` field stores the total length of the master
+audio file in **milliseconds**, as a integer  number.
+
+This value is critical for **timeline synchronization**. The
+`TimelineService` compares `audio_total_duration` against
+`project_total_duration`. If they do not match, it means the audio and
+the animation are different lengths, and the final video will either
+have silence at the end or cut off before the audio finishes.
+
+```
+TIMELINE SYNC CHECK (performed by TimelineService):
+
+   project_total_duration  =  60.3 seconds
+   audio_total_duration    =  60.3 seconds
+   → MATCH. Timeline is synchronized. Export is safe.
+
+   project_total_duration  =  65.0 seconds
+   audio_total_duration    =  60.3 seconds
+   → MISMATCH. WARNING: "Audio is 4.7 seconds shorter than the project.
+     The last 4.7 seconds of the video will have no audio."
+
+   project_total_duration  =  55.0 seconds
+   audio_total_duration    =  60.3 seconds
+   → MISMATCH. WARNING: "Audio is 5.3 seconds longer than the project.
+     The last 5.3 seconds of the audio will be cut off during export."
+```
+
+The value is set automatically by `AudioService` when the
+user adds an audio file. It uses FFmpeg to probe the file and measure
+the exact duration. You never set this manually.
+
+### Subsubsection 3.13.4.4  `audio_sample_rate`
+
++------------------+------------------------------------------------------+
+| Field            | Value                                                |
++------------------+------------------------------------------------------+
+| Type             | int                                                  |
+| Default          | 44100                                                |
+| Example values   | 44100, 48000, 96000                                 |
++------------------+------------------------------------------------------+
+
+The `audio_sample_rate` field stores the number of
+audio samples per second (in Hertz) in the master audio file.
+
+* A sample is a tiny measurement of the sound wave at a single point in time.
+* The more samples per second, the better the audio can represent the original sound.
+* Common values:
+
+  * 44100 Hz → standard for music and narration
+  * 48000 Hz → standard for video production
+  * 96000 Hz → high-quality professional audio
+
+`AudioService` uses this value to make sure the audio plays at the correct speed
+and matches the video timeline.
+
+---
+
+### Subsubsection 3.13.4.5  `audio_channels`
+
++------------------+------------------------------------------------------+
+| Field            | Value                                                |
++------------------+------------------------------------------------------+
+| Type             | int                                                  |
+| Default          | 1                                                    |
+| Example values   | 1, 2                                                |
++------------------+------------------------------------------------------+
+
+The `audio_channels` field stores the number of channels in the audio file.
+
+* 1 → Mono (single channel, same sound in both ears)
+* 2 → Stereo (two channels, left and right for directional sound)
+
+This helps the system know how to mix or export audio correctly.
+For example, stereo music in a video needs two channels, while a simple narration may only need one.
+
+---
+
+### Subsubsection 3.13.4.6  `audio_bit_depth`
+
++------------------+------------------------------------------------------+
+| Field            | Value                                                |
++------------------+------------------------------------------------------+
+| Type             | int                                                  |
+| Default          | 16                                                   |
+| Example values   | 16, 24, 32                                         |
++------------------+------------------------------------------------------+
+
+The `audio_bit_depth` field shows how many bits are used to store each audio sample.
+
+* More bits → more detail in the sound → clearer audio
+* Example:
+
+  * 16-bit → CD quality
+  * 24-bit → professional recording
+  * 32-bit → very high quality, used in mastering
+
+This is important for maintaining good audio quality,
+especially if the file will be edited or exported multiple times.
+
+---
+
+### Subsubsection 3.13.4.7  `audio_bitrate`
+
++------------------+------------------------------------------------------+
+| Field            | Value                                                |
++------------------+------------------------------------------------------+
+| Type             | Optional[int]                                       |
+| Default          | None                                                 |
+| Example values   | 128000, 192000, 320000                              |
++------------------+------------------------------------------------------+
+
+The `audio_bitrate` field stores how many bits per second are used to encode the audio.
+
+* Higher bitrate → better quality, larger file
+* Lower bitrate → smaller file, lower quality
+* Only applies to compressed formats like MP3 or AAC
+* `AudioService` may use this when converting the audio to a different format or compressing it.
+
+---
+### Subsubsection 3.13.4.8  `is_audio_exist`
+
++------------------+------------------------------------------------------+
+| Field            | Value                                                |
++------------------+------------------------------------------------------+
+| Type             | bool                                                 |
+| Default          | False                                                 |
+| Example values   | True, False                                         |
++------------------+------------------------------------------------------+
+
+The `audio_exists` field indicates if the master audio file has been added to the project.
+
+* True → audio is present and ready for processing
+* False → no audio is assigned yet
+
+This helps avoid errors when services try to access audio that doesn’t exist.
+
+---
+
+### Subsubsection 3.13.4.9  `audio_file_size_byte`
+
++------------------+------------------------------------------------------+
+| Field            | Value                                                |
++------------------+------------------------------------------------------+
+| Type             | int                                                 |
+| Default          | 0                                                    |
+| Example values   | 1234567, 98765432                                   |
++------------------+------------------------------------------------------+
+
+The `audio_file_size_byte` field stores the size of the master audio file in bytes.
+
+* Used for validation and debugging
+* Ensures that the audio file is fully downloaded or copied correctly
+---
+
+## Subsection 3.13. 5 Full Python Class (Reference)
+
+```python
+# File location: /home/mina/SuperManim/core/entities/audio_settings.py
+
+from __future__ import annotations
+from dataclasses import dataclass
+from typing import Optional
+
+@dataclass
+class AudioSettings:
+    """
+    AudioSettings stores all metadata about the project-level audio file.
+
+    This is a pure data container (entity). It does NOT play, read, or convert
+    audio. It only describes the master audio file (narration or background music)
+    that spans the entire project.
+
+    Main fields:
+        - audio_format: format of the audio file (mp3, wav, etc.)
+        - audio_file_path: path to the audio file on disk
+        - audio_total_duration: total duration in milliseconds
+
+    Optional fields (enhanced metadata):
+        - audio_sample_rate: samples per second (Hz)
+        - audio_channels: number of audio channels (mono/stereo)
+        - audio_bit_depth: bits per audio sample
+        - audio_bitrate: bits per second for compressed audio
+        - is_audio_exist: whether audio is present
+        - audio_file_size_byte: size of the audio file in bytes
+    """
+
+    # === MAIN PROPERTIES ===
+    # The audio file format (lowercase string)
+    # Examples: "mp3", "wav", "ogg", "aac", "flac", "m4a"
+    audio_format: str = "mp3"
+
+    # Full path to the master audio file (relative or absolute)
+    audio_file_path: str = ""
+
+    # Total duration of the audio in milliseconds
+    audio_total_duration: int = 0
+
+    # True if the audio file exists in the project
+    is_audio_exist: bool = False
+
+    # Size of the audio file in bytes
+    audio_file_size_byte: int = 0
+
+    # === OPTIONAL PROPERTIES ===
+    # Number of audio samples per second in Hertz
+    # Common: 44100, 48000, 96000
+    audio_sample_rate: Optional[int] = 44100
+
+    # Number of channels: 1 = mono, 2 = stereo
+    audio_channels: Optional[int] = 1
+
+    # Bits per audio sample: 16, 24, 32
+    audio_bit_depth: Optional[int] = 16
+
+    # Audio bitrate (optional, only for compressed formats like mp3 or aac)
+    # Example: 128000, 192000, 320000
+    audio_bitrate: Optional[int] = None
+```
+
+# Section 3.14 Entitiy 12 VideoSettings
+## Subsection 3.14.1  What Is VideoSettings?
+
+`VideoSettings` is the entity that stores the **core identity of the
+project as a video** — the properties that define what kind of video
+the project is, who created it, and what its natural dimensions and
+aspect ratio are.
+
+While `RenderSettings` controls *how* scenes are rendered (resolution,
+frame rate), `VideoSettings` answers the more fundamental question:
+*what is this video?* It holds the project's metadata for the final
+assembled video output, including the visual canvas size and the
+author/creator information that may be embedded in the exported file.
+
+Think of `VideoSettings` as the **identity card** for the video project.
+
+---
+
+## Subsection 3.14.2  Where Does VideoSettings Live?
+
+`VideoSettings` is a **nested field inside the `Project` entity**.
+
+```
+Project
+├── project_name:             "My Math Video"
+├── project_total_duration:   60.3
+└── project_video_settings:   VideoSettings   ← lives here
+                                  ├── video_width:        1920
+                                  ├── video_height:       1080
+                                  ├── video_aspect_ratio: "16:9"
+                                  └── video_author:       "Mina"
+```
+
+---
+
+## Subsection 3.14.3  All Properties inside VideoSettings
+
+Got it! I can rewrite the **VideoSettings properties** fully in **paragraph form**, simple English, in-depth explanations, no “Definition / Why it matters / Explanation” labels. I’ll keep it comprehensive and beginner-friendly with examples and ASCII tables. Here’s the full rewrite:
+
+---
+
+# Section 3.14 Entity 12 — VideoSettings
+
+---
+
+## Subsection 3.14.3  All Properties inside VideoSettings entity
+
+`VideoSettings` stores all configuration and metadata for the video output of a project.
+It describes the canvas size, aspect ratio, frame rate, background color, codec,
+file paths, duration, and other key properties needed for rendering animations.
+
+This entity does not hold video frames or render anything itself;
+it is purely a **data container** that tells the system how the video should be created and stored.
+Think of it like a blueprint for the video.
+
+---
+
+### Subsubsection 3.14.3.1  `video_width`
+
+```
++------------------+---------------------------+
+| Field            | Value                     |
++------------------+---------------------------+
+| Type             | int                       |
+| Default          | 1920                      |
+| Example values   | 854, 1280, 1920, 3840     |
++------------------+---------------------------+
+```
+
+The `video_width` specifies how many horizontal pixels the video canvas has.
+A larger width results in higher resolution, sharper images, and bigger file sizes,
+while smaller widths allow faster previews and smaller output files.
+
+For example, 854 pixels is common for 480p preview, 1280 for 720p HD,
+1920 for 1080p Full HD (default), and 3840 for 4K Ultra HD.
+`video_width` always works together with `video_height` to define
+the complete canvas dimensions.
+
+---
+
+### Subsubsection 3.14.3.2  `video_height`
+
+```
++------------------+---------------------------+
+| Field            | Value                     |
++------------------+---------------------------+
+| Type             | int                       |
+| Default          | 1080                      |
+| Example values   | 480, 720, 1080, 2160      |
++------------------+---------------------------+
+```
+
+The `video_height` sets the vertical pixel count of the canvas. Together with `video_width`,
+it determines the resolution of the video. For instance,
+a video of 1920x1080 pixels is 1080p Full HD,
+while 1280x720 produces 720p HD.
+
+Using standard dimensions ensures the video displays correctly on most screens,
+avoiding stretched or squashed images.
+
+---
+
+### Subsubsection 3.14.3.3  `video_aspect_ratio`
+
+```
++------------------+--------------------------------------+
+| Field            | Value                                |
++------------------+--------------------------------------+
+| Type             | str                                  |
+| Default          | "16:9"                               |
+| Example values   | "16:9", "4:3", "1:1", "9:16", "21:9"|
++------------------+--------------------------------------+
+```
+
+The `video_aspect_ratio` stores the ratio of width to height in a human-readable string.
+Common ratios include 16:9 for widescreen videos like YouTube,
+4:3 for older monitors or slides, 1:1 for square social media content,
+9:16 for vertical videos on mobile platforms like TikTok, and 21:9 for cinematic ultra-wide formats.
+
+Even if `video_width` and `video_height` already determine the ratio mathematically,
+storing it explicitly allows other services to quickly access the ratio without calculations.
+
+---
+
+### Subsubsection 3.14.3.4  `video_frame_rate`
+
+```
++------------------+---------------------------+
+| Field            | Value                     |
++------------------+---------------------------+
+| Type             | int                       |
+| Default          | 30                        |
+| Example values   | 24, 30, 60                |
++------------------+---------------------------+
+```
+
+The `video_frame_rate` defines how many frames per second (FPS) the video will contain.
+Higher FPS produces smoother motion but increases file size and processing requirements.
+Common frame rates include 24 FPS for a cinematic feel, 30 FPS for standard animations (default),
+and 60 FPS for very smooth video, often used in fast-paced or gaming content.
+
+---
+
+### Subsubsection 3.14.3.5  `video_background_color`
+
+```
++------------------+---------------------------+
+| Field            | Value                     |
++------------------+---------------------------+
+| Type             | str                       |
+| Default          | "#000000"                 |
+| Example values   | "#000000", "#ffffff", "#ff0000" |
++------------------+---------------------------+
+```
+
+The `video_background_color` specifies the background color of the canvas in hexadecimal format.
+It is the color visible in areas where no visual layers exist. Black (`#000000`) is the default,
+white (`#ffffff`) is common for presentations, and any other color like red (`#ff0000`)
+can be chosen for stylistic effects. Some formats also support transparency, allowing overlays
+to appear on other backgrounds.
+
+---
+
+### Subsubsection 3.14.3.6  `video_total_duration`
+
+```
++------------------+---------------------------+
+| Field            | Value                     |
++------------------+---------------------------+
+| Type             | float                     |
+| Default          | 0.0                       |
+| Example values   | 60.3, 120.0, 45.75        |
++------------------+---------------------------+
+```
+
+The `video_total_duration` stores the total length of the video in seconds.
+This property is essential for synchronizing video with audio and scene timelines.
+If `video_total_duration` and the total audio duration do not match,
+the final video may have silent sections or be cut short at the end.
+
+---
+
+### Subsubsection 3.14.3.7  `video_file_path`
+
+```
++------------------+------------------------------------------+
+| Field            | Value                                    |
++------------------+------------------------------------------+
+| Type             | str                                      |
+| Default          | ""                                       |
+| Example values   | "videos/final_render.mp4", "/home/user/project/video.mp4" |
++------------------+------------------------------------------+
+```
+
+The `video_file_path` indicates where the rendered video file will be saved.
+This path can be relative to the project directory or absolute on the system.
+
+It is used by the rendering service to write the final output and must exist or be creatable.
+Using relative paths ensures portability when sharing the project.
+
+---
+
+### Subsubsection 3.14.3.8  `video_codec`
+
+```
++------------------+---------------------------+
+| Field            | Value                     |
++------------------+---------------------------+
+| Type             | str                       |
+| Default          | "h264"                    |
+| Example values   | "h264", "hevc", "vp9", "av1" |
++------------------+---------------------------+
+```
+
+The `video_codec` defines the format used to compress and encode the video file.
+H264 is widely compatible and used by default. HEVC provides better compression,
+VP9 is web-friendly, and AV1 is a next-generation codec designed for future-proofing.
+The codec affects both video quality and file size.
+
+---
+
+### Subsubsection 3.14.3.9  `is_video_exist`
+
+```
++------------------+---------------------------+
+| Field            | Value                     |
++------------------+---------------------------+
+| Type             | bool                      |
+| Default          | False                     |
+| Example values   | True, False               |
++------------------+---------------------------+
+```
+
+The `is_video_exist` property indicates whether the rendered video file currently exists on disk.
+It prevents errors when the system or services attempt to access the video before it has been generated.
+
+---
+
+### Subsubsection 3.14.3.10  `video_file_size_byte`
+
+```
++------------------+---------------------------+
+| Field            | Value                     |
++------------------+---------------------------+
+| Type             | int                       |
+| Default          | 0                         |
+| Example values   | 1234567, 98765432         |
++------------------+---------------------------+
+```
+
+The `video_file_size_byte` stores the size of the final video file in bytes.
+It is used for validation, storage tracking, and to ensure that the export completed successfully.
+Large videos will naturally have bigger sizes, especially at higher resolutions and frame rates.
+
+
+## Subsection 3.14.4 Full Python Class (Reference)
+
+```python 
+# File location: /home/mina/SuperManim/core/entities/video_settings.py
+
+from __future__ import annotations
+from dataclasses import dataclass
+from typing import Optional
+
+@dataclass
+class VideoSettings:
+    """
+    VideoSettings stores all configuration and metadata for video output.
+    It describes canvas size, aspect ratio, frame rate, background color, codec,
+    file paths, duration, and other key properties needed for rendering animations.
+
+    This entity does not hold video frames or perform rendering.
+    It is a pure data container (blueprint) for video creation.
+    """
+
+    # === Video Dimensions ===
+    video_width: int = 1920
+    video_height: int = 1080
+    video_aspect_ratio: str = "16:9"
+
+    # === Frame Rate ===
+    video_frame_rate: int = 30
+
+    # === Visual Appearance ===
+    video_background_color: Optional[str] = "#000000"
+
+    # === Timing ===
+    video_total_duration: int = 0.0  # in seconds
+
+    # === Output File ===
+    video_file_path: str = None
+    video_codec: Optional[str] = "h264"
+
+    # === File Status ===
+    is_video_exist: bool = False
+    video_file_size_byte: int = 0
+
+```
+
+
+---
+# Section 3.15 Entity 13 — RenderSettings
+
+## Subsection 3.15.1  What Is RenderSettings?
+
+`RenderSettings` is the entity that stores the **visual quality defaults
+for rendering all animation scenes** in a project. It controls how Manim
+draws each scene — how many pixels per frame, how many frames per second,
+and what background color to paint behind every animation.
+
+Think of `RenderSettings` as the **camera settings** for the entire project.
+Just like a camera operator chooses the resolution and frame rate before
+pressing record, `RenderSettings` defines those values before Manim renders
+your animations. Every scene in the project inherits these defaults
+unless it explicitly overrides them with its own values.
+
+While `VideoSettings` answers the question *what is this video?* by storing
+the project's identity and output metadata, `RenderSettings` answers a
+different question: *how should every frame be drawn?* It is the technical
+blueprint that Manim reads to know the resolution, smoothness, color,
+and output format for each rendered scene.
+
+An important distinction to understand is that these are **project-level
+defaults**. Individual `Scene` entities have their own `scene_resolution`,
+`scene_fps`, and `scene_background_color` fields that can override these
+defaults for specific scenes. If a scene does not specify its own values,
+it falls back to whatever `RenderSettings` provides.
+
+Beyond the rendering configuration, `RenderSettings` also holds four
+**cached statistics counters** that track the current state of all scenes
+in the project. These counters are updated automatically whenever a scene's
+status changes, giving the system instant access to progress information
+without needing to query the database every time.
+
+Think of `RenderSettings` as the **master control panel** that sets the
+baseline quality for the entire production, with per-scene overrides
+available when needed, and a built-in dashboard that always shows how
+many scenes are done, pending, or failed.
+
+---
+
+## Subsection 3.15.2  Where Does RenderSettings Live?
+
+`RenderSettings` is a **nested field inside the `Project` entity**.
+
+```
+Project
+├── project_name:              "My Math Video"
+├── project_total_duration:    60.3
+└── project_render_settings:   RenderSettings   ← lives here
+                                  ├── render_resolution:       "1920x1080"
+                                  ├── render_fps:              60
+                                  ├── render_background_color: "#000000"
+                                  ├── render_quality:          "high"
+                                  ├── render_output_dir:       "output/"
+                                  ├── project_total_scenes:    5
+                                  ├── project_rendered_scenes: 3
+                                  ├── project_pending_scenes:  1
+                                  └── project_failed_scenes:   1
+```
+
+When the user creates a new project, `RenderSettings` is automatically
+created with sensible defaults — 1080p resolution, 60 FPS, a black
+background, and all four statistics counters set to zero. As scenes are
+added and their statuses change, the counters update automatically. The
+user can change any of the rendering values at any time, and the next
+render will use the updated settings.
+
+---
+
+## Subsection 3.15.3  All Properties inside RenderSettings
+
+`RenderSettings` stores all configuration for how Manim renders animation
+scenes in a project, along with cached counters that track the progress
+of all scenes. It describes the pixel resolution, frame rate, background
+appearance, quality presets, output directory, and scene-level statistics.
+
+This entity does not draw anything itself, does not invoke Manim, and
+does not manage files on disk. It is purely a **data container** — a set
+of instructions that other services read when they need to know how a
+scene should be rendered and how far along the project is. Think of it
+like a photographer's settings card that gets handed to the lab, combined
+with a progress checklist that says how many shots are developed, how
+many are waiting, and how many had errors.
+
+---
+
+### Subsubsection 3.15.3.1  `render_resolution`
+
+```
++------------------+------------------------------------------+
+| Field            | Value                                    |
++------------------+------------------------------------------+
+| Type             | str                                      |
+| Default          | "1920x1080"                              |
+| Example values   | "854x480", "1280x720", "1920x1080", "3840x2160" |
++------------------+------------------------------------------+
+```
+
+The `render_resolution` specifies the default pixel dimensions for every
+rendered scene, stored as a single string in the format `"widthxheight"`.
+This value is passed directly to Manim as a command-line argument when
+rendering each scene, telling Manim how large to make every single frame
+of the animation.
+
+All scenes in a project should ideally use the same resolution. When FFmpeg
+assembles the final video by concatenating individual scene clips, every
+clip must have identical pixel dimensions. Mixing different resolutions
+across scenes — for example, rendering Scene 1 at 720p and Scene 2 at
+1080p — will cause FFmpeg to fail or produce a broken video with
+mismatched frame sizes. For this reason, `RenderSettings` provides a
+single shared resolution that all scenes inherit by default.
+
+```
++-------------------------------------------------------------+
+|   COMMON RENDER RESOLUTIONS                                  |
++-------------------------------------------------------------+
+|                                                             |
+|   "854x480"    →  480p    Fast. Low quality. Testing only.  |
+|   "1280x720"   →  720p    HD. Good balance of speed/quality |
+|   "1920x1080"  →  1080p   Full HD. DEFAULT. Best for most.  |
+|   "3840x2160"  →  4K      Ultra HD. Very slow render.       |
+|                                                             |
++-------------------------------------------------------------+
+```
+
+A larger resolution produces sharper, more detailed video but
+dramatically increases render time because Manim must calculate and draw
+many more pixels per frame. For example, a 1080p frame has over two
+million pixels, while a 480p frame has only about four hundred thousand —
+roughly five times fewer pixels to compute. During development and testing,
+lowering the resolution to 480p or 720p can save significant time, then
+switching back to 1080p for the final production render.
+
+---
+
+### Subsubsection 3.15.3.2  `render_fps`
+
+```
++------------------+---------------------------+
+| Field            | Value                     |
++------------------+---------------------------+
+| Type             | int                       |
+| Default          | 60                        |
+| Example values   | 15, 24, 30, 60            |
++------------------+---------------------------+
+```
+
+The `render_fps` defines the default frame rate for all rendered scenes —
+how many individual still images Manim must draw for every one second of
+animation. Higher frame rates produce noticeably smoother motion, because
+there are more individual frames bridging each second of movement, but the
+trade-off is that significantly more frames must be computed and stored.
+
+```
++-------------------------------------------------------------+
+|   WHAT FRAME RATE MEANS FOR RENDER TIME                     |
++-------------------------------------------------------------+
+|                                                             |
+|   For a 16.8-second scene:                                  |
+|                                                             |
+|   At 15 fps  →  16.8 × 15  =   252 frames to draw          |
+|   At 24 fps  →  16.8 × 24  =   403 frames to draw          |
+|   At 30 fps  →  16.8 × 30  =   504 frames to draw          |
+|   At 60 fps  →  16.8 × 60  =  1008 frames to draw          |
+|                                                             |
+|   Higher fps = smoother motion = more frames = slower render|
+|                                                             |
+|   15 fps:  Rough. Good for quick testing only.              |
+|   24 fps:  Cinema standard. Smooth enough for most video.   |
+|   30 fps:  TV standard. Good for educational animations.    |
+|   60 fps:  Very smooth. DEFAULT. Best for detailed motion.  |
+|                                                             |
++-------------------------------------------------------------+
+```
+
+A scene rendered at 60 FPS takes roughly four times as long to render as
+the same scene at 15 FPS, because Manim must draw four times as many
+individual frames. During early development, when you are primarily
+checking layout and logic rather than visual smoothness, dropping the
+frame rate to 15 or 24 can dramatically speed up your iteration cycle.
+The default of 60 FPS is chosen because it produces the smoothest
+possible output for educational and mathematical animations where precise
+motion matters.
+
+---
+
+### Subsubsection 3.15.3.3  `render_background_color`
+
+```
++------------------+------------------------------------------+
+| Field            | Value                                    |
++------------------+------------------------------------------+
+| Type             | str                                      |
+| Default          | "#000000"                                |
+| Example values   | "#000000", "#FFFFFF", "#1a1a2e", "#f5f5f5" |
++------------------+------------------------------------------+
+```
+
+The `render_background_color` sets the default background fill color for
+all rendered scenes, specified as a hexadecimal color code. Before Manim
+draws any animation objects — shapes, text, graphs, or equations — it
+first paints the entire frame with this color. Every pixel that is not
+covered by an animation object will display this background color.
+
+Individual scenes can override this value with their own
+`scene_background_color` field, allowing some scenes to have a dark
+background and others to have a light one within the same project.
+However, if a scene does not specify its own background color, it
+automatically inherits the color stored here.
+
+```
+Common background color choices:
+
+  "#000000"  → Pure black.    DEFAULT. Classic math/science video look.
+  "#FFFFFF"  → Pure white.    Clean, bright, whiteboard style.
+  "#1a1a2e"  → Deep navy.     Modern, polished, professional dark theme.
+  "#f5f5f5"  → Off-white.     Softer than pure white. Easy on the eyes.
+  "#0d1117"  → GitHub dark.   Very popular for coding/programming videos.
+  "#fdf6e3"  → Solarized.     Warm cream tone. Readable and calm.
+```
+
+The choice of background color is mostly an aesthetic decision, but it
+can affect readability. Light text on a dark background or dark text on
+a light background are the two standard approaches. The default black
+background is traditional for mathematical animations because it makes
+colored shapes and white text stand out clearly.
+
+---
+
+### Subsubsection 3.15.3.4  `render_quality`
+
+```
++------------------+------------------------------------------+
+| Field            | Value                                    |
++------------------+------------------------------------------+
+| Type             | str                                      |
+| Default          | "high"                                   |
+| Example values   | "low", "medium", "high", "ultra"         |
++------------------+------------------------------------------+
+```
+
+The `render_quality` is a convenience shorthand that maps to a
+predefined combination of resolution and frame rate. Instead of manually
+setting `render_resolution` and `render_fps` separately, you can set
+`render_quality` to one of four preset levels, and the corresponding
+resolution and frame rate values are applied automatically.
+
+```
+Quality preset mappings:
+
+  "low"    → render_resolution = "854x480",   render_fps = 15
+  "medium" → render_resolution = "1280x720",  render_fps = 30
+  "high"   → render_resolution = "1920x1080", render_fps = 60  ← DEFAULT
+  "ultra"  → render_resolution = "3840x2160", render_fps = 60
+```
+
+Using the quality shorthand is faster and less error-prone than setting
+resolution and frame rate independently, especially when switching between
+testing and production modes. During development, you might set the quality
+to `"low"` for fast iteration, then switch to `"high"` for the final
+render. Both approaches — setting individual fields or using the shorthand —
+result in exactly the same configuration values being passed to Manim.
+
+---
+
+### Subsubsection 3.15.3.5  `render_output_dir`
+
+```
++------------------+----------------------------------------------+
+| Field            | Value                                        |
++------------------+----------------------------------------------+
+| Type             | str                                          |
+| Default          | "output/"                                    |
+| Example values   | "output/", "rendered_scenes/", "/tmp/manim/" |
++------------------+----------------------------------------------+
+```
+
+The `render_output_dir` specifies the folder where Manim saves the rendered
+video file for each scene after a successful render. After Manim finishes
+drawing all frames for a scene and encoding them into a video clip, the
+resulting `.mp4` file is written to this directory.
+
+The `ProjectExportService` later reads all scene clips from this directory
+when assembling the final exported video with FFmpeg. Every rendered scene
+is stored here as a separate file, typically named by its scene index.
+
+```
+Typical output directory layout after rendering 4 scenes:
+
+  output/
+  ├── scene_001.mp4
+  ├── scene_002.mp4
+  ├── scene_003.mp4
+  └── scene_004.mp4
+
+The ProjectExportService reads all .mp4 files from this directory
+and concatenates them in order to produce the final video.
+```
+
+This path can be relative to the project root directory or an absolute
+path on the system. Using a relative path like `"output/"` ensures that
+the project remains portable when moved or shared between machines, because
+the output folder will always be created inside the project directory
+rather than at some arbitrary location on the file system.
+
+---
+
+### Subsubsection 3.15.3.6  `project_total_scenes`
+
+```
++------------------+---------------------------+
+| Field            | Value                     |
++------------------+---------------------------+
+| Type             | int                       |
+| Default          | 0                         |
+| Example values   | 0, 4, 10, 25             |
++------------------+---------------------------+
+```
+
+The `project_total_scenes` counter stores the total number of `Scene`
+objects that belong to this project. Every time a new scene is added to
+the project, this counter increases by one. Every time a scene is deleted,
+it decreases by one. This counter always reflects the absolute total —
+it does not care whether a scene is rendered, pending, or failed; it
+simply counts how many scenes exist in the project at any given moment.
+
+This counter is important because many parts of the system need to know
+how large the project is. The timeline service uses it to validate that
+scene indices are within range. The export service uses it to know how
+many clips to expect in the output directory. The progress display uses
+it to calculate completion percentages. Without this cached counter, the
+system would have to query the database and count rows every time it needs
+this information, which would be slow and unnecessary for such a simple
+number.
+
+The counter is automatically maintained by the scene management service.
+When the user runs `add scene` or `delete scene`, the service updates
+this value as part of the same operation, ensuring it stays perfectly
+synchronized with the actual number of scenes in the database.
+
+---
+
+### Subsubsection 3.15.3.7  `project_rendered_scenes`
+
+```
++------------------+---------------------------+
+| Field            | Value                     |
++------------------+---------------------------+
+| Type             | int                       |
+| Default          | 0                         |
+| Example values   | 0, 3, 10, 25             |
++------------------+---------------------------+
+```
+
+The `project_rendered_scenes` counter tracks how many scenes in the
+project currently have a status of `"rendered"`. A scene becomes rendered
+when Manim successfully finishes drawing all its frames and encoding
+the output video file. This counter goes up by one every time a render
+succeeds, and goes down by one if a previously rendered scene is reset
+back to pending status.
+
+This is the number that tells the user (and the system) how much of the
+project is actually finished. When `project_rendered_scenes` equals
+`project_total_scenes`, every scene in the project has been rendered
+and the project is ready for export. The progress bar in the terminal
+uses these two numbers to calculate the completion percentage.
+
+```
+SCENES
+──────────────────
+Total:      5    ← project_total_scenes
+Rendered:   3    ← project_rendered_scenes
+Pending:    1    ← project_pending_scenes
+Failed:     1    ← project_failed_scenes
+
+Progress:   3/5  =  60% complete
+```
+
+When the user re-renders a scene that was already in the `"rendered"`
+state — for example, after changing the animation code — the counter
+does not double-count. The scene was already counted as rendered, so
+the number stays the same. The counter only changes when a scene's
+status actually transitions between states.
+
+---
+
+### Subsubsection 3.15.3.8  `project_pending_scenes`
+
+```
++------------------+---------------------------+
+| Field            | Value                     |
++------------------+---------------------------+
+| Type             | int                       |
+| Default          | 0                         |
+| Example values   | 0, 1, 4, 10              |
++------------------+---------------------------+
+```
+
+The `project_pending_scenes` counter tracks how many scenes in the
+project currently have a status of `"pending"`. A pending scene is one
+that has been created and added to the project but has never been
+successfully rendered. Every newly created scene starts its life with
+the status `"pending"`, so this counter increases by one whenever a new
+scene is added, and decreases by one when that scene is rendered for the
+first time.
+
+Pending scenes represent the remaining work. If a project has five scenes
+and three are rendered, the two pending scenes are the ones that still
+need to be rendered before the project can be fully exported. When the
+user runs `render all`, the system can use this counter to know exactly
+how many scenes need processing, and can skip scenes that are already
+rendered or failed, focusing only on the pending ones.
+
+```
+Status transitions that affect project_pending_scenes:
+
+  +1  when:  a new scene is created (status → "pending")
+  -1  when:  a pending scene is successfully rendered (status → "rendered")
+  -1  when:  a pending scene fails during render    (status → "failed")
+  +1  when:  a rendered scene is reset               (status → "pending")
+  +1  when:  a failed scene is reset                 (status → "pending")
+```
+
+This counter is always automatically updated by the scene management
+service whenever a scene's status changes. The system never requires
+manual updates to these counters — they are maintained as part of the
+same atomic operation that changes the scene's status in the database.
+
+---
+
+### Subsubsection 3.15.3.9  `project_failed_scenes`
+
+```
++------------------+---------------------------+
+| Field            | Value                     |
++------------------+---------------------------+
+| Type             | int                       |
+| Default          | 0                         |
+| Example values   | 0, 1, 2, 5               |
++------------------+---------------------------+
+```
+
+The `project_failed_scenes` counter tracks how many scenes in the
+project currently have a status of `"failed"`. A scene enters the failed
+state when a render was attempted but Manim returned an error — for
+example, a syntax error in the animation code, a missing import, or an
+invalid Manim command. The counter goes up by one when a render fails,
+and goes down by one when the user fixes the problem and successfully
+re-renders the scene.
+
+Failed scenes are the ones that need attention from the developer. They
+represent code that has a bug or a configuration problem that prevented
+Manim from completing the render. The system can use this counter to
+display a clear warning: "1 scene failed — check scene errors before
+exporting." If the user tries to export a project while failed scenes
+exist, the system can warn them that the export will be incomplete.
+
+```
+Status transitions that affect project_failed_scenes:
+
+  +1  when:  a render attempt fails             (status → "failed")
+  -1  when:  a failed scene is fixed and rendered (status → "rendered")
+  -1  when:  a failed scene is reset to pending   (status → "pending")
+
+Example lifecycle of a problematic scene:
+
+  Created       → status = "pending"    (pending_scenes: +1)
+  Render fails  → status = "failed"     (pending_scenes: -1, failed_scenes: +1)
+  Code fixed, re-render succeeds
+                → status = "rendered"   (failed_scenes: -1, rendered_scenes: +1)
+```
+
+The four counters — `project_total_scenes`, `project_rendered_scenes`,
+`project_pending_scenes`, and `project_failed_scenes` — must always add up
+correctly. At any moment in time, the following equation must hold true:
+
+```
+project_total_scenes = project_rendered_scenes
+                     + project_pending_scenes
+                     + project_failed_scenes
+
+Example:  5 = 3 + 1 + 1  ← 5 scenes total, 3 rendered, 1 pending, 1 failed
+```
+
+If this equation ever breaks, it means there is a bug in the scene
+management service that updated the counters incorrectly. The system can
+use this equation as a validation check during startup or before exports
+to catch any counter synchronization issues early.
+
+---
+
+## Subsection 3.15.4  Full Python Class (Reference)
+
+```python
+# File location: /home/mina/SuperManim/core/entities/render_settings.py
+
+from __future__ import annotations
+from dataclasses import dataclass
+from typing import Optional
+
+@dataclass
+class RenderSettings:
+    """
+    RenderSettings stores all configuration for how Manim renders
+    animation scenes in a project, along with cached statistics
+    counters that track scene progress.
+
+    It describes resolution, frame rate, background color, quality
+    presets, output directory, and the current count of scenes
+    broken down by status.
+
+    This entity does not perform rendering, invoke Manim, or manage files.
+    It is a pure data container — a set of instructions that rendering
+    services read to know how each scene should be drawn and how far
+    along the project is.
+
+    These values serve as project-level defaults. Individual Scene
+    entities can override the rendering values with their own
+    scene_resolution, scene_fps, and scene_background_color fields.
+
+    The statistics counters are automatically maintained by the scene
+    management service and must always satisfy:
+        project_total_scenes == project_rendered_scenes
+                              + project_pending_scenes
+                              + project_failed_scenes
+    """
+
+    # === Visual Quality ===
+    render_resolution:            str   = "1920x1080"
+    render_fps:                   int   = 60
+    render_background_color:      str   = "#000000"
+    render_quality:               str   = "high"
+
+    # === Output Location ===
+    render_output_dir:            str   = "output/"
+
+    # === Scene Statistics (cached counters) ===
+    project_total_scenes:         int   = 0
+    project_rendered_scenes:      int   = 0
+    project_pending_scenes:       int   = 0
+    project_failed_scenes:        int   = 0
+```
+
+
+---
+# Section 3.16 Entity 14 — PreviewSettings
+
+## Subsection 3.16.1  What Is PreviewSettings?
+
+`PreviewSettings` is the entity that stores the **configuration for
+generating quick preview videos** of individual scenes. A preview is a
+rough, low-quality draft that the user can watch in a few seconds to
+check whether an animation looks correct, without waiting the minutes
+that a full render would take.
+
+The entire purpose of the preview system is **speed over quality**. Every
+setting inside `PreviewSettings` is chosen to make the preview generate
+as fast as possible. Users check previews to catch layout errors, wrong
+colors, or timing problems. They do not need full quality for that. They
+just need to see: are the objects in the right place? Is the text readable?
+Does the animation run in the correct order?
+
+Think of it like a **pencil sketch** before painting the final canvas.
+The sketch is fast to draw, easy to erase and redraw, and tells you
+everything you need to know about the composition. Only when the sketch
+looks right do you commit to the slow, detailed final painting — which
+in this case is the full render controlled by `RenderSettings`.
+
+While `RenderSettings` is designed for maximum quality and visual fidelity,
+`PreviewSettings` is the exact opposite: it trades quality for speed at
+every single opportunity. Lower resolution, lower frame rate, separate
+output folder — every decision is made to get the preview into the user's
+hands as quickly as possible.
+
+---
+
+## Subsection 3.16.2  Where Does PreviewSettings Live?
+
+`PreviewSettings` is a **nested field inside the `Project` entity**.
+
+```
+Project
+├── project_name:              "My Math Video"
+├── project_total_duration:    60.3
+├── project_render_settings:   RenderSettings   ← full quality settings
+└── project_preview_settings:  PreviewSettings  ← lives here
+                                  ├── preview_resolution:  "854x480"
+                                  ├── preview_fps:         30
+                                  └── preview_output_dir:  "previews/"
+```
+
+Notice that the `Project` entity has **both** `RenderSettings` and
+`PreviewSettings`. They live side by side. One controls the final
+production quality, and the other controls the quick draft quality.
+They are independent of each other — changing the preview settings
+does not affect the render settings, and vice versa.
+
+When the user creates a new project, `PreviewSettings` is automatically
+created with its fixed defaults. The user does not need to configure
+anything — the system already knows the fastest possible settings for
+previews and locks them in.
+
+---
+
+## Subsection 3.16.3  All Properties inside PreviewSettings
+
+`PreviewSettings` stores the configuration for generating quick preview
+videos. It describes the preview resolution, frame rate, and the folder
+where preview files are saved.
+
+This entity does not render anything itself, does not call Manim, and
+does not play video files. It is purely a **data container** that tells
+the preview service how to configure Manim when generating a draft. Think
+of it like a sticky note on your desk that says "drafts go in this
+folder, at this size, at this speed" — the note does not do any work,
+but the person who reads it knows exactly what to do.
+
+An important thing to understand is that the values in `PreviewSettings`
+are **system constants**. They are not meant to be changed by the user.
+The entire preview system is built around the assumption that previews
+always use 480p resolution and 30 FPS. These values are locked in place
+to guarantee that previews are always fast, every single time.
+
+---
+
+### Subsubsection 3.16.3.1  `preview_resolution`
+
+```
++------------------+---------------------------+
+| Field            | Value                     |
++------------------+---------------------------+
+| Type             | str                       |
+| Default          | "854x480"                 |
+| Example values   | "854x480"                 |
++------------------+---------------------------+
+```
+
+The `preview_resolution` is fixed at `"854x480"` (480p). This is not a
+user-configurable setting — it is a system constant that never changes,
+regardless of what `render_resolution` is set to in `RenderSettings`.
+
+The entire point of the preview system is speed. If the preview used the
+same resolution as the full render (1080p by default), it would take just
+as long to generate and the whole concept of a "quick preview" would be
+pointless. By locking the resolution at 480p, the system guarantees that
+previews are always fast.
+
+```
++-------------------------------------------------------------+
+|   WHY 480p IS LOCKED FOR PREVIEWS                           |
++-------------------------------------------------------------+
+|                                                             |
+|   "854x480"    →  480p  →  409,920 pixels per frame        |
+|   "1920x1080"  →  1080p →  2,073,600 pixels per frame      |
+|                                                             |
+|   1080p has roughly FIVE TIMES more pixels than 480p.       |
+|   This means a 480p preview renders approximately 5x faster |
+|   than a full 1080p render.                                 |
+|                                                             |
+|   Example:                                                  |
+|     Full render at 1080p takes ~3 minutes                   |
+|     Preview at 480p takes    ~35 seconds                    |
+|                                                             |
+|   Same scene. Same animation. 5x faster.                    |
+|                                                             |
++-------------------------------------------------------------+
+```
+
+At 480p, the video looks noticeably less sharp than the final output, but
+that is perfectly fine for a preview. The user is not watching the preview
+for visual beauty — they are watching it to verify that objects are in the
+right position, text is spelled correctly, and the animation sequence makes
+sense. None of those things require high resolution to check.
+
+---
+
+### Subsubsection 3.16.3.2  `preview_fps`
+
+```
++------------------+---------------------------+
+| Field            | Value                     |
++------------------+---------------------------+
+| Type             | int                       |
+| Default          | 30                        |
+| Example values   | 30                        |
++------------------+---------------------------+
+```
+
+The `preview_fps` is fixed at `30` frames per second. Just like
+`preview_resolution`, this is a system constant — it is not meant to be
+changed. The full render uses 60 FPS by default, but the preview cuts
+that in half to 30 FPS. Fewer frames per second means fewer frames for
+Manim to draw, which directly translates to faster generation.
+
+```
++-------------------------------------------------------------+
+|   WHY 30 FPS IS LOCKED FOR PREVIEWS                         |
++-------------------------------------------------------------+
+|                                                             |
+|   Frame count for a 16.8-second scene:                      |
+|                                                             |
+|   At 60 fps (full render) →  16.8 × 60 = 1,008 frames      |
+|   At 30 fps (preview)     →  16.8 × 30 =   504 frames      |
+|                                                             |
+|   The preview draws HALF the frames of the full render.     |
+|   Motion will look slightly less smooth, but still very     |
+|   watchable — perfectly fine for checking layout and logic. |
+|                                                             |
++-------------------------------------------------------------+
+```
+
+When you combine the lower resolution (5x fewer pixels) with the lower
+frame rate (2x fewer frames), a preview can be generated approximately
+**10 times faster** than a full render. That is the real power of the
+preview system — a scene that takes 3 minutes to fully render will have
+its preview ready in about 18 seconds.
+
+At 30 FPS, motion is still smooth enough to follow what is happening in
+the animation. The human eye can detect choppiness below about 24 FPS,
+so 30 FPS provides a comfortable viewing experience even though it is
+half the full render's frame rate. The slight reduction in smoothness
+is an acceptable trade-off for the massive speed gain.
+
+---
+
+### Subsubsection 3.16.3.3  `preview_output_dir`
+
+```
++------------------+------------------------------------------+
+| Field            | Value                                    |
++------------------+------------------------------------------+
+| Type             | str                                      |
+| Default          | "previews/"                              |
+| Example values   | "previews/", "/tmp/manim_previews/"      |
++------------------+------------------------------------------+
+```
+
+The `preview_output_dir` is the folder where Manim saves the preview video
+file for each scene after a preview render completes. Preview files are
+stored in a completely separate directory from full render output files,
+which prevents any possibility of mixing up draft files with final
+production files.
+
+This separation matters because the file names can look similar — a
+full render might be called `scene_003.mp4` and a preview might be called
+`scene_003_preview.mp4`. If they were stored in the same folder, it would
+be easy to accidentally use the low-quality preview clip when assembling
+the final video. Keeping them in different folders eliminates this risk
+entirely.
+
+```
++-------------------------------------------------------------+
+|   SEPARATE FOLDERS KEEP THINGS CLEAN                        |
++-------------------------------------------------------------+
+|                                                             |
+|   previews/              output/                            |
+|   ├── scene_001_preview.mp4    ├── scene_001.mp4            |
+|   ├── scene_002_preview.mp4    ├── scene_002.mp4            |
+|   └── scene_003_preview.mp4    ├── scene_003.mp4            |
+|                                                             |
+|   LEFT:  low quality drafts (480p, 30 fps)                  |
+|   RIGHT: full quality renders (1080p, 60 fps)               |
+|                                                             |
+|   The export service reads ONLY from output/                |
+|   The preview service writes ONLY to previews/              |
+|   They never cross paths.                                   |
+|                                                             |
++-------------------------------------------------------------+
+```
+
+This path can be relative to the project root or an absolute path on the
+system. The default `"previews/"` is a relative path, which means the
+previews folder is created inside the project directory. This keeps
+everything self-contained and makes the project portable — if you copy
+the project folder to another machine, the previews go with it.
+
+---
+
+## Subsection 3.16.4  How PreviewSettings Compares to RenderSettings
+
+Because `PreviewSettings` and `RenderSettings` live side by side inside
+the same `Project` entity and both control how scenes are rendered, it is
+helpful to see them compared directly. The table below shows how every
+corresponding property differs between the two entities.
+
+```
++-------------------------------------------------------------+
+|   PREVIEW SETTINGS  vs  RENDER SETTINGS                     |
++-------------------------------------------------------------+
+|                                                             |
+|   Property              Preview    Render                   |
+|   ────────────────────────────────────────────────────────  |
+|   resolution            854x480    1920x1080                |
+|   frame rate            30 fps     60 fps                   |
+|   output folder         previews/  output/                  |
+|   purpose               quick check final production        |
+|   speed                 ~10x faster baseline                |
+|   user configurable?    NO         YES                      |
+|                                                             |
++-------------------------------------------------------------+
+```
+
+The key takeaway is that `PreviewSettings` is designed for one thing
+and one thing only: **getting a draft on screen as fast as possible**.
+Every value is chosen to minimize generation time. The user does not
+configure these values because there is no benefit to changing them —
+a preview at 720p would be slower without being meaningfully more useful
+than one at 480p. The system makes the optimal choice and locks it in.
+
+---
+
+## Subsection 3.16.5  Full Python Class (Reference)
+
+```python
+# File location: /home/mina/SuperManim/core/entities/preview_settings.py
+
+from __future__ import annotations
+from dataclasses import dataclass
+from typing import Optional
+
+@dataclass
+class PreviewSettings:
+    """
+    PreviewSettings stores the configuration for generating quick
+    preview videos of individual scenes.
+
+    Every value in this entity is a system constant — they are not
+    designed to be changed by the user. The entire preview system
+    is built around the assumption that previews always use 480p
+    resolution and 30 FPS to guarantee fast generation.
+
+    Preview files are stored separately from full render files to
+    prevent any mix-up between draft and production output.
+
+    This entity does not perform rendering, invoke Manim, or play
+    video files. It is a pure data container — a set of fixed
+    instructions that the preview service reads to know how to
+    configure Manim for quick draft generation.
+    """
+
+    # === Preview Visual Quality (system constants — not user-configurable) ===
+    preview_resolution: str = "854x480"    # 480p. Fixed for speed.
+    preview_fps:        int = 30           # Half of render fps. Fixed for speed.
+
+    # === Preview Output Location ===
+    preview_output_dir: str = "previews/"  # Separate from render output to avoid mix-ups.
+```
+
+# Section 3.17 Entity 15 — ExportSettings
+
+## Subsection 3.17.1  What Is ExportSettings?
+
+`ExportSettings` is the entity that stores the **configuration for the
+final video export step** — the step where all individually rendered
+scene clips are assembled into one complete, finished video file that
+the user can share, upload, or deliver.
+
+Think of the entire SuperManim workflow as a factory assembly line. The
+user writes animation code (Scene), renders each scene into a video clip
+(RenderSettings), and checks drafts along the way (PreviewSettings).
+`ExportSettings` is the **shipping department** at the very end of the
+line. It answers the question: "When all scenes are done and I type
+`export`, what should the final product look like, what format should
+it be in, and where should it be saved?"
+
+While `RenderSettings` controls how each individual scene is drawn by
+Manim, and `VideoSettings` stores the identity of the video project
+itself, `ExportSettings` is concerned only with the very last step —
+taking all the finished scene clips and stitching them together into a
+single video file. It does not care about how scenes were rendered or
+what code produced them. It only cares about the output: format, quality,
+filename, audio, and readiness.
+
+These settings persist between sessions because they are stored as part
+of the `Project` entity in the database. The user configures them once
+and they stay until deliberately changed. This means the user can set up
+their preferred export format and quality at the start of a project and
+never think about it again until they are ready to export.
+
+Think of `ExportSettings` as the **delivery label** on a package — it
+tells the system exactly how to wrap up and ship the finished product.
+
+---
+
+## Subsection 3.17.2  Where Does ExportSettings Live?
+
+`ExportSettings` is a **nested field inside the `Project` entity**.
+
+```
+Project
+├── project_name:              "My Math Video"
+├── project_total_duration:    60.3
+├── project_render_settings:   RenderSettings
+├── project_preview_settings:  PreviewSettings
+└── project_export_settings:   ExportSettings   ← lives here
+                                  ├── export_format:           "mp4"
+                                  ├── export_quality:          "high"
+                                  ├── export_name:             None
+                                  ├── export_output_dir:       "exports/"
+                                  ├── export_output_path:      None
+                                  ├── export_include_audio:    True
+                                  ├── export_codec:            "libx264"
+                                  ├── project_is_export_ready: False
+                                  └── export_watermark_text:   None
+```
+
+When the user creates a new project, `ExportSettings` is automatically
+created with sensible defaults — MP4 format, high quality, H.264 codec,
+audio enabled, and the readiness flag set to `False` because no scenes
+have been rendered yet. As the project progresses and scenes get rendered,
+the readiness flag updates automatically. The user can change any of the
+configuration values at any time, and the next export will use the updated
+settings.
+
+---
+
+## Subsection 3.17.3  All Properties inside ExportSettings
+
+`ExportSettings` stores all configuration for the final video assembly
+step, along with a readiness flag and a watermark option. It describes
+the output format, quality level, filename, output folder, codec, audio
+inclusion, whether the project is ready to export, and an optional
+watermark text overlay.
+
+This entity does not assemble video files, does not invoke FFmpeg, and
+does not manage any rendering process. It is purely a **data container** —
+a set of instructions that the export service reads when it is time to
+stitch all the scene clips together into one final video. Think of it
+like a recipe card that tells the chef exactly how to plate and package
+the dish, but the actual cooking happened earlier in the kitchen.
+
+---
+
+### Subsubsection 3.17.3.1  `export_format`
+
+```
++------------------+------------------------------------------+
+| Field            | Value                                    |
++------------------+------------------------------------------+
+| Type             | str                                      |
+| Default          | "mp4"                                    |
+| Example values   | "mp4", "webm", "mov", "avi"              |
++------------------+------------------------------------------+
+```
+
+The `export_format` determines the container format of the final assembled
+video file. A container format is like the type of box that holds the
+video data — it decides what file extension the video gets, what players
+can open it, and how the video and audio data are packaged together inside
+the file.
+
+MP4 is the default and by far the most widely supported video format in
+the world. It works on every operating system, every browser, every phone,
+and every video platform. For almost every project, MP4 is the right
+choice and the user never needs to change this setting.
+
+```
++-------------------------------------------------------------+
+|   THE FOUR EXPORT FORMATS                                     |
++-------------------------------------------------------------+
+|                                                             |
+|   "mp4"                                            DEFAULT  |
+|   Works everywhere. Windows, macOS, Linux, Android, iOS,   |
+|   all browsers, YouTube, every video player ever made.     |
+|   Best choice for: almost every project.                    |
+|   File extension: .mp4                                      |
+|                                                             |
+|   "webm"                                                   |
+|   Designed for the web. Slightly smaller files than MP4.   |
+|   Not supported by all desktop players.                     |
+|   Best choice for: embedding in websites.                   |
+|   File extension: .webm                                     |
+|                                                             |
+|   "mov"                                                    |
+|   Apple QuickTime format. Used in professional editing      |
+|   tools like Final Cut Pro and DaVinci Resolve on macOS.   |
+|   Larger file sizes than MP4.                               |
+|   Best choice for: professional editing on macOS.           |
+|   File extension: .mov                                      |
+|                                                             |
+|   "avi"                                                    |
+|   An older Microsoft format. Very large files. Limited      |
+|   modern support. Only use if a specific tool needs it.     |
+|   File extension: .avi                                      |
+|                                                             |
++-------------------------------------------------------------+
+```
+
+The choice of format mainly depends on where the video will end up. If
+the video is going to YouTube, social media, or a website, MP4 is almost
+always the best choice. If the video needs to be imported into a
+professional editing tool on macOS, MOV might be preferred. If the video
+will be embedded directly in a web page and file size matters more than
+compatibility, WebM can be a good option.
+
+---
+
+### Subsubsection 3.17.3.2  `export_quality`
+
+```
++------------------+------------------------------------------+
+| Field            | Value                                    |
++------------------+------------------------------------------+
+| Type             | str                                      |
+| Default          | "high"                                   |
+| Example values   | "low", "medium", "high", "ultra"         |
++------------------+------------------------------------------+
+```
+
+The `export_quality` determines the resolution and bitrate of the final
+assembled video. This setting only affects the very last step where all
+the scene clips get stitched together into one file. It does not affect
+how individual scenes were rendered — those are always produced at full
+resolution in the `output/` folder.
+
+This separation means the user can render all scenes once at full quality,
+and then export multiple times at different quality levels without ever
+re-rendering a single scene. For example, they could export a quick 480p
+version to send to a colleague for review, and then later export a full
+1080p version for the final delivery — all from the same set of rendered
+clips.
+
+```
++-------------------------------------------------------------+
+|   THE FOUR EXPORT QUALITY LEVELS                             |
++-------------------------------------------------------------+
+|                                                             |
+|   "low"     →  480p   (854 x 480 pixels)                    |
+|   File size (~60s video):  ≈  40 MB                         |
+|   Export speed:           fastest                           |
+|   Best for: quick sharing, internal drafts, testing only.   |
+|                                                             |
+|   "medium"  →  720p   (1280 x 720 pixels)                   |
+|   File size (~60s video):  ≈  90 MB                         |
+|   Best for: web uploads, acceptable YouTube quality,         |
+|   general-purpose sharing.                                  |
+|                                                             |
+|   "high"    →  1080p  (1920 x 1080 pixels)        DEFAULT  |
+|   File size (~60s video):  ≈  214 MB                        |
+|   Best for: most projects. Sharp on all modern screens.     |
+|   Standard for YouTube HD uploads and professional content. |
+|                                                             |
+|   "ultra"   →  4K     (3840 x 2160 pixels)                 |
+|   File size (~60s video):  ≈  850 MB                        |
+|   Best for: professional publishing, large screens,          |
+|   archival quality. Slow to export.                         |
+|                                                             |
++-------------------------------------------------------------+
+```
+
+Higher quality means more pixels, larger file sizes, and longer export
+times. But because the export step only re-encodes video that has already
+been rendered, even the "ultra" quality export is much faster than
+re-rendering all scenes from scratch.
+
+---
+
+### Subsubsection 3.17.3.3  `export_name`
+
+```
++------------------+------------------------------------------+
+| Field            | Value                                    |
++------------------+------------------------------------------+
+| Type             | Optional[str]                            |
+| Default          | None                                     |
+| Example values   | "IntroToCalculus_Ep1", "FinalVersion_v3" |
++------------------+------------------------------------------+
+```
+
+The `export_name` is the custom filename the user wants for the final
+exported video, **without the file extension**. The file extension is
+always added automatically from the `export_format` field, so the user
+never needs to type `.mp4` or `.webm` as part of the name.
+
+When `export_name` is `None`, the system falls back to using
+`project_name + "_final"` as the filename. This means that if the user
+never sets a custom name, the exported file will be named after the
+project with `_final` appended to it.
+
+```
+export_name = None
+project_name = "MyAnimation"
+→ exported file:  exports/MyAnimation_final.mp4
+
+export_name = "IntroToCalculus_Ep1"
+export_format = "mp4"
+→ exported file:  exports/IntroToCalculus_Ep1.mp4
+
+If the user later changes the format to "webm" (name stays the same):
+→ exported file:  exports/IntroToCalculus_Ep1.webm
+```
+
+The extension is always derived automatically from `export_format`. This
+design means the user can change the video format without having to
+rename the file — the system handles it. The user only needs to provide
+the base name once, and the correct extension is always applied.
+
+---
+
+### Subsubsection 3.17.3.4  `export_output_dir`
+
+```
++------------------+----------------------------------------------+
+| Field            | Value                                        |
++------------------+----------------------------------------------+
+| Type             | str                                          |
+| Default          | "exports/"                                   |
+| Example values   | "exports/", "/home/mina/videos/", "output/"  |
++------------------+----------------------------------------------+
+```
+
+The `export_output_dir` is the folder where the final assembled video
+file will be saved when the export command runs. This is the destination
+folder — the place where the finished product lands after all the scene
+clips have been stitched together.
+
+```
+exports/
+└── IntroToCalculus_Ep1.mp4   ← the final finished video lives here
+```
+
+This path can be relative to the project root directory or an absolute
+path on the system. Using a relative path like `"exports/"` keeps
+everything self-contained inside the project folder, which makes the
+project portable. Using an absolute path like `"/home/mina/videos/"`
+saves the file to a specific location on the computer, which is useful
+if the user wants all exported videos from all projects to go to one
+central folder.
+
+The export folder is separate from both the render output folder
+(`output/`) and the preview folder (`previews/`). This three-folder
+structure keeps things organized — drafts in one place, renders in
+another, and the final finished product in a third.
+
+---
+
+### Subsubsection 3.17.3.5  `export_output_path`
+
+```
++------------------+----------------------------------------------+
+| Field            | Value                                        |
++------------------+----------------------------------------------+
+| Type             | Optional[str]                                |
+| Default          | None                                         |
+| Example value    | "exports/IntroToCalculus_Ep1.mp4"            |
++------------------+----------------------------------------------+
+```
+
+The `export_output_path` stores the **full path** to the final exported
+video file after it has been successfully created. Before any export has
+happened, this field is `None`. After a successful export, the system
+writes the complete file path here automatically.
+
+This is a **result value**, not a configuration value. The user never
+sets this field manually. It is filled in by the export service after
+FFmpeg finishes assembling the video. The system then uses this path
+to tell the user where to find the finished file, or to open it
+directly in a video player.
+
+```
+Before export:  export_output_path = None
+After export:   export_output_path = "exports/IntroToCalculus_Ep1.mp4"
+```
+
+Think of it like a delivery confirmation number. You do not write it
+yourself — the shipping company fills it in after the package has been
+delivered, and then you can use it to track down exactly where the
+package is.
+
+---
+
+### Subsubsection 3.17.3.6  `export_include_audio`
+
+```
++------------------+---------------------------+
+| Field            | Value                     |
++------------------+---------------------------+
+| Type             | bool                      |
+| Default          | True                      |
+| Example values   | True, False               |
++------------------+---------------------------+
+```
+
+The `export_include_audio` controls whether the final exported video
+includes sound or not. When set to `True` (the default), the export
+service mixes the audio from each scene's audio clip into the final
+video during assembly. The exported video will have narration, music,
+or whatever audio was recorded for the project.
+
+When set to `False`, the export service assembles only the video
+clips without any audio track. The exported video will be completely
+silent. This is useful in post-production workflows where the user
+wants to do the audio mixing separately in a professional audio or
+video editor.
+
+```
+export_include_audio = True   → final video has sound
+                             → narration, music, sound effects included
+                             → ready to upload and share as-is
+
+export_include_audio = False  → final video is silent
+                             → video-only, no audio track
+                             → useful for external editing workflows
+```
+
+The audio for each scene comes from the `AudioClip` entity that was
+synced to that scene. If a scene does not have an audio clip, that
+portion of the final video simply has no sound, even when this setting
+is `True`.
+
+---
+
+### Subsubsection 3.17.3.7  `export_codec`
+
+```
++------------------+----------------------------------------------+
+| Field            | Value                                        |
++------------------+----------------------------------------------+
+| Type             | str                                          |
+| Default          | "libx264"                                    |
+| Example values   | "libx264", "libx265", "libvpx-vp9", "prores" |
++------------------+----------------------------------------------+
+```
+
+The `export_codec` is the video compression codec used when encoding
+the final assembled video. A codec is the algorithm that squeezes the
+raw video data into a smaller file. Different codecs make different
+trade-offs between file size, encoding speed, video quality, and
+compatibility with different devices and players.
+
+H.264 (`libx264`) is the default and the safest choice. It has been
+the industry standard for over a decade and works on virtually every
+device and platform in existence. For most users and most projects,
+there is no reason to change this setting.
+
+```
++-------------------------------------------------------------+
+|   THE FOUR EXPORT CODECS                                      |
++-------------------------------------------------------------+
+|                                                             |
+|   "libx264"  →  H.264 codec. DEFAULT.                       |
+|   Best compatibility. Works everywhere.                     |
+|   Good balance of file size and quality.                    |
+|   Best for: general delivery, YouTube, web sharing.         |
+|                                                             |
+|   "libx265"  →  H.265 / HEVC codec.                         |
+|   Roughly HALF the file size of H.264 at same quality.      |
+|   Slower to encode. Needs a newer player to play.           |
+|   Best for: archival storage, reducing disk usage.          |
+|                                                             |
+|   "libvpx-vp9"  →  VP9 codec. Used with WebM format.       |
+|   Efficient open-source codec. Good web support.            |
+|   Best for: web video without licensing concerns.           |
+|                                                             |
+|   "prores"  →  Apple ProRes codec. Used with MOV format.   |
+|   Very large files. Designed for professional editing.      |
+|   Best for: macOS post-production workflows.                |
+|                                                             |
++-------------------------------------------------------------+
+```
+
+The codec choice should match the format choice. Using `"prores"` with
+the `"webm"` format would not make sense, because ProRes is designed for
+the MOV container. In practice, the system handles these pairings
+automatically, but understanding which codecs go with which formats
+helps the user make informed decisions.
+
+---
+
+### Subsubsection 3.17.3.8  `project_is_export_ready`
+
+```
++------------------+---------------------------+
+| Field            | Value                     |
++------------------+---------------------------+
+| Type             | bool                      |
+| Default          | False                     |
+| Example values   | True, False               |
++------------------+---------------------------+
+```
+
+The `project_is_export_ready` flag is the **most important readiness
+signal** in the entire project. It tells the system and the user whether
+the project is complete enough to be exported into a final video. This
+flag is `True` only when every single scene in the project has been
+successfully rendered. Even one pending scene or one failed scene will
+keep this flag at `False`.
+
+For the flag to become `True`, all three of these conditions must be
+met at the same time:
+
+```
+project_is_export_ready = True   ONLY when ALL of these are true:
+
+  project_total_scenes    >  0     (the project has at least one scene)
+  project_pending_scenes  == 0     (no scenes are waiting to be rendered)
+  project_failed_scenes   == 0     (no scenes have errors)
+```
+
+The export command checks this flag before doing anything. If it is
+`False`, the export is refused and the user is told exactly what is
+missing — which scenes are still pending or which ones have failed. This
+prevents the user from accidentally exporting an incomplete video where
+some scenes are missing or broken.
+
+```
++-------------------------------------------------------------+
+|   project_is_export_ready — FULL LIFECYCLE                   |
++-------------------------------------------------------------+
+|                                                             |
+|   PROJECT CREATED (5 scenes, none rendered):                |
+|   total=5  rendered=0  pending=5  failed=0                  |
+|   project_is_export_ready = False  ← cannot export yet      |
+|                                                             |
+|   AFTER RENDERING SCENES 1, 2, 3:                           |
+|   total=5  rendered=3  pending=2  failed=0                  |
+|   project_is_export_ready = False  ← 2 scenes still waiting |
+|                                                             |
+|   SCENE 4 RENDERS WITH AN ERROR:                            |
+|   total=5  rendered=3  pending=1  failed=1                  |
+|   project_is_export_ready = False  ← one scene has an error |
+|                                                             |
+|   USER FIXES SCENE 4 AND RE-RENDERS. SCENE 5 ALSO RENDERS: |
+|   total=5  rendered=5  pending=0  failed=0                  |
+|   project_is_export_ready = True   ← ALL DONE. READY!       |
+|                                                             |
++-------------------------------------------------------------+
+```
+
+This flag is automatically maintained by the scene management service.
+Every time a scene's status changes — from pending to rendered, from
+rendered to failed, or from failed back to rendered — the service
+recalculates whether the project is fully ready. The user never has to
+set this flag manually.
+
+---
+
+### Subsubsection 3.17.3.9  `export_watermark_text`
+
+```
++------------------+----------------------------------------------+
+| Field            | Value                                        |
++------------------+----------------------------------------------+
+| Type             | Optional[str]                                |
+| Default          | None                                         |
+| Example values   | "Math With Mina", "© 2025 SuperManim"        |
++------------------+----------------------------------------------+
+```
+
+The `export_watermark_text` is an optional text string that gets burned
+into the video frames during export. It appears as a visible text overlay
+in a corner of every frame in the final video, like a channel logo or a
+copyright notice that you see on television broadcasts.
+
+When this field is `None` (the default), no watermark is added and the
+video frames are left untouched. The user only needs to set this field
+if they want a visible brand or notice on their exported video.
+
+```
+export_watermark_text = None   → no watermark, clean video frames
+
+export_watermark_text = "Math With Mina"
+→ every frame in the exported video shows "Math With Mina"
+  in the bottom corner, overlaid on top of the animation
+```
+
+It is important to understand the difference between this watermark
+and the `video_author` field in `VideoSettings`. The `video_author`
+field is invisible metadata — it is embedded inside the video file's
+data but nobody can see it while watching the video. The
+`export_watermark_text` is a visible, permanent text overlay that is
+literally painted onto every frame. Once exported with a watermark, it
+cannot be removed without re-exporting.
+
+---
+
+## Subsection 3.17.4  Full Python Class (Reference)
+
+```python
+# File location: /home/mina/SuperManim/core/entities/export_settings.py
+
+from __future__ import annotations
+from dataclasses import dataclass
+from typing import Optional
+
+@dataclass
+class ExportSettings:
+    """
+    ExportSettings stores all configuration for the final video
+    assembly step — where rendered scene clips are stitched together
+    into one complete output file.
+
+    It describes the output format, quality level, filename, folder,
+    codec, audio inclusion, export readiness, and optional watermark.
+
+    This entity does not assemble video, invoke FFmpeg, or encode
+    anything. It is a pure data container — a set of instructions
+    that the export service reads to know how to package the final
+    video.
+
+    The project_is_export_ready flag is automatically maintained by
+    the scene management service. It is True only when all scenes
+    are rendered with zero pending and zero failed.
+    """
+
+    # === Output Format ===
+    export_format:           str           = "mp4"
+
+    # === Output Quality ===
+    export_quality:          str           = "high"
+
+    # === Output Naming ===
+    export_name:             Optional[str] = None
+    export_output_dir:       str           = "exports/"
+
+    # === Export Result (set automatically after export) ===
+    export_output_path:      Optional[str] = None
+
+    # === Audio ===
+    export_include_audio:    bool          = True
+
+    # === Codec ===
+    export_codec:            str           = "libx264"
+
+    # === Readiness ===
+    project_is_export_ready: bool          = False
+
+    # === Watermark ===
+    export_watermark_text:   Optional[str] = None
+```
+
+
+
+---
+# Section 3.18  Quick Reference Summary
+
+| Entity | Purpose | Key Properties |
+|---|---|---|
+| **AudioSettings** | Describes the master audio file | `audio_format`, `audio_file_path`, `audio_total_duration` |
+| **VideoSettings** | Identity card of the video | `video_width`, `video_height`, `video_aspect_ratio`, `video_author`, `video_language` |
+| **RenderSettings** | Manim rendering defaults | `render_resolution`, `render_fps`, `render_background_color`, `render_quality` |
+| **PreviewSettings** | Fast draft preview config | `preview_resolution` (fixed 480p), `preview_fps` (fixed 30), `preview_auto_open` |
+| **ExportSettings** | Final video delivery config | `export_format`, `export_quality`, `export_name`, `project_is_export_ready` |
+
+---
+
+```
+Where each entity lives inside Project:
+
+Project
+├── project_audio_settings:    AudioSettings
+├── project_video_settings:    VideoSettings
+├── project_render_settings:   RenderSettings
+├── project_preview_settings:  PreviewSettings
+└── project_export_settings:   ExportSettings
+```
+
+
+
+# Section 3.19: How All the Entities Relate to Each Other
+
+## Subsection 3.19.1: The Complete Entity Relationship Map
+
+Here is the complete picture of how all ten entities connect to each
+other in the SuperManim data model:
+
+```
++=====================================================================+
+|              COMPLETE ENTITY RELATIONSHIP DIAGRAM                    |
++=====================================================================+
+|                                                                     |
+|   Project                                                           |
+|   ─────────────────────────────────────────────────────────────    |
+|   │ Has one  → Timeline      (one ordered view of all scenes)       |
+|   │ Has many → Scene         (via project_items or DB)              |
+|   │ Has one  → AudioFile     (the master audio recording)           |
+|   │ Has one  → VideoFile     (the master video, if used)            |
+|   │                                                                 |
+|   Timeline                                                          |
+|   ─────────────────────────────────────────────────────────────    |
+|   │ References many → Scene  (via ordered_scene_ids list)           |
+|   │                                                                 |
+|   AudioFile                                                         |
+|   ─────────────────────────────────────────────────────────────    |
+|   │ Has many → AudioClip     (one clip per scene, via audio_clips)  |
+|   │                                                                 |
+|   VideoFile                                                         |
+|   ─────────────────────────────────────────────────────────────    |
+|   │ Has many → VideoClip     (one clip per scene, via video_clips)  |
+|   │                                                                 |
+|   Scene                                                             |
+|   ─────────────────────────────────────────────────────────────    |
+|   │ Is linked to ← AudioClip (via AudioClip.scene_id)              |
+|   │ Has many → SubScene      (via scene_map list)                   |
+|   │ Has many → AssetFile     (via AssetFile.scene_id)              |
+|   │ Inherits from → MediaUnit                                       |
+|   │                                                                 |
+|   SubScene                                                          |
+|   ─────────────────────────────────────────────────────────────    |
+|   │ Belongs to → Scene       (via parent_scene_id)                  |
+|   │                                                                 |
+|   AudioClip                                                         |
+|   ─────────────────────────────────────────────────────────────    |
+|   │ Belongs to → AudioFile   (via audio_file_id)                    |
+|   │ Is linked to → Scene     (via scene_id)                         |
+|   │ Inherits from → MediaUnit                                       |
+|   │                                                                 |
+|   AssetFile                                                         |
+|   ─────────────────────────────────────────────────────────────    |
+|      Belongs to → Scene      (via scene_id)                         |
+|      Contributes to → scene_assets_hash on parent Scene             |
+|                                                                     |
++=====================================================================+
+```
+
+## Subsection 3.19.2: A Complete Real-World Data Flow Example
+
+Here is a step-by-step example showing how all the entities work together
+when a user creates and renders a complete 4-scene synchronized video.
+
+```
++=====================================================================+
+|   COMPLETE DATA FLOW: 4-SCENE SYNCHRONIZED VIDEO                    |
++=====================================================================+
+|                                                                     |
+|   COMMAND: new project MyAnimation                                  |
+|   ENTITIES INVOLVED:                                                |
+|     → Project entity created in memory                              |
+|     → project_name = "MyAnimation"                                  |
+|     → All folders created on disk                                   |
+|     → Timeline entity created (empty, total_duration = 0)          |
+|     → Saved to database                                             |
+|                                                                     |
+|   ─────────────────────────────────────────────────────────────    |
+|                                                                     |
+|   COMMAND: set scenes_number 4                                      |
+|   ENTITIES INVOLVED:                                                |
+|     → 4 Scene entities created:                                     |
+|         Scene(scene_id=1, status="pending", duration=None)          |
+|         Scene(scene_id=2, status="pending", duration=None)          |
+|         Scene(scene_id=3, status="pending", duration=None)          |
+|         Scene(scene_id=4, status="pending", duration=None)          |
+|     → Timeline updated:                                             |
+|         ordered_scene_ids = [1, 2, 3, 4]                            |
+|         scene_count       = 4                                       |
+|     → Project.project_total_scenes = 4                              |
+|     → Project.project_pending_scenes = 4                            |
+|                                                                     |
+|   ─────────────────────────────────────────────────────────────    |
+|                                                                     |
+|   COMMAND: set scene 3 duration 16.8                                |
+|   ENTITIES INVOLVED:                                                |
+|     → Scene 3 updated: scene_duration = 16800                       |
+|     → TimelineService recomputes all start/end times:               |
+|         (assumes scenes 1 and 2 already had durations set)          |
+|         Scene 3: scene_start_time = 31000, scene_end_time = 47800   |
+|     → Timeline updated: total_duration = sum of all scene durations |
+|                                                                     |
+|   ─────────────────────────────────────────────────────────────    |
+|                                                                     |
+|   COMMAND: add audio voice.mp3                                      |
+|   ENTITIES INVOLVED:                                                |
+|     → AudioFile entity created:                                     |
+|         AudioFile(audio_file_id=1, audio_file_duration=60.0, ...)   |
+|     → Project.audio_total_duration = 60.0                           |
+|     → Project.audio_file_path = "audio_clips/original_audio.mp3"   |
+|     → Timeline.audio_total_duration = 60.0                          |
+|                                                                     |
+|   ─────────────────────────────────────────────────────────────    |
+|                                                                     |
+|   COMMAND: split audio 4                                            |
+|   ENTITIES INVOLVED:                                                |
+|     → FFmpeg cuts voice.mp3 into 4 pieces (handled by Adapter)      |
+|     → 4 AudioClip entities created:                                  |
+|         AudioClip(id=1, duration=12.5, start=0.0,  end=12.5)        |
+|         AudioClip(id=2, duration=18.5, start=12.5, end=31.0)        |
+|         AudioClip(id=3, duration=16.8, start=31.0, end=47.8)        |
+|         AudioClip(id=4, duration=12.2, start=47.8, end=60.0)        |
+|     → AudioFile.audio_clips = [clip1, clip2, clip3, clip4]          |
+|     → AudioFile.audio_file_is_split = True                          |
+|                                                                     |
+|   ─────────────────────────────────────────────────────────────    |
+|                                                                     |
+|   COMMAND: set scene 3 code my_scenes/example.py                   |
+|   ENTITIES INVOLVED:                                                |
+|     → Scene 3 updated:                                              |
+|         scene_code_path = "my_scenes/example.py"                   |
+|         scene_code_hash = SHA256("my_scenes/example.py" content)   |
+|         final_scene_hash recomputed                                  |
+|                                                                     |
+|   ─────────────────────────────────────────────────────────────    |
+|                                                                     |
+|   COMMAND: sync scene 3                                             |
+|   ENTITIES INVOLVED:                                                |
+|     → ValidationService checks:                                     |
+|         scene_duration (16800 ms) == clip_duration (16.8s × 1000)?  |
+|         16800 == 16800  →  MATCH                                    |
+|     → Scene 3 updated: related_audio_clip_path = "clip_003.mp3"    |
+|                          synced_with_audio = True                   |
+|     → AudioClip 3 updated: scene_id = 3                             |
+|                              audio_clip_is_synced = True             |
+|                                                                     |
+|   ─────────────────────────────────────────────────────────────    |
+|                                                                     |
+|   COMMAND: render scene 3                                           |
+|   ENTITIES INVOLVED:                                                |
+|     → RenderService reads Scene 3 entity                            |
+|     → Computes fresh final_scene_hash from disk files               |
+|     → fresh hash ≠ stored hash  →  RENDER (something changed)       |
+|     → ManimAdapter runs Manim on "my_scenes/example.py"             |
+|     → Manim produces output/scene_03/scene_03.mp4                  |
+|     → Scene 3 updated:                                              |
+|         scene_status = "rendered"                                    |
+|         scene_output_path = "output/scene_03/scene_03.mp4"          |
+|         scene_rendered_at = "2024-11-12 14:22:30"                   |
+|         scene_render_duration = 252.7                               |
+|         final_scene_hash = (new hash stored)                        |
+|     → Project.project_rendered_scenes += 1                          |
+|     → Project.project_pending_scenes -= 1                           |
+|                                                                     |
+|   ─────────────────────────────────────────────────────────────    |
+|                                                                     |
+|   COMMAND: render scene 3  (run AGAIN, no code changes)             |
+|   ENTITIES INVOLVED:                                                |
+|     → RenderService reads Scene 3 entity                            |
+|     → Computes fresh final_scene_hash from disk files               |
+|     → fresh hash == stored hash  →  SKIP (nothing changed!)         |
+|     → Scene 3 updated:  scene_status = "skipped"                    |
+|     → Manim is NOT called. No waiting. Instant result.              |
+|                                                                     |
+|   ─────────────────────────────────────────────────────────────    |
+|                                                                     |
+|   COMMAND: export  (after ALL 4 scenes are rendered)                |
+|   ENTITIES INVOLVED:                                                |
+|     → Project.project_is_export_ready checked                       |
+|     → total=4, rendered=4, pending=0, failed=0  →  True. Proceed.  |
+|     → FFmpegAdapter assembles all 4 scene_output_path files         |
+|     → Project.export_output_path = "exports/MyAnimation_final.mp4"  |
+|                                                                     |
++=====================================================================+
+```
+
+## Subsection 3.19.3: The Entity Dependency Graph
+
+This diagram shows which entities depend on other entities — meaning
+which entities store IDs or references to other entities:
+
+```
++=====================================================================+
+|                ENTITY DEPENDENCY GRAPH                              |
++=====================================================================+
+|                                                                     |
+|                        Project                                      |
+|                      /    |    \                                    |
+|                     /     |     \                                   |
+|              AudioFile  Timeline  VideoFile                         |
+|                 │                    │                              |
+|          (audio_file_id)      (video_file_id)                       |
+|                 │                    │                              |
+|             AudioClip            VideoClip                          |
+|                 │ (scene_id)                                         |
+|                 │                                                   |
+|               Scene ──────────────────────────────────             |
+|             /   |   \                                               |
+|    (parent_  (scene_  (scene_                                       |
+|    scene_id)  id)      id)                                          |
+|       │         │          │                                        |
+|    SubScene  AssetFile   (many                                      |
+|              (contrib.  properties                                  |
+|              to hash)   about this                                  |
+|                          scene)                                     |
+|                                                                     |
+|   All of AudioClip, VideoClip, Scene inherit from → MediaUnit       |
+|                                                                     |
++=====================================================================+
+```
+
+---
+
+# Section 3.20: The `__init__.py` File — Making Imports Clean
+
+## Subsection 3.20.1: What Is `__init__.py`?
+
+The `core/entities/` directory contains a special file called
+`__init__.py`. This file makes the directory a Python **package**. It
+also serves as a central place to list all the entity classes so that
+other modules can import them easily.
+
+### Subsubsection 3.20.1.1: Where Is the __init__.py File?
+
+```
+/home/mina/SuperManim/core/entities/__init__.py
+```
+
+## Subsection 3.20.2: The Full `__init__.py` File
+
+```python
+# File location: /home/mina/SuperManim/core/entities/__init__.py
+
+"""
+SuperManim Core Entities Package
+
+This package contains all the Entity classes — pure data containers
+that represent the real-world objects that SuperManim works with.
+
+All entities are pure data containers:
+  - No database calls
+  - No file system calls
+  - No subprocess calls
+  - No print() calls
+  - Only @dataclass fields with types and default values
+
+Import any entity directly from this package:
+  from core.entities import Scene, SubScene, Project
+  from core.entities import AudioClip, AudioFile
+  from core.entities import VideoClip, VideoFile
+  from core.entities import AssetFile, Timeline, MediaUnit
+"""
+
+from core.entities.scenes import Scene, SubScene
+from core.entities.project import Project
+from core.entities.media_unit import MediaUnit
+from core.entities.audio_clip import AudioClip
+from core.entities.audio_file import AudioFile
+from core.entities.video_clip import VideoClip
+from core.entities.video_file import VideoFile
+from core.entities.asset_file import AssetFile
+from core.entities.timeline import Timeline
+
+__all__ = [
+    "Scene",
+    "SubScene",
+    "Project",
+    "MediaUnit",
+    "AudioClip",
+    "AudioFile",
+    "VideoClip",
+    "VideoFile",
+    "AssetFile",
+    "Timeline",
+]
+```
+
+With this `__init__.py` in place, any other module in SuperManim can
+import entities like this:
+
+```python
+# Clean import (using the package):
+from core.entities import Scene, Project, AudioClip
+
+# Instead of the verbose per-file import:
+from core.entities.scenes import Scene
+from core.entities.project import Project
+from core.entities.audio_clip import AudioClip
+```
+
+---
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 # Module 4 The Core of SuperManim tool (Business Rules):
@@ -26464,20 +28241,19 @@ New entries go to the top. Old entries fall off the bottom when the list exceeds
 +=====================================================================+
 |                                                                     |
 |   Column             Type     Description                           |
-|   ─────────────────────────────────────────────────────────────   |
+|   ─────────────────────────────────────────────────────────────     |
 |   project_name       TEXT     Name of the project.                  |
 |   project_path       TEXT     Full path to the project folder.      |
-|   project_mode       TEXT     "normal" / "simplemanim" /            |
-|                               "supermanim"                          |
+|                                                                     |
 |   last_opened_at     TEXT     ISO timestamp of last open.           |
 |   open_count         INTEGER  Total number of times this project    |
 |                               was opened.                           |
-|                                                                     |
+|   is_project_open    BOOL                                           |
 |   Example contents:                                                 |
-|   ─────────────────────────────────────────────────────────────   |
-|   MyAnimation        /projects/MyAnimation       supermanim  ...  3|
-|   Chapter1_Intro     /projects/Chapter1_Intro    simplemanim ... 7 |
-|   TestProject        /projects/TestProject       normal      ...  1|
+|   ─────────────────────────────────────────────────────────────     |
+|   MyAnimation        /projects/MyAnimation            ...  3        |
+|   Chapter1_Intro     /projects/Chapter1_Intro          ... 7        |
+|   TestProject        /projects/TestProject            ...  1        |
 |                                                                     |
 +=====================================================================+
 ```
