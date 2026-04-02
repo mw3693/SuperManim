@@ -1,60 +1,38 @@
-# File location: /home/mina/SuperManim/core/entities/audio_settings.py
-
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
-
+from pathlib import Path
 @dataclass
 class AudioSettings:
     """
     AudioSettings stores all metadata about the project-level audio file.
-
-    This is a pure data container (entity). It does NOT play, read, or convert
-    audio. It only describes the master audio file (narration or background music)
-    that spans the entire project.
-
-    Main fields:
-        - audio_format: format of the audio file (mp3, wav, etc.)
-        - audio_file_path: path to the audio file on disk
-        - audio_total_duration: total duration in milliseconds
-
-    Optional fields (enhanced metadata):
-        - audio_sample_rate: samples per second (Hz)
-        - audio_channels: number of audio channels (mono/stereo)
-        - audio_bit_depth: bits per audio sample
-        - audio_bitrate: bits per second for compressed audio
-        - is_audio_exist: whether audio is present
-        - audio_file_size_byte: size of the audio file in bytes
+    Everything is Optional until the audio file is actually probed/analyzed.
     """
 
     # === MAIN PROPERTIES ===
-    # The audio file format (lowercase string)
-    # Examples: "mp3", "wav", "ogg", "aac", "flac", "m4a"
-    audio_format: str = "mp3"
+    
+    # The audio file format (e.g., "mp3", "wav") - None means not set yet
+    audio_format: Optional[str] = None
 
-    # Full path to the master audio file (relative or absolute)
-    audio_file_path: str = ""
+    # Full path to the audio file on disk - Empty or None means no file linked
+    audio_file_path: Optional[Path] = None
 
-    # Total duration of the audio in milliseconds
-    audio_total_duration: int = 0
-
-    # True if the audio file exists in the project
-    is_audio_exist: bool = False
+    # Total duration in milliseconds - 0 or None means unknown duration
+    audio_total_duration: Optional[int] = None
 
     # Size of the audio file in bytes
-    audio_file_size_byte: int = 0
+    audio_file_size_byte: Optional[int] = None
 
-    # === OPTIONAL PROPERTIES ===
-    # Number of audio samples per second in Hertz
-    # Common: 44100, 48000, 96000
-    audio_sample_rate: Optional[int] = 44100
+    # === TECHNICAL METADATA (Strictly Optional) ===
+    
+    # Samples per second (Hz) - Should be None until detected
+    audio_sample_rate: Optional[int] = None
 
-    # Number of channels: 1 = mono, 2 = stereo
-    audio_channels: Optional[int] = 1
+    # 1 = mono, 2 = stereo - Should be None until detected
+    audio_channels: Optional[int] = None
 
-    # Bits per audio sample: 16, 24, 32
-    audio_bit_depth: Optional[int] = 16
+    # Bits per audio sample - Should be None until detected
+    audio_bit_depth: Optional[int] = None
 
-    # Audio bitrate (optional, only for compressed formats like mp3 or aac)
-    # Example: 128000, 192000, 320000
+    # Audio bitrate (bps) - Should be None until detected
     audio_bitrate: Optional[int] = None

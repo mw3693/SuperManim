@@ -1,129 +1,85 @@
-
 from __future__ import annotations
 from dataclasses import dataclass, field
-from typing import Optional, List
-
-
-@dataclass
-class SubScene:
-    """
-    The SubScene Entity represents one animation block inside a Scene.
-
-    It represents a distinct phase or moment within the Scene's animation
-    sequence. Like the Scene Entity, it is a pure data container.
-    It holds information only. It does not call any external tools,
-    does not run Manim, and does not talk to any database.
-
-    TIMING CONVENTION:
-    All timing fields (subscene_duration, subscene_start_time,
-    subscene_end_time) are stored as integers in MILLISECONDS,
-    consistent with the parent Scene entity.
-
-    IMPORTANT RULE:
-    The sum of all subscene_duration values within one Scene MUST
-    equal the parent Scene's scene_duration. If they do not add up
-    correctly, the SubScenes do not fully cover the Scene, which is
-    a data integrity error.
-    """
-
-    # ── GROUP 1 — IDENTITY ────────────────────────────────────────────
-    subscene_id:            int
-    subscene_name:          Optional[str]    = None
-    subscene_index:         int              = 0
-    parent_scene_id:        int              = 0
-
-    # ── GROUP 2 — TIMING (relative to start of parent Scene, in ms) ───
-    subscene_duration:      Optional[int]    = None
-    subscene_start_time:    Optional[int]    = None
-    subscene_end_time:      Optional[int]    = None
-
-    # ── GROUP 3 — CONTENT ─────────────────────────────────────────────
-    subscene_content:       Optional[str]    = None
-    subscene_code_path:     Optional[str]    = None
-    subscene_hash:          Optional[str]    = None
-
-    # ── GROUP 4 — STATUS ──────────────────────────────────────────────
-    subscene_status:        str              = "pending"
-    subscene_output_path:   Optional[str]    = None
-
-    # ── ALLOWED VALUES FOR subscene_status ────────────────────────────
-    # "pending"   → block exists but has not been processed yet
-    # "rendered"  → block was rendered successfully
-    # "failed"    → processing was attempted but failed
-    # "skipped"   → skipped because nothing changed (hash match)
-
+from pathlib import Path
+from typing import Optional, List, TYPE_CHECKING
+from datetime import datetime
 
 @dataclass
 class Scene:
     """
-    The Scene Entity represents one section of the animation video.
-
-    This is a pure data container — a filing card that holds all the
-    information about one scene. It does not call any external tools,
-    does not open databases, does not run Manim, does not call print().
-    It is just structured data.
-
-    A Scene can contain zero or more SubScene objects inside its
-    scene_map list. SubScenes represent the individual animation
-    blocks that make up this scene.
-
-    TIMING CONVENTION:
-    All timing fields (scene_duration, scene_start_time, scene_end_time)
-    are stored as integers in MILLISECONDS.
-    Example: 16.8 seconds is stored as 16800.
-    This avoids floating-point rounding errors in arithmetic.
+    The Scene Entity represents a single, independent unit of animation.
+    It acts as a data container for metadata, timing, and rendering state.
+    
+    All timing values are stored in MILLISECONDS (int) to avoid float errors.
     """
 
-    # ── GROUP 1 — IDENTITY ────────────────────────────────────────────
-    scene_id:                       int
-    scene_name:                     Optional[str]   = None
-    scene_index:                    int             = 0
-    previous_scene_id:              Optional[int]   = None
-    next_scene_id:                  Optional[int]   = None
+    # -- MANDATORY CONFIGURATION --
+    scene_resolution: str  # e.g., "1920x1080"
+    scene_fps: int         # e.g., 30, 60
 
-    # ── GROUP 2 — TIMING (stored in milliseconds as integers) ─────────
-    scene_duration:                 Optional[int]   = None
-    scene_start_time:               Optional[int]   = None
-    scene_end_time:                 Optional[int]   = None
-    scene_start_marker:             Optional[str]   = None
-    scene_end_marker:               Optional[str]   = None
+    # -- GROUP 1: IDENTITY --
+    scene_id: int = 0
+    scene_index: int = 0
+    scene_name: str = "unnamed_scene"
+    previous_scene_id: Optional[int] = None
+    next_scene_id: Optional[int] = None
 
-    # ── GROUP 3 — CODE ────────────────────────────────────────────────
-    scene_code_path:                Optional[str]   = None
-    scene_code_content:             Optional[str]   = None
+    # -- GROUP 2: TIMING (In Milliseconds) --
+    scene_duration: int = 0
+    scene_start_time: int = 0
+    scene_end_time: int = 0
+    scene_start_marker: Optional[str] = None
+    scene_end_marker: Optional[str] = None
 
-    # ── GROUP 4 — HASH FINGERPRINTS ───────────────────────────────────
-    scene_code_hash:                Optional[str]   = None
-    scene_assets_hash:              Optional[str]   = None
-    scene_audio_hash:               Optional[str]   = None
-    final_scene_hash:               Optional[str]   = None
+    # -- GROUP 3: CODE & PATHS --
+    # Using Path objects instead of strings for robust file handling
+    scene_code_path: Optional[Path] = None
+    scene_code_content: Optional[str] = None
+    scene_output_path: Optional[Path] = None
+    scene_preview_path: Optional[Path] = None
 
-    # ── GROUP 5 — CONTENT AND VISUAL SETTINGS ─────────────────────────
-    scene_content:                  Optional[str]   = None
-    scene_background_color:         str             = "#000000"
-    scene_resolution:               str             = "1920x1080"
-    scene_fps:                      int             = 60
+    # -- GROUP 4: HASH FINGERPRINTS (For Change Detection) --
+    scene_code_hash: Optional[str] = None
+    scene_assets_hash: Optional[str] = None
+    scene_audio_hash: Optional[str] = None
+    final_scene_hash: Optional[str] = None
 
-    # ── GROUP 6 — STATUS AND OUTPUT ───────────────────────────────────
-    scene_status:                   str             = "pending"
-    scene_output_path:              Optional[str]   = None
-    scene_preview_path:             Optional[str]   = None
-    scene_error_message:            Optional[str]   = None
-    scene_rendered_at:              Optional[str]   = None
-    scene_render_duration:          Optional[float] = None
+    # -- GROUP 5: VISUALS & STATUS --
+    scene_background_color: str = "#000000"
+    scene_status: str = "pending"  # pending, rendered, failed, modified, skipped
+    scene_error_message: Optional[str] = None
+    scene_rendered_at: Optional[datetime] = None
+    scene_render_duration: Optional[int] = None
 
-    # ── GROUP 7 — AUDIO ───────────────────────────────────────────────
-    related_audio_clip_path:        Optional[str]   = None
-    synced_with_audio:              bool            = False
+    # -- GROUP 6: AUDIO LINKS --
+    related_audio_clip_path: Optional[Path] = None
+    synced_with_audio: bool = False
 
-    # ── GROUP 8 — SUBSCENES ───────────────────────────────────────────
-    # field(default_factory=list) is used instead of [] because in Python
-    # mutable default arguments are shared between instances. Using
-    # default_factory=list gives each Scene its own fresh empty list.
-    scene_map:                      List["SubScene"] = field(default_factory=list)
+    def __post_init__(self):
+        """
+        Validation and Type Enforcement Guard.
+        Ensures the scene state is physically possible and types are consistent.
+        """
+        # 1. Basic Validation
+        if self.scene_fps <= 0:
+            raise ValueError(f"Scene FPS must be positive, got {self.scene_fps}")
+        
+        if self.scene_duration < 0:
+            raise ValueError("Scene duration cannot be negative.")
 
-    # ── ALLOWED VALUES FOR scene_status ───────────────────────────────
-    # "pending"   → scene exists but has never been rendered
-    # "rendered"  → scene was rendered successfully
-    # "failed"    → render was attempted but failed with an error
-    # "skipped"   → render was skipped because nothing changed (hash match)
+        # 2. Path Enforcement (Convert strings to Path objects automatically)
+        path_fields = [
+            'scene_code_path', 
+            'scene_output_path', 
+            'scene_preview_path', 
+            'related_audio_clip_path'
+        ]
+        
+        for field_name in path_fields:
+            value = getattr(self, field_name)
+            if isinstance(value, str):
+                setattr(self, field_name, Path(value))
+
+        # 3. String Sanitization
+        if not self.scene_name.strip():
+            self.scene_name = f"scene_{self.scene_index}"

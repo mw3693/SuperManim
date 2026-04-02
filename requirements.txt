@@ -1,0 +1,28 @@
+# ═════════════════════════════════════════════════════
+# SuperManim
+# Python ≥ 3.10 required
+# Includes core animation, audio libraries & testing
+# ═════════════════════════════════════════════════════
+
+# Core animation engine
+manim==0.18.1
+
+# FFmpeg wrapper
+ffmpeg-python==0.2.0
+
+# Audio analysis
+librosa==0.10.0
+
+# Numerical & scientific libraries
+numpy==1.26.0
+scipy==1.11.0
+Pillow==10.1.0
+
+# Progress bars
+tqdm==4.66.1
+
+# Testing & coverage
+pytest==8.2.0
+pytest-cov==4.1.0
+
+# SQLite included in Python, no need to install separately

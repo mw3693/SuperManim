@@ -1,15 +1,12 @@
-# core/entities/project.py
 from __future__ import annotations
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Optional, List, TYPE_CHECKING
+from datetime import datetime
 
-# Using TYPE_CHECKING to avoid circular imports during type hinting
-if TYPE_CHECKING:
-    from .media_unit import MediaUnit
-    from .render_settings import RenderSettings
-    from .audio_settings import AudioSettings
-    from .video_settings import VideoSettings
-    from .export_settings import ExportSettings
+# Import other entities for type hinting only
+from .scenes import Scene
+from .project_settings import ProjectSettings
 
 @dataclass
 class Project:
@@ -24,25 +21,37 @@ class Project:
 
     # -- LOCATION --
     # Paths for project folders and database storage
-    project_folder_path: Optional[str] = None
-    project_db_path: Optional[str] = None
+    project_folder_path: Path 
+    project_db_path: Path
+
+    # -- COMPOSITION --
+    # A list to hold Scene entities associated with this project
+    project_scenes_list: List['Scene'] = field(default_factory=list)
+
+    # -- SETTINGS --
+    project_settings: Optional[ProjectSettings] = None
 
     # -- TIMESTAMPS --
-    # ISO formatted strings for creation and last update
+    # Captures the exact moment the project object is initialized
     project_created_at: Optional[str] = None
-    project_updated_at: Optional[str] = None
-
-    # -- CONTENT --
-    # List of MediaUnit objects (audio clips, video clips, or Manim scenes)
-    # Using field(default_factory=list) ensures a fresh list for every new project
-    project_items: List[MediaUnit] = field(default_factory=list)
-
-    # -- SETTINGS (Optional components) --
-    project_render_settings: Optional[RenderSettings] = None
-    project_audio_settings:  Optional[AudioSettings]  = None
-    project_video_settings:  Optional[VideoSettings]  = None
-    project_export_settings: Optional[ExportSettings] = None
-
+    
     # -- STATE --
-    # 1 = Open (Active in memory), 0 = Closed
-    project_state: int = 0
+    # Tracks if the project is currently active/open in the application
+    project_state: bool = False
+
+    def __post_init__(self):
+        """
+        Internal validation logic executed immediately after the object is created.
+        This ensures the entity always maintains a valid state.
+        """
+        # 1. Validation: Ensure the project name is not empty or just whitespace
+        if not self.project_name or not self.project_name.strip():
+            raise ValueError("Project name cannot be empty.")
+
+        # 2. Type Enforcement: Automatically convert string paths to Path objects 
+        # to ensure consistency across the entire application.
+        if isinstance(self.project_folder_path, str):
+            self.project_folder_path = Path(self.project_folder_path)
+            
+        if isinstance(self.project_db_path, str):
+            self.project_db_path = Path(self.project_db_path)

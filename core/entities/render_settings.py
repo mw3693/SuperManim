@@ -31,17 +31,13 @@ class RenderSettings:
                               + project_failed_scenes
     """
 
-    # === Visual Quality ===
-    render_resolution:            str   = "1920x1080"
-    render_fps:                   int   = 60
-    render_background_color:      str   = "#000000"
-    render_quality:               str   = "high"
-
-    # === Output Location ===
-    render_output_dir:            str   = "output/"
-
+        
     # === Scene Statistics (cached counters) ===
     project_total_scenes:         int   = 0
     project_rendered_scenes:      int   = 0
     project_pending_scenes:       int   = 0
     project_failed_scenes:        int   = 0
+
+# === Visual Quality ===
+    render_resolution:           Optional[str]    = "1920x1080"
+    render_fps:                   Optional[int]   = 30

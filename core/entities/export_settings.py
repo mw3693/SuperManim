@@ -3,7 +3,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
-
+from pathlib import Path
 @dataclass
 class ExportSettings:
     """
@@ -32,10 +32,9 @@ class ExportSettings:
 
     # === Output Naming ===
     export_name:             Optional[str] = None
-    export_output_dir:       str           = "exports/"
-
+    
     # === Export Result (set automatically after export) ===
-    export_output_path:      Optional[str] = None
+    export_output_path:      Optional[Path] = None
 
     # === Audio ===
     export_include_audio:    bool          = True
@@ -45,6 +44,3 @@ class ExportSettings:
 
     # === Readiness ===
     project_is_export_ready: bool          = False
-
-    # === Watermark ===
-    export_watermark_text:   Optional[str] = None
