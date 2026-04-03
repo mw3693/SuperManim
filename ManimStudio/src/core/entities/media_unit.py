@@ -32,11 +32,11 @@ class MediaUnit:
     """
 
     unit_id        : int                          # The identifer of the child unit
-    parent_unit_id : int                          # The identifer of the parent of the child unit 
     start_time_ms  : int
     end_time_ms    : int
     unit_path      : Path                         # The location of the unit in the project        
-    
+
+    parent_unit_id : Optional[int] = None         # The identifer of the parent of the child unit        
 
     @property
     def duration_ms(self) -> float:

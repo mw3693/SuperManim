@@ -1,54 +1,58 @@
 from __future__ import annotations
-
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List
+from src.core.entities.scene_audio import SceneAudio
+from src.core.entities.asset_file import AssetFile
+from src.core.entities.scene_code import SceneCode
 
 
-@dataclass(slots=True)
+@dataclass(slots=True, kw_only=True)
 class Scene:
+    """
+    Represents a Manim Scene with assets, audio, code, and metadata.
+    Rich entity class with all key properties and safe defaults.
+    """
 
-    start_time        : int
-    end_time         : int
-    code_path      : Path  # in milliseconds
-    bitrate: Optional[int] = None
+    scene_id: int
+    scene_root_path: Path                         # Path to scene folder, e.g., ProjectName/scenes/scene_01
+    scene_index: Optional[int] = None
+    scene_duration_ms: Optional[int] = None
+    start_time_ms: Optional[int] = 0
 
-    # ------------------- Properties -------------------
-
-    @property
-    def file_name(self) -> str:
-        """
-        Returns the file name with extension.
-        """
-        return self.file_path.name
-
-    @property
-    def file_format(self) -> str:
-        """
-        Returns the file format (extension) in lowercase without the leading dot.
-        """
-        return self.file_path.suffix[1:] if self.file_path.suffix else ""
+    assets: List[AssetFile] = field(default_factory=list)
+    related_audio: Optional[SceneAudio] = None
+    related_code: Optional[SceneCode] = None
+    scene_content: Optional[str] = None
+    scene_hash: Optional[str] = None
 
     @property
-    def duration_seconds(self) -> float:
-        """
-        Returns the duration of the media file in seconds.
-        """
-        return self.file_duration_ms / 1000
+    def scene_name(self) -> str:
+        """Return a formatted scene name, e.g., 'scene_01'."""
+        return f"scene_{self.scene_id:02d}"
 
     @property
-    def bitrate_kbps(self) -> Optional[float]:
+    def end_time_ms(self) -> Optional[int]:
         """
-        Returns the bitrate in kilobits per second (Kbps).
-        Returns None if bitrate is not set.
+        Compute end time in ms.
+        Returns None if start time or duration is not defined.
         """
-        if self.bitrate is not None:
-            return self.bitrate / 1000
-        return None
+        if self.start_time_ms is None or self.scene_duration_ms is None:
+            return None
+        return self.start_time_ms + self.scene_duration_ms
 
     @property
-    def path_str(self) -> str:
-        """
-        Returns the file path as a string.
-        """
-        return str(self.file_path)
+    def has_assets(self) -> bool:
+        return len(self.assets) > 0
+
+    @property
+    def has_audio(self) -> bool:
+        return self.related_audio is not None
+
+    @property
+    def has_code(self) -> bool:
+        return self.related_code is not None
+
+    @property
+    def has_content(self) -> bool:
+        return self.scene_content is not None
