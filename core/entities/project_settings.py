@@ -11,8 +11,7 @@ if TYPE_CHECKING:
     from .export_settings import ExportSettings
 
 
-
-@dataclass
+@dataclass(slots=True, kw_only=True)
 class ProjectSettings:
     render_settings: Optional[RenderSettings] = None
     audio_settings:  Optional[AudioSettings]  = None
