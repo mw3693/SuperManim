@@ -1,24 +1,31 @@
 from abc import ABC, abstractmethod
+from pathlib import Path 
+from src.core.entities.scene import Scene
+from src.core.entities.scene_code import SceneCode
+
+from src.core.entities.scene_audio import SceneAudio
+
+
 
 class SceneCommandPort(ABC):
     @abstractmethod
-    def add_scene(self, scene_name: str, code: str = None, duration: float = None) -> dict:
-        """Add a new scene to the current project. Returns scene details dict."""
+    def add_scene(self, scene_name: str, code: SceneCode = None, duration: int = None) -> Scene:
+        """Add a new scene to the current project. Returns scene Entity."""
         pass
 
     @abstractmethod
-    def remove_scene(self, scene_id: int = None, scene_index: int = None) -> bool:
-        """Remove a scene by id or index. Returns success status."""
+    def remove_scene(self, scene_id: int ) -> bool:
+        """Remove a scene by id . Returns success status."""
         pass
 
     @abstractmethod
     def list_scenes(self) -> list:
-        """List all scenes in the current project. Returns list of scene dicts."""
+        """List all scenes in the current project. Returns list of scene entities."""
         pass
 
     @abstractmethod
-    def update_scene(self, scene_id: int, **kwargs) -> dict:
-        """Update a scene's properties. Returns updated scene dict."""
+    def update_scene(self, scene_id: int, **kwargs) -> Scene:
+        """Update a scene's properties. Returns updated scene Entity."""
         pass
 
     @abstractmethod
@@ -27,11 +34,11 @@ class SceneCommandPort(ABC):
         pass
 
     @abstractmethod
-    def get_scene(self, scene_id: int = None, scene_index: int = None) -> dict:
-        """Get a scene by id or index. Returns scene dict or None."""
+    def get_scene(self, scene_id: int) -> Scene:
+        """Get a scene by id . Returns scene entity or None."""
         pass
 
     @abstractmethod
-    def edit_scene_code(self, scene_id: int, code: str) -> dict:
-        """Update the code for a scene. Returns updated scene dict."""
+    def edit_scene_code(self, scene_id: int, code: SceneCode) -> Scene:
+        """Update the code for a scene. Returns updated scene entity."""
         pass

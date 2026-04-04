@@ -2,10 +2,22 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional, List
+from config.constants import RenderStatus
 from src.core.entities.scene_audio import SceneAudio
 from src.core.entities.asset_file import AssetFile
 from src.core.entities.scene_code import SceneCode
 
+
+@dataclass(frozen=True)
+class SceneStatusInfo:
+    """
+    Immutable value object representing the current render state and progress.
+    'frozen=True' ensures state updates are done by replacing the entire object.
+    """
+    scene_id: int
+    status: RenderStatus = RenderStatus.PENDING
+    progress: float = 0.0  # Range: 0.0 to 100.0
+    error_message: Optional[str] = None
 
 @dataclass(slots=True, kw_only=True)
 class Scene:
@@ -25,6 +37,19 @@ class Scene:
     related_code: Optional[SceneCode] = None
     scene_content: Optional[str] = None
     scene_hash: Optional[str] = None
+
+
+    # Link the status info to the scene
+    render_status: SceneStatusInfo = field(default_factory=lambda: SceneStatusInfo(scene_id=0))
+
+    def __post_init__(self):
+        """
+        Ensures the render_status reflects the correct scene_id after initialization.
+        """
+        # Using object.__setattr__ because slots=True and potential frozen constraints
+        if self.render_status.scene_id == 0:
+            object.__setattr__(self, 'render_status', SceneStatusInfo(scene_id=self.scene_id))
+
 
     @property
     def scene_name(self) -> str:

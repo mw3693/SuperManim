@@ -1,5 +1,8 @@
 from __future__ import annotations
 from pathlib import Path
+from enum import Enum
+
+
 
 __all__ = (
     # ── Directories ───────────────────────────────────────────────────────
@@ -50,7 +53,9 @@ __all__ = (
     "DEFAULT_VIDEO_CODEC",
     "DEFAULT_VIDEO_BITRATE",
     "SUPPORTED_ASPECT_RATIOS",
+    "VideoFormat",
     "RENDER_QUALITY_PRESETS",
+    "RenderQuality",
     # ── Scenes ────────────────────────────────────────────────────────────
     "STATUS_PENDING",
     "STATUS_RENDERED",
@@ -62,6 +67,14 @@ __all__ = (
     "MAX_SCENES_NUMBER",
     "SCENE_ID_PAD_WIDTH",
     "DEFAULT_SCENE_FPS",
+    # ── Previews ──────────────────────────────────────────────────────────
+    "PREVIEW_VIDEO_WIDTH",
+    "PREVIEW_VIDEO_HEIGHT",
+    "PREVIEW_FPS",
+    "PREVIEW_CRF",
+
+    # ── Render  ──────────────────────────────────────────────────────────
+    "RenderStatus"
 )
 
 
@@ -231,7 +244,7 @@ VIDEO_PRESETS: dict[str, tuple[int, int]] = {
 }
 
 # Container formats the tool can produce as final output.
-SUPPORTED_VIDEO_FORMATS: frozenset[str] = frozenset({"mp4", "mov", "png"})
+SUPPORTED_VIDEO_FORMATS: frozenset[str] = frozenset({"mp4", "mov"})
 
 # Default output container when the user has not specified one.
 DEFAULT_VIDEO_FORMAT: str = "mp4"
@@ -291,13 +304,11 @@ SUPPORTED_ASPECT_RATIOS: frozenset[str] = frozenset({
     "21:9",
 })
 
-# Named quality tiers that map to combinations of resolution, bitrate, etc.
-RENDER_QUALITY_PRESETS: frozenset[str] = frozenset({
-    "low",
-    "medium",
-    "high",
-    "ultra",
-})
+
+class VideoFormat(str, Enum):
+    """Supported output container formats."""
+    MP4 = "mp4"
+    MOV = "mov"
 
 
 # =========================================
@@ -332,7 +343,6 @@ DEFAULT_SCENE_FPS: int = 30
 MAX_SCENES_NUMBER: int = 99
 
 
-
 # =========================================
 # Preview Constants
 # =========================================
@@ -345,3 +355,44 @@ PREVIEW_FPS:          int = 15    # frames per second
 # CRF for libx264 — 35 is fast to encode with acceptable draft quality.
 # Range: 0 (lossless) → 51 (worst quality).
 PREVIEW_CRF:          int = 35
+
+
+# =========================================
+# Render Constants
+# =========================================
+
+
+# Named quality tiers that map to combinations of resolution, bitrate, etc.
+RENDER_QUALITY_PRESETS: frozenset[str] = frozenset({
+    "low",
+    "medium",
+    "high",
+    "fourk",
+})
+
+
+class RenderQuality(str, Enum):
+    """Rendering quality presets for Manim/Renderer."""
+    LOW    = "low"
+    MEDIUM = "medium"
+    HIGH   = "high"
+    FOURK  = "fourk"
+
+class RenderStatus(str, Enum):
+    """
+    Represents the lifecycle state of a scene's render process.
+    Used by the UI to update visual indicators and by the RenderService 
+    to determine execution logic.
+    """
+    
+    # Scene has been successfully rendered and the output file exists.
+    RENDERED = "rendered"
+    
+    # Render process started but encountered an error (e.g., code crash or missing assets).
+    FAILED = "failed"
+    
+    # User or system manually bypassed this scene; it will not be included in the final export.
+    SKIPPED = "skipped"
+    
+    # Initial state: Scene is newly created or modified and is awaiting its first render.
+    PENDING = "pending"
