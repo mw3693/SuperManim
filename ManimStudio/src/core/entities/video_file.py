@@ -42,7 +42,7 @@ class VideoFile(MediaFile):
     width: int
     height: int
     fps: int
-    codes: str
+    codec: str
 
     # ------------------- Optional Fields -------------------
     color_depth: Optional[int] = None
